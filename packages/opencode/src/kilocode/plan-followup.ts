@@ -302,9 +302,9 @@ export namespace PlanFollowup {
             {
               label: ANSWER_CONTINUE,
               labelKey: "plan.followup.answer.continue",
-              description: "Implement the plan in this session",
+              description: "Continue planning in this session",
               descriptionKey: "plan.followup.answer.continue.description",
-              mode: "code",
+              mode: "plan",
             },
           ],
         },
@@ -500,14 +500,11 @@ export namespace PlanFollowup {
 
     if (answer === ANSWER_CONTINUE) {
       Telemetry.trackPlanFollowup(input.sessionID, "continue")
-      const code = await resolveCodeModel({
-        model: user.model,
-      })
       const msg = await inject({
         sessionID: input.sessionID,
-        agent: "code",
-        model: code.model,
-        text: "Implement the plan above.",
+        agent: "plan",
+        model: user.model,
+        text: "Continue planning.",
       })
       KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
       return "continue"
