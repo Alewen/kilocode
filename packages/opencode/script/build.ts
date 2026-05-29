@@ -329,7 +329,7 @@ if (Script.release) {
       archives.push(out) // kilocode_change
     }
   }
-  await $`gh release upload v${Script.version} ${archives} --clobber` // kilocode_change
+  // await $`gh release upload v${Script.version} ${archives} --clobber` // kilocode_change
 }
 
 export { binaries }
