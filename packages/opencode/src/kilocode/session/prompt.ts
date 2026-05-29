@@ -3,6 +3,8 @@ import path from "path"
 import fs from "fs/promises"
 import { StringDecoder } from "string_decoder"
 import { Cause, Effect, Exit } from "effect"
+import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { InstanceState } from "@/effect/instance-state"
 import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
@@ -374,4 +376,250 @@ export namespace KiloSessionPrompt {
   export function maybeStripHistoricalMedia(msgs: MessageV2.WithParts[]): MessageV2.WithParts[] {
     return hasCompletedSummary(msgs) ? stripHistoricalMedia(msgs) : msgs
   }
+
+  /**
+   * Guards tool execution by checking if file operations are within workspace.
+   */
+  export const guardToolExecution = Effect.fn("KiloSessionPrompt.guardToolExecution")(function* (input: {
+    toolName: string
+    args: any
+  }) {
+    const instance = yield* InstanceState.context
+
+    // Check write/edit tools
+    if (input.toolName === "write" || input.toolName === "edit") {
+      const targetPath = input.args.filePath
+      if (targetPath) {
+        const normalizedDir = AppFileSystem.normalizePath(instance.directory)
+        const normalizedWorktree = AppFileSystem.normalizePath(instance.worktree)
+        
+        // 先把相对路径转换为绝对路径，再 normalize
+        const absoluteTarget = path.isAbsolute(targetPath) 
+          ? targetPath 
+          : path.join(instance.directory, targetPath)
+        const normalizedTarget = AppFileSystem.normalizePath(absoluteTarget)
+
+        const isInWorkspace =
+          AppFileSystem.contains(normalizedDir, normalizedTarget) ||
+          AppFileSystem.contains(normalizedWorktree, normalizedTarget)
+
+        if (!isInWorkspace) {
+          throw new Error(
+            `The "${input.toolName}" tool does not allow operations on files outside the workspace, and workspace is "${instance.directory}"`
+          )
+        }
+      }
+    }
+
+    // Check bash tool for file system operations
+    if (input.toolName === "bash" && input.args.command) {
+      const command = input.args.command
+      const normalizedDir = AppFileSystem.normalizePath(instance.directory)
+      const normalizedWorktree = AppFileSystem.normalizePath(instance.worktree)
+
+      /**
+       * 从命令字符串中提取路径，支持引号包裹的路径
+       */
+      const extractPaths = (cmd: string): string[] => {
+        const paths: string[] = []
+        let i = 0
+        
+        while (i < cmd.length) {
+          // 跳过空白字符
+          while (i < cmd.length && /\s/.test(cmd[i])) i++
+          if (i >= cmd.length) break
+          
+          let pathStart = i
+          let pathEnd: number
+          
+          // 检查是否是引号包裹的路径
+          if (cmd[i] === '"' || cmd[i] === "'") {
+            const quote = cmd[i]
+            pathStart = i + 1
+            i++
+            while (i < cmd.length && cmd[i] !== quote) i++
+            pathEnd = i
+            if (i < cmd.length) i++ // 跳过结束引号
+          } else {
+            // 非引号包裹，读取到下一个空白字符
+            while (i < cmd.length && !/\s/.test(cmd[i])) i++
+            pathEnd = i
+          }
+          
+          if (pathEnd > pathStart) {
+            const extractedPath = cmd.slice(pathStart, pathEnd)
+            // 只添加看起来像路径的内容（排除选项如 -p, -r 等）
+            if (!/^-/.test(extractedPath)) {
+              paths.push(extractedPath)
+            }
+          }
+        }
+        
+        return paths
+      }
+
+      /**
+       * 从 PowerShell 命令中提取 -Path 参数的值
+       */
+      const extractPowerShellPath = (cmd: string, paramName: string = 'Path'): string | null => {
+        // 匹配 -Path 参数，支持各种写法：-Path, -path, -p, -Destination 等
+        const pathRegex = new RegExp(`-${paramName}\\s*(?::\\s*)?(['"])(.*?)\\1|-${paramName}\\s*(?::\\s*)?([^\\s-]+)`, 'i')
+        const match = cmd.match(pathRegex)
+        if (match) {
+          return match[2] || match[3]
+        }
+        return null
+      }
+
+      /**
+       * 检查单个路径是否在工作区内
+       */
+      const checkPath = (targetPath: string, cmdName: string) => {
+        // 先把相对路径转换为绝对路径，再 normalize
+        const absoluteTarget = path.isAbsolute(targetPath) 
+          ? targetPath 
+          : path.join(instance.directory, targetPath)
+        const normalizedTarget = AppFileSystem.normalizePath(absoluteTarget)
+
+        const isInWorkspace =
+          AppFileSystem.contains(normalizedDir, normalizedTarget) ||
+          AppFileSystem.contains(normalizedWorktree, normalizedTarget)
+
+        if (!isInWorkspace) {
+          throw new Error(
+            `The "bash" tool does not allow "${cmdName}" operations on paths outside the workspace. Workspace is "${instance.directory}", target path is "${targetPath}"`
+          )
+        }
+      }
+
+      /**
+       * 检查命令是否包含嵌套执行，如果是则递归检查内部命令
+       */
+      const checkNestedCommand = (cmd: string) => {
+        // 检测 powershell -Command / -c
+        const powershellNestedRegex = /^\s*powershell(?:\.exe)?\s*(?:-Command|-c)\s*(['"])(.*?)\1/i
+        const psMatch = cmd.match(powershellNestedRegex)
+        if (psMatch && psMatch[2]) {
+          checkCommand(psMatch[2])
+          return true
+        }
+        
+        // 检测 cmd /c /k
+        const cmdNestedRegex = /^\s*cmd(?:\.exe)?\s*(?:\/c|\/k)\s*(['"])?(.*?)\1?$/i
+        const cmdMatch = cmd.match(cmdNestedRegex)
+        if (cmdMatch && cmdMatch[2]) {
+          checkCommand(cmdMatch[2])
+          return true
+        }
+        
+        return false
+      }
+      
+      /**
+       * 递归检查命令是否包含危险操作
+       */
+      const checkCommand = (cmd: string) => {
+        const cmdLower = cmd.toLowerCase().trimStart()
+        
+        // 先检查是否是嵌套命令
+        if (checkNestedCommand(cmd)) {
+          return
+        }
+        
+        // ========== .NET 方法调用检查 ==========
+        
+        // 检测 .NET 的 Directory 和 File 方法调用
+        const dotNetMethodRegex = /\[(system\.io\.(directory|file))\]::(createdirectory|delete|create|move|copy|writealltext|writeallbytes|writealllines)\s*\(\s*(['"])(.*?)\4/i
+        const dotNetMatch = cmd.match(dotNetMethodRegex)
+        if (dotNetMatch) {
+          const className = dotNetMatch[1]
+          const methodName = dotNetMatch[3]
+          const targetPath = dotNetMatch[5]
+          checkPath(targetPath, `${className}::${methodName}`)
+          return
+        }
+        
+        // ========== PowerShell 命令检查 ==========
+        
+        // New-Item - 创建文件/文件夹
+        if (/^new-item\s/i.test(cmdLower)) {
+          const targetPath = extractPowerShellPath(cmd, 'Path')
+          if (targetPath) {
+            checkPath(targetPath, 'New-Item')
+          }
+          return
+        }
+        // Remove-Item - 删除文件/文件夹
+        else if (/^remove-item\s/i.test(cmdLower)) {
+          const targetPath = extractPowerShellPath(cmd, 'Path')
+          if (targetPath) {
+            checkPath(targetPath, 'Remove-Item')
+          }
+          return
+        }
+        // Move-Item - 移动文件/文件夹
+        else if (/^move-item\s/i.test(cmdLower)) {
+          const destPath = extractPowerShellPath(cmd, 'Destination') || extractPowerShellPath(cmd, 'Path')
+          if (destPath) {
+            checkPath(destPath, 'Move-Item')
+          }
+          return
+        }
+        // Copy-Item - 复制文件/文件夹
+        else if (/^copy-item\s/i.test(cmdLower)) {
+          const destPath = extractPowerShellPath(cmd, 'Destination') || extractPowerShellPath(cmd, 'Path')
+          if (destPath) {
+            checkPath(destPath, 'Copy-Item')
+          }
+          return
+        }
+        
+        // ========== 传统 CMD/Bash 命令检查 ==========
+        
+        // 创建文件夹 (mkdir/md)
+        if (/^(mkdir|md)\s/i.test(cmdLower)) {
+          const paths = extractPaths(cmd.replace(/^(mkdir|md)\s/i, ''))
+          for (const p of paths) {
+            checkPath(p, 'mkdir')
+          }
+          return
+        }
+        // 删除文件夹 (rmdir/rd)
+        else if (/^(rmdir|rd)\s/i.test(cmdLower)) {
+          const paths = extractPaths(cmd.replace(/^(rmdir|rd)\s/i, ''))
+          for (const p of paths) {
+            checkPath(p, 'rmdir')
+          }
+          return
+        }
+        // 删除文件 (del/erase/rm)
+        else if (/^(del|erase|rm)\s/i.test(cmdLower)) {
+          const paths = extractPaths(cmd.replace(/^(del|erase|rm)\s/i, ''))
+          for (const p of paths) {
+            checkPath(p, 'rm')
+          }
+          return
+        }
+        // 移动文件/文件夹 (move/mv) - 检查目标路径
+        else if (/^(move|mv)\s/i.test(cmdLower)) {
+          const paths = extractPaths(cmd.replace(/^(move|mv)\s/i, ''))
+          if (paths.length >= 2) {
+            checkPath(paths[paths.length - 1], 'mv') // 最后一个是目标路径
+          }
+          return
+        }
+        // 复制文件/文件夹 (copy/xcopy/cp) - 检查目标路径
+        else if (/^(copy|xcopy|cp)\s/i.test(cmdLower)) {
+          const paths = extractPaths(cmd.replace(/^(copy|xcopy|cp)\s/i, ''))
+          if (paths.length >= 2) {
+            checkPath(paths[paths.length - 1], 'cp') // 最后一个是目标路径
+          }
+          return
+        }
+       }
+       
+       // 开始检查命令
+       checkCommand(command)
+    }
+  })
 }

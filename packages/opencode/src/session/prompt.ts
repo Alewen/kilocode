@@ -449,6 +449,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                   { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID },
                   { args },
                 )
+                // kilocode_change start - workspace guard
+                yield* KiloSessionPrompt.guardToolExecution({ toolName: item.id, args })
+                // kilocode_change end
                 const result = yield* item.execute(args, ctx)
                 const output = {
                   ...result,
