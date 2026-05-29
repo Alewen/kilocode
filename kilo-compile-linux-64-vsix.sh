@@ -5,27 +5,10 @@ set -e
 
 # 获取脚本所在目录（源码根目录）
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BUILD_SCRIPT="$SCRIPT_DIR/packages/opencode/script/build.ts"
-EXTENSION_TS="$SCRIPT_DIR/packages/kilo-vscode/src/extension.ts"
 
 echo "=========================================="
 echo " 源码目录: $SCRIPT_DIR 打包 Kilo VS Code 扩展 (Linux-x64)"
 echo "=========================================="
-
-# 查找包含 "gh release upload" 的行并注释掉
-if grep -n 'gh release upload' "$BUILD_SCRIPT" | grep -v '^[0-9]*://'; then
-  sed -i '/gh release upload/ s|^|// |' "$BUILD_SCRIPT"
-  echo "已经注释 GitHub 上传语句..."
-  echo ""
-fi
-
-# 查找包含 closeSidebar 的行并注释掉
-if grep -n 'if (closeSidebar) void vscode.commands.executeCommand("workbench.action.closeSidebar")' "$EXTENSION_TS" | grep -v '^[0-9]*://'; then
-  # 注释掉这一行
-  sed -i '/if (closeSidebar) void vscode.commands.executeCommand("workbench.action.closeSidebar")/ s|^|// |' "$EXTENSION_TS"
-  echo "已经注释掉自动关闭侧栏的语句..."
-  echo ""
-fi
 
 # 步骤 1: 检查并安装根目录依赖
 echo "[1/5] 检查根目录依赖..."
