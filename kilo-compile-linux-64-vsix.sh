@@ -27,7 +27,11 @@ echo "[2/5] 编译 CLI 二进制..."
 cd "$SCRIPT_DIR/packages/opencode"
 echo "  当前目录: $(pwd)"
 echo ""
+# 从根目录 package.json 获取版本号
+VERSION=$(grep -E '"version":' "$SCRIPT_DIR/package.json" | head -1 | cut -d'"' -f4)
 export KILO_RELEASE=true
+export KILO_VERSION=$VERSION
+export KILO_CHANNEL=latest
 bun run script/build.ts --single
 
 # 步骤 3: 编译 VS Code 扩展
