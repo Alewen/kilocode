@@ -638,6 +638,16 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
             const titleAttr = title ? ` title="${title}"` : ""
             return `<a href="${href}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
           },
+          // kilocode_change: escape raw HTML in markdown to prevent
+          // DOMPurify from stripping content after tags like <style>
+          html({ text }) {
+            return text
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#39;")
+          },
           // kilocode_change start
           codespan({ text }) {
             const file = parseFilePath(text)
