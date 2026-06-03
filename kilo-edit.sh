@@ -43,12 +43,4 @@ if [ ! -f "$JSON_FILE" ]; then
   exit 1
 fi
 
-# 优先用 python3，否则用 bun
-if command -v python3 &>/dev/null; then
-  exec python3 "$SCRIPT_DIR/kilo-edit.py" "$JSON_FILE" "$LEVEL"
-elif command -v bun &>/dev/null; then
-  exec bun run "$SCRIPT_DIR/kilo-edit-impl.js" "$JSON_FILE" "$LEVEL"
-else
-  echo "错误: 需要 python3 或 bun 运行时"
-  exit 1
-fi
+bun run "$SCRIPT_DIR/kilo-edit-impl.js" "$JSON_FILE" "$LEVEL"
