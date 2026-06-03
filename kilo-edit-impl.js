@@ -411,14 +411,27 @@ function* multiOccurrenceReplacer(content, find) {
 
 // ====== replace 主函数 (复刻 edit.ts:702) ======
 
-function replace(content, oldString, newString, replaceAll) {
+const ALL_REPLACERS = [
+  simpleReplacer,
+  lineTrimmedReplacer,
+  blockAnchorReplacer,
+  whitespaceNormalizedReplacer,
+  indentationFlexibleReplacer,
+  escapeNormalizedReplacer,
+  trimmedBoundaryReplacer,
+  contextAwareReplacer,
+  multiOccurrenceReplacer,
+];
+
+function replace(content, oldString, newString, replaceAll, level) {
   if (oldString === newString) {
     throw new Error("No changes to apply: oldString and newString are identical.");
   }
 
+  const replacers = ALL_REPLACERS.slice(0, level);
   let notFound = true;
 
-  for (const replacer of [simpleReplacer]) {
+  for (const replacer of replacers) {
     for (const search of replacer(content, oldString)) {
       const index = content.indexOf(search);
       if (index === -1) continue;
@@ -445,6 +458,7 @@ function replace(content, oldString, newString, replaceAll) {
 // ====== 主流程 ======
 
 const jsonPath = process.argv[2];
+const level = parseInt(process.argv[3]) || 1;
 if (!jsonPath) {
   console.error("错误: 缺少 JSON 文件参数");
   process.exit(1);
@@ -493,7 +507,7 @@ const ending = detectLineEnding(oldContent);
 const oldStr = convertToLineEnding(normalizeLineEndings(params.oldString), ending);
 const newStr = convertToLineEnding(normalizeLineEndings(params.newString), ending);
 
-const replaced = replace(oldContent, oldStr, newStr, params.replaceAll || false);
+const replaced = replace(oldContent, oldStr, newStr, params.replaceAll || false, level);
 const toWrite = bomJoin(replaced, sourceBom);
 writeSync(filePath, toWrite, sourceEncoding);
 
