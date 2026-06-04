@@ -390,14 +390,14 @@ export namespace KiloSessionPrompt {
     if (input.toolName === "write" || input.toolName === "edit") {
       const targetPath = input.args.filePath
       if (targetPath) {
-        const normalizedDir = AppFileSystem.normalizePath(instance.directory)
-        const normalizedWorktree = AppFileSystem.normalizePath(instance.worktree)
-        
-        // 先把相对路径转换为绝对路径，再 normalize
-        const absoluteTarget = path.isAbsolute(targetPath) 
-          ? targetPath 
+        const normalizedDir = AppFileSystem.resolve(instance.directory)
+        const normalizedWorktree = AppFileSystem.resolve(instance.worktree)
+
+        // 先把相对路径转换为绝对路径，再 resolve
+        const absoluteTarget = path.isAbsolute(targetPath)
+          ? targetPath
           : path.join(instance.directory, targetPath)
-        const normalizedTarget = AppFileSystem.normalizePath(absoluteTarget)
+        const normalizedTarget = AppFileSystem.resolve(absoluteTarget)
 
         const isInWorkspace =
           AppFileSystem.contains(normalizedDir, normalizedTarget) ||
@@ -414,8 +414,8 @@ export namespace KiloSessionPrompt {
     // Check bash tool for file system operations
     if (input.toolName === "bash" && input.args.command) {
       const command = input.args.command
-      const normalizedDir = AppFileSystem.normalizePath(instance.directory)
-      const normalizedWorktree = AppFileSystem.normalizePath(instance.worktree)
+      const normalizedDir = AppFileSystem.resolve(instance.directory)
+      const normalizedWorktree = AppFileSystem.resolve(instance.worktree)
 
       /**
        * 从命令字符串中提取路径，支持引号包裹的路径
@@ -475,11 +475,11 @@ export namespace KiloSessionPrompt {
        * 检查单个路径是否在工作区内
        */
       const checkPath = (targetPath: string, cmdName: string) => {
-        // 先把相对路径转换为绝对路径，再 normalize
-        const absoluteTarget = path.isAbsolute(targetPath) 
-          ? targetPath 
+        // 先把相对路径转换为绝对路径，再 resolve
+        const absoluteTarget = path.isAbsolute(targetPath)
+          ? targetPath
           : path.join(instance.directory, targetPath)
-        const normalizedTarget = AppFileSystem.normalizePath(absoluteTarget)
+        const normalizedTarget = AppFileSystem.resolve(absoluteTarget)
 
         const isInWorkspace =
           AppFileSystem.contains(normalizedDir, normalizedTarget) ||
