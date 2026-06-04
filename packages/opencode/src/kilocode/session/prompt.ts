@@ -640,9 +640,10 @@ export namespace KiloSessionPrompt {
         if (cmdBaseName === 'sed') {
           const inPlaceMatch = cmd.match(/-i\b/)
           if (inPlaceMatch) {
-            const fileMatch = cmd.match(/[^\\]'([^']+)'$/)
-            if (fileMatch) {
-              checkPath(fileMatch[1], 'sed -i')
+            const args = cmd.replace(/^\s*(\/[\w-]+\/[\w]+|\w+)\s*/, '').replace(/-i\b/, '').trim().split(/\s+/)
+            const filePath = args[args.length - 1]
+            if (filePath) {
+              checkPath(filePath, 'sed -i')
             }
           }
           return
@@ -668,13 +669,26 @@ export namespace KiloSessionPrompt {
           }
           return
         }
-        // echo/printf/tee 重定向写入 (支持 > 和 >>，绝对路径)
-        if (cmdBaseName === 'echo' || cmdBaseName === 'printf' || cmdBaseName === 'tee') {
+        // echo/printf 重定向写入 (支持 > 和 >>，绝对路径)
+        if (cmdBaseName === 'echo' || cmdBaseName === 'printf') {
           const redirectMatch = cmd.match(/>{1,2}\s*(\S+)/)
           if (redirectMatch) {
             checkPath(redirectMatch[1], cmdBaseName)
             return
           }
+        }
+        // tee 无重定向写入 (直接跟文件路径)
+        if (cmdBaseName === 'tee') {
+          const redirectMatch = cmd.match(/>{1,2}\s*(\S+)/)
+          if (redirectMatch) {
+            checkPath(redirectMatch[1], 'tee')
+            return
+          }
+          const paths = extractPaths(cmd.replace(/^\s*(\/[\w-]+\/[\w]+|\w+)\s*/, ''))
+          for (const p of paths) {
+            checkPath(p, 'tee')
+          }
+          return
         }
         // cat 重定向写入 (支持 > 和 >>，绝对路径)
         if (cmdBaseName === 'cat') {
@@ -684,11 +698,18 @@ export namespace KiloSessionPrompt {
             return
           }
         }
-        // 管道 tee 写入 (| tee)
+        // 管道 tee 写入 (| tee) - 支持带重定向和不带重定向
         if (/\|\s*tee\b/i.test(cmd)) {
+          // 先检测带重定向的情况: | tee > file 或 | tee >> file
           const pipeMatch = cmd.match(/\|\s*tee\s+(>>?)\s*(\S+)/)
           if (pipeMatch) {
             checkPath(pipeMatch[2], 'tee')
+            return
+          }
+          // 检测不带重定向的情况: echo | tee file
+          const teeMatch = cmd.match(/\|\s*tee\s+(\S+)/)
+          if (teeMatch) {
+            checkPath(teeMatch[1], 'tee')
           }
           return
         }
