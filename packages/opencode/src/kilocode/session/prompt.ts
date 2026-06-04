@@ -661,7 +661,7 @@ export namespace KiloSessionPrompt {
         // awk 处理文件（写入模式）- 支持绝对路径
         if (cmdBaseName === 'awk') {
           if (/\{.*\}/.test(cmd) && />>?/.test(cmd)) {
-            const redirectMatch = cmd.match(>>?\s*(\S+)/)
+            const redirectMatch = cmd.match(/>{1,2}\s*(\S+)/)
             if (redirectMatch) {
               checkPath(redirectMatch[1], 'awk')
             }
@@ -670,7 +670,7 @@ export namespace KiloSessionPrompt {
         }
         // echo/printf/tee 重定向写入 (支持 > 和 >>，绝对路径)
         if (cmdBaseName === 'echo' || cmdBaseName === 'printf' || cmdBaseName === 'tee') {
-          const redirectMatch = cmd.match(>>?\s*(\S+)/)
+          const redirectMatch = cmd.match(/>{1,2}\s*(\S+)/)
           if (redirectMatch) {
             checkPath(redirectMatch[1], cmdBaseName)
             return
@@ -678,7 +678,7 @@ export namespace KiloSessionPrompt {
         }
         // cat 重定向写入 (支持 > 和 >>，绝对路径)
         if (cmdBaseName === 'cat') {
-          const redirectMatch = cmd.match(>>?\s*(\S+)/)
+          const redirectMatch = cmd.match(/>{1,2}\s*(\S+)/)
           if (redirectMatch) {
             checkPath(redirectMatch[1], 'cat')
             return
