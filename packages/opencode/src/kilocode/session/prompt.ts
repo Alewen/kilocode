@@ -417,10 +417,18 @@ export namespace KiloSessionPrompt {
       const normalizedDir = AppFileSystem.resolve(instance.directory)
       const normalizedWorktree = AppFileSystem.resolve(instance.worktree)
 
-      /**
-       * 从命令字符串中提取路径，支持引号包裹的路径
-       */
-      const extractPaths = (cmd: string): string[] => {
+        /**
+         * 从命令中提取命令名（支持绝对路径如 /bin/echo）
+         */
+        const extractCmdName = (cmdLower: string): string | null => {
+          const match = cmdLower.match(/^\s*(\/[\w-]+\/[\w]+|\w+)/)
+          return match ? match[1] : null
+        }
+
+        /**
+         * 从命令字符串中提取路径，支持引号包裹的路径
+         */
+        const extractPaths = (cmd: string): string[] => {
         const paths: string[] = []
         let i = 0
         
@@ -575,70 +583,114 @@ export namespace KiloSessionPrompt {
         }
         
         // ========== 传统 CMD/Bash 命令检查 ==========
-        
-        // 创建文件夹 (mkdir/md)
-        if (/^(mkdir|md)\s/i.test(cmdLower)) {
-          const paths = extractPaths(cmd.replace(/^(mkdir|md)\s/i, ''))
+
+        // 获取命令名（支持绝对路径如 /bin/sed）
+        const cmdName = extractCmdName(cmdLower)
+        const cmdBaseName = cmdName ? cmdName.replace(/.*\//, '') : null
+
+        // 创建文件夹 (mkdir/md) - 支持绝对路径
+        if (cmdBaseName === 'mkdir' || cmdBaseName === 'md') {
+          const paths = extractPaths(cmd.replace(/^\s*(\/[\w-]+\/[\w]+|\w+)\s*/, ''))
           for (const p of paths) {
             checkPath(p, 'mkdir')
           }
           return
         }
-        // 删除文件夹 (rmdir/rd)
-        else if (/^(rmdir|rd)\s/i.test(cmdLower)) {
-          const paths = extractPaths(cmd.replace(/^(rmdir|rd)\s/i, ''))
+        // 删除文件夹 (rmdir/rd) - 支持绝对路径
+        if (cmdBaseName === 'rmdir' || cmdBaseName === 'rd') {
+          const paths = extractPaths(cmd.replace(/^\s*(\/[\w-]+\/[\w]+|\w+)\s*/, ''))
           for (const p of paths) {
             checkPath(p, 'rmdir')
           }
           return
         }
-        // 删除文件 (del/erase/rm)
-        else if (/^(del|erase|rm)\s/i.test(cmdLower)) {
-          const paths = extractPaths(cmd.replace(/^(del|erase|rm)\s/i, ''))
+        // 删除文件 (del/erase/rm) - 支持绝对路径
+        if (cmdBaseName === 'del' || cmdBaseName === 'erase' || cmdBaseName === 'rm') {
+          const paths = extractPaths(cmd.replace(/^\s*(\/[\w-]+\/[\w]+|\w+)\s*/, ''))
           for (const p of paths) {
             checkPath(p, 'rm')
           }
           return
         }
-        // 移动文件/文件夹 (move/mv) - 检查目标路径
-        else if (/^(move|mv)\s/i.test(cmdLower)) {
-          const paths = extractPaths(cmd.replace(/^(move|mv)\s/i, ''))
+        // 移动文件/文件夹 (move/mv) - 支持绝对路径，检查目标路径
+        if (cmdBaseName === 'move' || cmdBaseName === 'mv') {
+          const paths = extractPaths(cmd.replace(/^\s*(\/[\w-]+\/[\w]+|\w+)\s*/, ''))
           if (paths.length >= 2) {
-            checkPath(paths[paths.length - 1], 'mv') // 最后一个是目标路径
+            checkPath(paths[paths.length - 1], 'mv')
           }
           return
         }
-        // 复制文件/文件夹 (copy/xcopy/cp) - 检查目标路径
-        else if (/^(copy|xcopy|cp)\s/i.test(cmdLower)) {
-          const paths = extractPaths(cmd.replace(/^(copy|xcopy|cp)\s/i, ''))
+        // 复制文件/文件夹 (copy/xcopy/cp) - 支持绝对路径，检查目标路径
+        if (cmdBaseName === 'copy' || cmdBaseName === 'xcopy' || cmdBaseName === 'cp') {
+          const paths = extractPaths(cmd.replace(/^\s*(\/[\w-]+\/[\w]+|\w+)\s*/, ''))
           if (paths.length >= 2) {
-            checkPath(paths[paths.length - 1], 'cp') // 最后一个是目标路径
+            checkPath(paths[paths.length - 1], 'cp')
           }
           return
         }
-        // touch - 创建文件
-        else if (/^touch\s/i.test(cmdLower)) {
-          const paths = extractPaths(cmd.replace(/^touch\s/i, ''))
+        // touch - 创建文件 - 支持绝对路径
+        if (cmdBaseName === 'touch') {
+          const paths = extractPaths(cmd.replace(/^\s*(\/[\w-]+\/[\w]+|\w+)\s*/, ''))
           for (const p of paths) {
             checkPath(p, 'touch')
           }
           return
         }
-        // echo/printf/tee 重定向写入
-        else if (/^(echo|printf|tee)\s/i.test(cmdLower)) {
-          const redirectMatch = cmd.match(/>\s*(\S+)/)
+        // sed -i 直接修改文件 - 支持绝对路径
+        if (cmdBaseName === 'sed') {
+          const inPlaceMatch = cmd.match(/-i\b/)
+          if (inPlaceMatch) {
+            const fileMatch = cmd.match(/[^\\]'([^']+)'$/)
+            if (fileMatch) {
+              checkPath(fileMatch[1], 'sed -i')
+            }
+          }
+          return
+        }
+        // perl -i 直接修改文件 - 支持绝对路径
+        if (cmdBaseName === 'perl') {
+          const inPlaceMatch = cmd.match(/-i\b/)
+          if (inPlaceMatch) {
+            const fileMatch = cmd.match(/-i(?:\s+\S+)?\s+(\S+)\s*$/)
+            if (fileMatch) {
+              checkPath(fileMatch[1], 'perl -i')
+            }
+          }
+          return
+        }
+        // awk 处理文件（写入模式）- 支持绝对路径
+        if (cmdBaseName === 'awk') {
+          if (/\{.*\}/.test(cmd) && />>?/.test(cmd)) {
+            const redirectMatch = cmd.match(>>?\s*(\S+)/)
+            if (redirectMatch) {
+              checkPath(redirectMatch[1], 'awk')
+            }
+          }
+          return
+        }
+        // echo/printf/tee 重定向写入 (支持 > 和 >>，绝对路径)
+        if (cmdBaseName === 'echo' || cmdBaseName === 'printf' || cmdBaseName === 'tee') {
+          const redirectMatch = cmd.match(>>?\s*(\S+)/)
           if (redirectMatch) {
-            checkPath(redirectMatch[1], cmdLower.split(/\s/)[0])
+            checkPath(redirectMatch[1], cmdBaseName)
             return
           }
         }
-        // cat 重定向写入
-        else if (/^cat\s/i.test(cmdLower)) {
-          const redirectMatch = cmd.match(/>\s*(\S+)/)
+        // cat 重定向写入 (支持 > 和 >>，绝对路径)
+        if (cmdBaseName === 'cat') {
+          const redirectMatch = cmd.match(>>?\s*(\S+)/)
           if (redirectMatch) {
             checkPath(redirectMatch[1], 'cat')
             return
           }
+        }
+        // 管道 tee 写入 (| tee)
+        if (/\|\s*tee\b/i.test(cmd)) {
+          const pipeMatch = cmd.match(/\|\s*tee\s+(>>?)\s*(\S+)/)
+          if (pipeMatch) {
+            checkPath(pipeMatch[2], 'tee')
+          }
+          return
         }
        }
        
