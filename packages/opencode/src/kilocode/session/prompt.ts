@@ -616,6 +616,30 @@ export namespace KiloSessionPrompt {
           }
           return
         }
+        // touch - 创建文件
+        else if (/^touch\s/i.test(cmdLower)) {
+          const paths = extractPaths(cmd.replace(/^touch\s/i, ''))
+          for (const p of paths) {
+            checkPath(p, 'touch')
+          }
+          return
+        }
+        // echo/printf/tee 重定向写入
+        else if (/^(echo|printf|tee)\s/i.test(cmdLower)) {
+          const redirectMatch = cmd.match(/>\s*(\S+)/)
+          if (redirectMatch) {
+            checkPath(redirectMatch[1], cmdLower.split(/\s/)[0])
+            return
+          }
+        }
+        // cat 重定向写入
+        else if (/^cat\s/i.test(cmdLower)) {
+          const redirectMatch = cmd.match(/>\s*(\S+)/)
+          if (redirectMatch) {
+            checkPath(redirectMatch[1], 'cat')
+            return
+          }
+        }
        }
        
        // 开始检查命令
