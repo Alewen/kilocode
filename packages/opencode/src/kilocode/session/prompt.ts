@@ -14,6 +14,7 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
 import { KiloSession } from "@/kilocode/session"
 import { Permission } from "@/permission"
+import { Patch } from "../patch"
 import { environmentDetails, type EditorContext } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
@@ -407,6 +408,41 @@ export namespace KiloSessionPrompt {
           throw new Error(
             `The "${input.toolName}" tool does not allow operations on files outside the workspace, and workspace is "${instance.directory}"`
           )
+        }
+      }
+    }
+
+    // Check apply_patch tool
+    if (input.toolName === "apply_patch" && input.args.patchText) {
+      const normalizedDir = AppFileSystem.resolve(instance.directory)
+      const normalizedWorktree = AppFileSystem.resolve(instance.worktree)
+      const { hunks } = Patch.parsePatch(input.args.patchText)
+      for (const hunk of hunks) {
+        const absoluteTarget = path.isAbsolute(hunk.path)
+          ? hunk.path
+          : path.join(instance.directory, hunk.path)
+        const normalizedTarget = AppFileSystem.resolve(absoluteTarget)
+        const isInWorkspace =
+          AppFileSystem.contains(normalizedDir, normalizedTarget) ||
+          AppFileSystem.contains(normalizedWorktree, normalizedTarget)
+        if (!isInWorkspace) {
+          throw new Error(
+            `The "apply_patch" tool does not allow operations on files outside the workspace, and workspace is "${instance.directory}"`
+          )
+        }
+        if (hunk.type === "update" && hunk.move_path) {
+          const absoluteMove = path.isAbsolute(hunk.move_path)
+            ? hunk.move_path
+            : path.join(instance.directory, hunk.move_path)
+          const normalizedMove = AppFileSystem.resolve(absoluteMove)
+          const moveInWorkspace =
+            AppFileSystem.contains(normalizedDir, normalizedMove) ||
+            AppFileSystem.contains(normalizedWorktree, normalizedMove)
+          if (!moveInWorkspace) {
+            throw new Error(
+              `The "apply_patch" tool does not allow operations on files outside the workspace, and workspace is "${instance.directory}"`
+            )
+          }
         }
       }
     }
