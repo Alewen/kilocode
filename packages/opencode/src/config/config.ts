@@ -373,6 +373,31 @@ export const Info = Schema.Struct({
       }),
     }),
   ),
+  // kilocode_change start
+  bwrap: Schema.optional(
+    Schema.Struct({
+      ro_bind: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
+        description: "Paths to mount read-only in the bwrap sandbox (e.g. /usr, /etc, /home/user/.bun)",
+      }),
+      tmpfs: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
+        description: "Paths to mount as empty tmpfs in the bwrap sandbox (e.g. /root, /var, /opt)",
+      }),
+      symlink: Schema.optional(
+        Schema.mutable(
+          Schema.Array(Schema.Struct({ from: Schema.String, to: Schema.String })),
+        ),
+      ).annotate({
+        description: "Symlinks to create in the bwrap sandbox (e.g. {from: 'usr/bin', to: '/bin'})",
+      }),
+      rw_bind: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
+        description: "Paths under /home to mount read-write in the bwrap sandbox (e.g. /home/user/.kilo for skills)",
+      }),
+    }),
+  ).annotate({
+    description:
+      "Bubblewrap sandbox configuration for the bash tool. Project-level config can only add restrictions (additional tmpfs paths), not relax global settings.",
+  }),
+  // kilocode_change end
 })
   .annotate({ identifier: "Config" })
   .pipe(

@@ -305,12 +305,93 @@ const ask = Effect.fn("ShellTool.ask")(function* (ctx: Tool.Context, scan: Scan,
   })
 })
 
-function wrapWithBwrap(command: string, cwd: string): string {
+function wrapWithBwrap(
+  command: string,
+  cwd: string,
+  cfg?: { ro_bind?: string[]; tmpfs?: string[]; symlink?: { from: string; to: string }[]; rw_bind?: string[] },
+): string {
   const escapedCmd = command.replace(/'/g, "'\\''")
-  return `bwrap --bind '${cwd}' / --tmpfs /tmp --dev /dev --proc /proc --unshare-user --unshare-pid --chdir / --new-session bash -c '${escapedCmd}'`
+  const home = os.homedir()
+
+  const ro = cfg?.ro_bind ?? ["/usr", "/etc"]
+  const tmps = cfg?.tmpfs ?? [
+    "/tmp",
+    "/root",
+    "/var",
+    "/opt",
+    "/mnt",
+    "/media",
+    "/run",
+    "/srv",
+    "/boot",
+  ]
+  const syms = cfg?.symlink ?? [
+    { from: "usr/bin", to: "/bin" },
+    { from: "usr/lib", to: "/lib" },
+    { from: "usr/lib64", to: "/lib64" },
+    { from: "usr/sbin", to: "/sbin" },
+  ]
+  const rw = cfg?.rw_bind ?? []
+
+  const bins = new Set<string>()
+  for (const p of ro) {
+    bins.add(path.join(p, "bin"))
+    bins.add(path.join(p, "sbin"))
+  }
+  for (const b of ["/usr/local/sbin", "/usr/local/bin", "/usr/sbin", "/usr/bin", "/sbin", "/bin"]) {
+    bins.add(b)
+  }
+  const sandboxPath = [...bins].join(":")
+
+  const fullCmd = `export PATH='${sandboxPath}'; ${escapedCmd}`
+
+  const args: string[] = ["bwrap"]
+
+  const sysRo: string[] = []
+  const homeRo: string[] = []
+  for (const p of ro) {
+    if (p.startsWith(home)) {
+      homeRo.push(p)
+    } else {
+      sysRo.push(p)
+    }
+  }
+
+  for (const p of sysRo) {
+    args.push("--ro-bind", `'${p}'`, `'${p}'`)
+  }
+
+  for (const s of syms) {
+    args.push("--symlink", `'${s.from}'`, `'${s.to}'`)
+  }
+
+  for (const p of tmps) {
+    args.push("--tmpfs", `'${p}'`)
+  }
+
+  args.push("--tmpfs", "/home")
+  args.push("--bind", `'${cwd}'`, `'${cwd}'`)
+  for (const p of homeRo) {
+    args.push("--ro-bind", `'${p}'`, `'${p}'`)
+  }
+  for (const p of rw) {
+    args.push("--bind", `'${p}'`, `'${p}'`)
+  }
+
+  args.push("--dev", "/dev", "--proc", "/proc", "--new-session")
+  args.push("--chdir", `'${cwd}'`)
+  args.push("bash", "-c", `'${fullCmd}'`)
+
+  return args.join(" ")
 }
 
-function cmd(shell: string, command: string, cwd: string, env: NodeJS.ProcessEnv) {
+function cmd(
+  shell: string,
+  command: string,
+  cwd: string,
+  env: NodeJS.ProcessEnv,
+  bwrap?: { ro_bind?: string[]; tmpfs?: string[]; symlink?: { from: string; to: string }[]; rw_bind?: string[] },
+) {
   if (process.platform === "win32" && Shell.ps(shell)) {
     return ChildProcess.make(shell, ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command], {
       cwd,
@@ -321,7 +402,7 @@ function cmd(shell: string, command: string, cwd: string, env: NodeJS.ProcessEnv
   }
 
   const isBash = shell.includes("bash") || shell === "sh" || shell === "/bin/sh"
-  const wrappedCommand = isBash ? wrapWithBwrap(command, cwd) : command
+  const wrappedCommand = isBash ? wrapWithBwrap(command, cwd, bwrap) : command
 
   return ChildProcess.make(wrappedCommand, [], {
     shell: isBash ? "/bin/bash" : shell,
@@ -490,7 +571,16 @@ export const ShellTool = Tool.define(
 
       const code: number | null = yield* Effect.scoped(
         Effect.gen(function* () {
-          const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env))
+          const cfg = yield* Config.Service
+          const global = yield* cfg.getGlobal()
+          const merged = yield* cfg.get()
+          const bwrapCfg = {
+            ro_bind: global.bwrap?.ro_bind,
+            rw_bind: global.bwrap?.rw_bind,
+            symlink: global.bwrap?.symlink,
+            tmpfs: merged.bwrap?.tmpfs,
+          }
+          const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env, bwrapCfg))
 
           yield* Effect.forkScoped(
             Stream.runForEach(Stream.decodeText(handle.all), (chunk) => {
