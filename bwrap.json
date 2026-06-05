@@ -1,0 +1,31 @@
+{
+  "bwrap": {
+    "tmpfs_force": ["/home"],
+    "tmpfs": ["/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"],
+    "symlink": [
+      {"from": "usr/bin", "to": "/bin"},
+      {"from": "usr/lib", "to": "/lib"},
+      {"from": "usr/lib64", "to": "/lib64"},
+      {"from": "usr/sbin", "to": "/sbin"}
+    ],
+    "ro_bind": ["/usr", "/etc"],
+    "rw_bind": [],
+    "--dev": "/dev",
+    "--proc": "/proc",
+    "--new-session": true,
+    "--bind": "$CWD 当前工作目录一定要执行 bind，允许读写",
+    "--chdir": "$CWD 沙箱启动后，把当前目录切换到工作目录",
+    "cwd": "/ -- 安全兜底，避免父进程的影响",
+    "PATH": ["/usr/local/sbin","/usr/local/bin","/usr/sbin","/usr/bin","/sbin","/bin"],
+    "配置文件":[
+        "1.全局配置 ~/.config/kilo/kilo.jsonc",
+        "2.KILO_CONFIG 环境变量指向的文件",
+        "3.项目根目录的 kilo.jsonc / kilo.json",
+        "4.项目根目录的 opencode.jsonc / opencode.json",
+        "5.kilo/ 目录下的配置文件",
+        "6.kilocode/ 目录下的配置文件",
+        "7.opencode/ 目录下的配置文件",
+        "8.KILO_CONFIG_CONTENT 环境变量"
+    ]
+  }
+}
