@@ -305,6 +305,11 @@ const ask = Effect.fn("ShellTool.ask")(function* (ctx: Tool.Context, scan: Scan,
   })
 })
 
+function wrapWithBwrap(command: string, cwd: string): string {
+  const escapedCmd = command.replace(/'/g, "'\\''")
+  return `bwrap --bind '${cwd}' / --tmpfs /tmp --dev /dev --proc /proc --unshare-user --unshare-pid --chdir / --new-session bash -c '${escapedCmd}'`
+}
+
 function cmd(shell: string, command: string, cwd: string, env: NodeJS.ProcessEnv) {
   if (process.platform === "win32" && Shell.ps(shell)) {
     return ChildProcess.make(shell, ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command], {
@@ -315,9 +320,12 @@ function cmd(shell: string, command: string, cwd: string, env: NodeJS.ProcessEnv
     })
   }
 
-  return ChildProcess.make(command, [], {
-    shell,
-    cwd,
+  const isBash = shell.includes("bash") || shell === "sh" || shell === "/bin/sh"
+  const wrappedCommand = isBash ? wrapWithBwrap(command, cwd) : command
+
+  return ChildProcess.make(wrappedCommand, [], {
+    shell: isBash ? "/bin/bash" : shell,
+    cwd: isBash ? "/" : cwd,
     env,
     stdin: "ignore",
     detached: process.platform !== "win32",
