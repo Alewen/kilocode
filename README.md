@@ -26,6 +26,9 @@
 - 关于我修改的详细日志，请阅读 ChineseChangLog.md
 - 添加 kiloHistory 功能，让你可以在不打开 vscode 的情况下浏览 kilo 对话历史
 ![图片描述](kiloHistory/kiloHistory.png)
+- 正确的使用 kilo-write.sh 和 kilo-edit.sh，使 ai 辅助编程的每一步都可以追溯
+![图片描述](kilocli/kilowrite.png)
+![图片描述](kilocli/kiloedit.png)
 
 ## Quick Links
 
