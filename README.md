@@ -19,6 +19,22 @@
 - ⚡ Inline autocomplete suggestions
 - 🤖 Latest AI models
 - 🎁 API keys optional
+- 该开源库，是基于 https://github.com/Kilo-Org/kilocode 的分支 v7.3.16 版本做的迭代开发
+- 我所作的最重要的更改，就是将 ai 关进笼子里面
+- 我的开发环境是 ubuntu 24.04.1，为了把 ai 关进笼子，我使用了轻量级的沙箱 bwrap [bubblewrap 0.9.0]
+- 安装完该插件之后，你需要手动配置 /home/username/.config/kilo/kilo.jsonc 这个配置文件最下面添加
+- "bwrap": {
+-    "tmpfs": ["/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"],
+-    "symlink": [
+-      {"from": "usr/bin", "to": "/bin"},
+-      {"from": "usr/lib", "to": "/lib"},
+-      {"from": "usr/lib64", "to": "/lib64"},
+-      {"from": "usr/sbin", "to": "/sbin"}
+-    ],
+-    "ro_bind": ["/usr", "/etc", "/home/username/.local/share/kilo/"],
+-    "rw_bind": ["/home/username/.kilo"]
+-  }
+- 关于这些配置的详细说明，我后续会补充详细文档
 
 ## Quick Links
 
