@@ -37,3 +37,17 @@
 
 这个里面是几个比较好用的 skill，在安装插件的时候，并不会被默认包含
 你需要将该目录下所有 skills 直接复制到 /home/username/.kilo/skills/ 目录下即可
+
+# 增加了 kiloHistory 文件夹，离线查看所有 kilo 对话记录
+
+部署并安装该服务之后，使你可以通过局域网 ip 地址，浏览全部的 kilo 对话历史记录
+包括 kilo ui 不显示的子会话也会展现， ![图片描述](kiloHistory/kiloHistory.png)
+
+这个里面的代码是纯静态的，不需要编译，部署它的方式就是在 linux 系统里面
+首先安装好 nginx 服务，有了这个服务之后，会出现 /var/www/html/ 文件夹
+直接将该项目的 kiloHistory 整个文件夹复制到 /var/www/html/ 下面
+然后，执行 /var/www/html/kiloHistory/install-kiloHistory.sh 这个脚本
+它会安装一个名为 kiloHistory.service 的用户级别的服务
+
+注意：默认情况下 nginx 会开放 80 端口，这个服务会反代绑定 8080 端口，
+使得静态网页可以读取 kilo.db 的数据库内容，如果你觉得这些端口已被占用，请自行更换
