@@ -32,3 +32,8 @@
 设置为 ro_bind 的只读目录，类似于挂载效果，rw_bind 为可读写的目录
 
 以上的限制，可以在代码层级，最大限度的 ai 操作范围，且允许它执行诸如 find, mv, touch, echo 等正常合规命令
+
+# 添加了 extraSkills 文件夹
+
+这个里面是几个比较好用的 skill，在安装插件的时候，并不会被默认包含
+你需要将该目录下所有 skills 直接复制到 /home/username/.kilo/skills/ 目录下即可
