@@ -23,7 +23,7 @@
 - 我所作的最重要的更改，就是将 ai 关进笼子里面
 - 我的开发环境是 ubuntu 24.04.1，为了把 ai 关进笼子，我使用了轻量级的沙箱 bwrap [bubblewrap 0.9.0]
 - 安装完该插件之后，你需要手动修改 /home/username/.config/kilo/kilo.jsonc 添加一个配置
-- 关于我修改的详细日志，请阅读 ChineseChangLog.md
+- 关于我修改的详细日志，请阅读 [ChineseChangLog.md](./ChineseChangLog.md) 
 - 添加 kiloHistory 功能，让你可以在不打开 vscode 的情况下浏览 kilo 对话历史
 ![图片描述](kiloHistory/kiloHistory.png)
 - 正确的使用 kilo-write.sh 和 kilo-edit.sh，使 ai 辅助编程的每一步都可以追溯
