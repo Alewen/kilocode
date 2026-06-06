@@ -1,0 +1,9 @@
+{
+  "name": "kilocli",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "chardet": "^2.1.1",
+    "iconv-lite": "^0.7.2"
+  }
+}
