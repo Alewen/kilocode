@@ -47,6 +47,7 @@ import { Todo } from "../session/todo"
 import { LSP } from "@/lsp/lsp"
 import { Instruction } from "../session/instruction"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { NamedError } from "@opencode-ai/core/util/error"
 import { Bus } from "../bus"
 import { Agent } from "../agent/agent"
 import { Git } from "../git" // kilocode_change
@@ -106,6 +107,7 @@ export const layer: Layer.Layer<
     const agents = yield* Agent.Service
     const skill = yield* Skill.Service
     const truncate = yield* Truncate.Service
+    const bus = yield* Bus.Service
 
     const invalid = yield* InvalidTool
     const task = yield* TaskTool
@@ -190,7 +192,16 @@ export const layer: Layer.Layer<
           const namespace = path.basename(match, path.extname(match))
           // `match` is an absolute filesystem path from `Glob.scanSync(..., { absolute: true })`.
           // Import it as `file://` so Node on Windows accepts the dynamic import.
-          const mod = yield* Effect.promise(() => import(pathToFileURL(match).href))
+          const mod = yield* Effect.promise(() => import(pathToFileURL(match).href)).pipe(
+            Effect.catchAll((err) => {
+              const message = err instanceof Error ? err.message : String(err)
+              log.error("failed to load custom tool", { file: match, error: message })
+              bus.publish(Session.Event.Error, {
+                error: new NamedError.Unknown({ message: `Failed to load custom tool "${match}": ${message}` }).toObject(),
+              })
+              return Effect.succeed({})
+            }),
+          )
           for (const [id, def] of Object.entries<ToolDefinition>(mod)) {
             custom.push(fromPlugin(id === "default" ? namespace : `${namespace}_${id}`, def))
           }
