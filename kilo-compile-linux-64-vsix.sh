@@ -1,10 +1,31 @@
 #!/usr/bin/env bash
-# 该脚本支持编译的 kilo 源码来自 gitclone https://github.com/Kilo-Org/kilocode.git v7.3.1
-# 整个编译 vsix 的耗时大约 260 秒，前提是 bun install 已经在本地有缓存
+# 该脚本支持编译的 kilo 源码来自 gitclone https://github.com/Kilo-Org/kilocode.git
+# 用法: ./kilo-compile-linux-64-vsix.sh [version]
+#   不带参数：使用现有版本号编译
+#   带参数：修改版本号后编译（例如: ./kilo-compile-linux-64-vsix.sh 7.3.16.1）
 set -e
 
-# 获取脚本所在目录（源码根目录）
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# 如果提供了版本号参数，同步修改包版本
+if [ -n "$1" ]; then
+    NEW_VERSION="$1"
+    echo "=========================================="
+    echo " 正在更新版本号到: $NEW_VERSION"
+    echo "=========================================="
+    # 修改根目录版本
+    sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" "$SCRIPT_DIR/package.json" && echo "  更新: package.json"
+    # 所有需要同步的包列表
+    PKGS="core kilo-vscode opencode kilo-gateway kilo-telemetry kilo-i18n kilo-ui kilo-indexing kilo-jetbrains ui sdk/js plugin script storybook kilo-docs kilo-vscode/tests upstream"
+    for pkg in $PKGS; do
+        if [ -f "$SCRIPT_DIR/packages/$pkg/package.json" ]; then
+            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" "$SCRIPT_DIR/packages/$pkg/package.json" && echo "  更新: packages/$pkg/package.json"
+        elif [ "$pkg" = "upstream" ]; then
+            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" "$SCRIPT_DIR/script/upstream/package.json" 2>/dev/null && echo "  更新: script/upstream/package.json"
+        fi
+    done
+    echo "  版本同步完成"
+fi
 
 echo "=========================================="
 echo " 源码目录: $SCRIPT_DIR 打包 Kilo VS Code 扩展 (Linux-x64)"
