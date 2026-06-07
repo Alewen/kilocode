@@ -105,11 +105,11 @@
 - When suggesting a code review, choose the right command for the action prompt:
 - 建议代码审查时，请为操作提示选择正确的命令：
 
-  - `/local-review-uncommitted` — for reviewing uncommitted working-tree changes (staged, unstaged, and untracked files).
-  - /local-review-uncommitted — 用于审查未提交的工作树更改（已暂存、未暂存和未跟踪的文件）。
+- `/local-review-uncommitted` — for reviewing uncommitted working-tree changes (staged, unstaged, and untracked files).
+- `/local-review-uncommitted` — 用于审查未提交的工作树更改（已暂存、未暂存和未跟踪的文件）。
 
-  - `/local-review` — for reviewing all committed changes on the current branch vs its base branch.
-  - /local-review — 用于审查当前分支相对于其基础分支的所有已提交更改。
+- `/local-review` — for reviewing all committed changes on the current branch vs its base branch.
+- `/local-review` — 用于审查当前分支相对于其基础分支的所有已提交更改。
 
-  - Prefer `/local-review-uncommitted` when the work you just did has not been committed yet.
-  - 当刚完成的工作尚未提交时，优先使用 /local-review-uncommitted。
+- Prefer `/local-review-uncommitted` when the work you just did has not been committed yet.
+- 当刚完成的工作尚未提交时，优先使用 `/local-review-uncommitted`

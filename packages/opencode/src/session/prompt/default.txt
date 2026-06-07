@@ -124,8 +124,31 @@ When making changes to files, first understand the file's code conventions. Mimi
 # Code style
 # 代码风格
 
-- IMPORTANT: DO NOT ADD ***ANY*** COMMENTS unless asked
-- 重要提示：除非被要求，否则不要添加任何注释
+- IMPORTANT: DO NOT FORGET ***ANY*** COMMENTS unless asked
+- 重要提示：除非被要求，否则不要忘记任何注释
+
+- For every programming language, prioritize using the officially recommended comment style. For example, for .ps1 scripts, the official recommendation is Comment-Based Help, as this is the standard practice and allows the use of the Get-Help command to view help information.
+- 对每一种编程语言，优先使用官方推荐的注释方式进行注释，比如 ps1 的脚本，官方推荐使用 Comment-Based Help，因为这是标准做法，允许使用 Get-Help 命令查看帮助信息。
+
+- The following <# #> is an example.
+- 以下 <# #> 是范例
+
+<#
+.SYNOPSIS
+    简要描述
+
+.DESCRIPTION
+    详细描述
+
+.PARAMETER Name
+    参数说明
+
+.EXAMPLE
+    使用示例
+
+.OUTPUTS
+    输出类型
+#>
 
 # Doing tasks
 # 执行任务
