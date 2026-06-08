@@ -192,15 +192,19 @@ export const layer: Layer.Layer<
           const namespace = path.basename(match, path.extname(match))
           // `match` is an absolute filesystem path from `Glob.scanSync(..., { absolute: true })`.
           // Import it as `file://` so Node on Windows accepts the dynamic import.
-          const mod = yield* Effect.promise(() => import(pathToFileURL(match).href)).pipe(
-            Effect.catch((err) => {
-              const message = err instanceof Error ? err.message : String(err)
-              log.error("failed to load custom tool", { file: match, error: message })
-              bus.publish(Session.Event.Error, {
-                error: new NamedError.Unknown({ message: `Failed to load custom tool "${match}": ${message}` }).toObject(),
-              })
-              return Effect.succeed({})
-            }),
+          const mod = yield* Effect.tryPromise(() => import(pathToFileURL(match).href)).pipe(
+            Effect.catch((err) =>
+              Effect.gen(function* () {
+                const message = err instanceof Error ? err.message : String(err)
+                log.error("failed to load custom tool", { file: match, error: message })
+                yield* bus.publish(Session.Event.Error, {
+                  error: new NamedError.Unknown({
+                    message: `Failed to load custom tool "${match}": ${message}`,
+                  }).toObject(),
+                })
+                return {}
+              }),
+            ),
           )
           for (const [id, def] of Object.entries<ToolDefinition>(mod)) {
             custom.push(fromPlugin(id === "default" ? namespace : `${namespace}_${id}`, def))
