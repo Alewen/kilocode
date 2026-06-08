@@ -10,7 +10,7 @@ import { NamedError } from "@opencode-ai/core/util/error"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Auth } from "../auth"
 import { Env } from "../env"
-import { applyEdits, findNodeAtLocation, modify, parseTree } from "jsonc-parser" // kilocode_change - parseTree/findNodeAtLocation used in patchJsonc
+import { applyEdits, findNodeAtLocation, modify, parseTree, parse as parseJsonc } from "jsonc-parser" // kilocode_change - parseTree/findNodeAtLocation used in patchJsonc
 import { type InstanceContext } from "../project/instance"
 import { InstallationLocal, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { existsSync } from "fs"
@@ -551,8 +551,76 @@ export const layer = Layer.effect(
       return yield* loadConfig(text, { path: filepath })
     })
 
+    // kilocode_change start - Initialize global config with default bwrap settings
+    const initializeGlobalConfig = Effect.fnUntraced(function* () {
+      log.info("initializeGlobalConfig: starting")
+      const homeDir = os.homedir()
+      const globalConfigPath = path.join(Global.Path.config, "kilo.jsonc")
+      log.info("initializeGlobalConfig: global config path", { path: globalConfigPath })
+      
+      const defaultBwrap = {
+        tmpfs: ["/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"],
+        symlink: [
+          { from: "usr/bin", to: "/bin" },
+          { from: "usr/lib", to: "/lib" },
+          { from: "usr/lib64", to: "/lib64" },
+          { from: "usr/sbin", to: "/sbin" }
+        ],
+        ro_bind: ["/usr", "/etc", path.join(homeDir, ".local", "share", "kilo")],
+        rw_bind: [path.join(homeDir, ".kilo")]
+      }
+
+      // Check if config file exists
+      const configExists = yield* fs.existsSafe(globalConfigPath)
+      log.info("initializeGlobalConfig: file exists?", { exists: configExists, path: globalConfigPath })
+
+      if (!configExists) {
+        // File doesn't exist - create it with default bwrap config
+        log.info("initializeGlobalConfig: Creating global config with default bwrap settings", { path: globalConfigPath })
+        const defaultConfig = {
+          $schema: "https://app.kilo.ai/config.json",
+          bwrap: defaultBwrap
+        }
+        yield* fs.writeFileString(globalConfigPath, JSON.stringify(defaultConfig, null, 2)).pipe(
+          Effect.tapError((e) => Effect.sync(() => log.error("initializeGlobalConfig: write failed", { error: e }))),
+          Effect.catch(() => Effect.void)
+        )
+        log.info("initializeGlobalConfig: file created successfully")
+        return
+      }
+
+      // File exists - check if it has bwrap node
+      const currentText = yield* readConfigFile(globalConfigPath)
+      if (!currentText) {
+        log.info("initializeGlobalConfig: file is empty")
+        return
+      }
+
+      try {
+        const currentConfig = parseJsonc(currentText)
+        log.info("initializeGlobalConfig: parsed config", { hasBwrap: !!currentConfig?.bwrap })
+        if (currentConfig && !currentConfig.bwrap) {
+          // File exists but no bwrap node - add it
+          log.info("initializeGlobalConfig: Adding default bwrap settings to global config", { path: globalConfigPath })
+          const updated = patchJsonc(currentText, { bwrap: defaultBwrap })
+          yield* fs.writeFileString(globalConfigPath, updated).pipe(
+            Effect.tapError((e) => Effect.sync(() => log.error("initializeGlobalConfig: write failed", { error: e }))),
+            Effect.catch(() => Effect.void)
+          )
+          log.info("initializeGlobalConfig: bwrap added successfully")
+        } else if (currentConfig && currentConfig.bwrap) {
+          log.info("initializeGlobalConfig: already has bwrap, skipping")
+        }
+      } catch (e) {
+        log.error("initializeGlobalConfig: error parsing config", { error: e })
+        // Invalid JSON - do nothing
+      }
+    })
+    // kilocode_change end
+
     const loadGlobal = Effect.fnUntraced(function* () {
       yield* Effect.promise(() => KilocodeConfig.migrateBashPermission()) // kilocode_change
+      yield* initializeGlobalConfig() // kilocode_change
       let result: Info = {}
       result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "config.json")))
       // kilocode_change start
