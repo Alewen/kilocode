@@ -193,7 +193,7 @@ export const layer: Layer.Layer<
           // `match` is an absolute filesystem path from `Glob.scanSync(..., { absolute: true })`.
           // Import it as `file://` so Node on Windows accepts the dynamic import.
           const mod = yield* Effect.promise(() => import(pathToFileURL(match).href)).pipe(
-            Effect.catchAll((err) => {
+            Effect.catch((err) => {
               const message = err instanceof Error ? err.message : String(err)
               log.error("failed to load custom tool", { file: match, error: message })
               bus.publish(Session.Event.Error, {
