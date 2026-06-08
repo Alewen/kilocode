@@ -19,6 +19,7 @@ import { ShellID } from "./shell/id"
 import * as Truncate from "./truncate"
 import { Plugin } from "@/plugin"
 import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
+import * as ShellOutput from "@/kilocode/tool/shell-output" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
@@ -569,6 +570,8 @@ export const ShellTool = Tool.define(
         },
       })
 
+      const decoder = ShellOutput.create() // kilocode_change
+
       const code: number | null = yield* Effect.scoped(
         Effect.gen(function* () {
           const cfg = yield* Config.Service
@@ -582,8 +585,11 @@ export const ShellTool = Tool.define(
           }
           const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env, bwrapCfg))
 
+          const output = handle.all as Stream.Stream<Uint8Array, unknown, never> // kilocode_change
           yield* Effect.forkScoped(
-            Stream.runForEach(Stream.decodeText(handle.all), (chunk) => {
+            // kilocode_change - decode Windows shell output before it reaches metadata/output.
+            Stream.runForEach(Stream.map(output, (bytes) => decoder.write(bytes)), (chunk) => {
+              if (!chunk) return Effect.void
               const size = Buffer.byteLength(chunk, "utf-8")
               list.push({ text: chunk, size })
               used += size
@@ -658,6 +664,18 @@ export const ShellTool = Tool.define(
           return exit.kind === "exit" ? exit.code : null
         }),
       ).pipe(Effect.orDie)
+      // kilocode_change start
+      const rest = decoder.end()
+      if (rest) {
+        const size = Buffer.byteLength(rest, "utf-8")
+        list.push({ text: rest, size })
+        used += size
+        last = preview(last + rest)
+        if (file) sink?.write(rest)
+        else full += rest
+        yield* ctx.metadata({ metadata: { output: last, description: input.description } })
+      }
+      // kilocode_change end
 
       const meta: string[] = []
       if (expired) {
@@ -756,6 +774,12 @@ export const ShellTool = Tool.define(
                   description: params.description ?? params.command, // kilocode_change
                 },
                 ctx,
+              ).pipe(
+                Effect.provideService(Config.Service, config),
+                Effect.provideService(ChildProcessSpawner, spawner),
+                Effect.provideService(AppFileSystem.Service, fs),
+                Effect.provideService(Truncate.Service, trunc),
+                Effect.provideService(Plugin.Service, plugin),
               )
             }),
         }
