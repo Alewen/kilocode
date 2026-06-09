@@ -16,7 +16,7 @@ When the user requests to open settings or settings file, use the bundled Python
 Execute the script using the bash tool:
 
 ```bash
-python "C:\Users\shaoke\.kilo\skills\open-vscode-setting\scripts\open-vscode-setting.py"
+python "scripts/open-vscode-setting.py"
 ```
 
 The script automatically determines the correct settings file path based on the operating system and opens it in the current VSCode instance.

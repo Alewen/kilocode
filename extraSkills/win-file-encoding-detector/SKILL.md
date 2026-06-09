@@ -26,17 +26,17 @@ The main detection script is located at: `scripts/win-file-encoding-detector.ps1
 
 ```powershell
 # Basic usage - detect encoding only
-powershell -File "C:\Users\shaoke\.kilo\skills\win-file-encoding-detector\scripts\win-file-encoding-detector.ps1" -FilePath "path\to\your\file.txt"
+powershell -File "scripts/win-file-encoding-detector.ps1" -FilePath "path\to\your\file.txt"
 
 # Detect encoding AND line endings
-powershell -File "C:\Users\shaoke\.kilo\skills\win-file-encoding-detector\scripts\win-file-encoding-detector.ps1" -FilePath "path\to\your\file.txt" -CheckLineEnding
+powershell -File "scripts/win-file-encoding-detector.ps1" -FilePath "path\to\your\file.txt" -CheckLineEnding
 ```
 
 ### Calling from PowerShell Directly (Dot-Sourcing)
 
 ```powershell
 # Load the script
-. "C:\Users\shaoke\.kilo\skills\win-file-encoding-detector\scripts\win-file-encoding-detector.ps1"
+. "scripts/win-file-encoding-detector.ps1"
 
 # Call the main function
 $result = Check-FileFormat -FilePath "path\to\your\file.txt" -CheckLineEnding
@@ -104,11 +104,11 @@ Files outside this range will return an error.
 
 ```powershell
 # Example 1: Detect a file's encoding
-$result = powershell -File "C:\Users\shaoke\.kilo\skills\win-file-encoding-detector\scripts\win-file-encoding-detector.ps1" -FilePath "document.txt"
+$result = powershell -File "scripts/win-file-encoding-detector.ps1" -FilePath "document.txt"
 # Output JSON with encoding information
 
 # Example 2: Detect encoding and line endings
-powershell -File "C:\Users\shaoke\.kilo\skills\win-file-encoding-detector\scripts\win-file-encoding-detector.ps1" -FilePath "code.py" -CheckLineEnding
+powershell -File "scripts/win-file-encoding-detector.ps1" -FilePath "code.py" -CheckLineEnding
 ```
 
 ## Example Output
@@ -116,7 +116,7 @@ powershell -File "C:\Users\shaoke\.kilo\skills\win-file-encoding-detector\script
 ```json
 {
     "Success": true,
-    "FilePath": "F:\\wtoe\\00.WinScripts\\ckFile_standalone.ps1",
+    "FilePath": "F:\\Winscripts\\ckFile_standalone.ps1",
     "FileSize": "16.18 K",
     "FileSizeBytes": 16569,
     "Encoding": "GB2312",

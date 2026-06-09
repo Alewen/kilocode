@@ -1,78 +1,115 @@
 ---
 name: kilo-db-query
-description: Query Kilo database to view session history, messages, and parts with PowerShell or shell scripts
+description: Query Kilo database to view session history with PowerShell or shell scripts
 ---
 
 # Skill: kilo-db-query
 
-Provide three PowerShell (Windows) and three shell (Linux/macOS) scripts for querying the Kilo database to view session history, messages, and parts.
+Provide scripts for querying the Kilo database to view session history, messages, and parts.
 
 ## When to Use
 
-This skill should be used when:
+Use this skill when:
 - Querying Kilo's session history
 - Viewing messages from a specific session
 - Examining parts from a specific session, optionally with filtering
+- Querying messages or parts within a specific time range
 
 ## Usage
 
 ### Windows (PowerShell)
 
-To query Kilo sessions, execute `scripts/kilosessions.ps1`.
-To query Kilo messages, execute `scripts/kilomessage.ps1` with a session ID.
-To query Kilo parts, execute `scripts/kilopart.ps1` with a session ID and optional filter.
+> **Important:** Use `pwsh` (PowerShell Core) instead of `powershell` (Windows PowerShell 5.1). Otherwise, time parsing may fail.
+
+Query Kilo sessions with `pwsh -File scripts/kilosessions.ps1`.
+Query Kilo messages with `pwsh -File scripts/kilomessage.ps1 <session_id>`.
+Query Kilo parts with `pwsh -File scripts/kilopart.ps1 <session_id> [<filter>]`.
+Query messages by time range with `pwsh -File scripts/kilomessage_time.ps1 <session_id> <start_time> <end_time>`.
+Query parts by time range with `pwsh -File scripts/kilopart_time.ps1 <session_id> <start_time> <end_time>`.
 
 #### Query Sessions (PowerShell)
 
 List all Kilo sessions:
 ```powershell
-scripts/kilosessions.ps1
+pwsh -File scripts/kilosessions.ps1
 ```
 
 List latest 10 sessions:
 ```powershell
-scripts/kilosessions.ps1 -Limit 10
+pwsh -File scripts/kilosessions.ps1 -Limit 10
 ```
 
 #### Query Messages (PowerShell)
 
 List all messages from a specific session:
 ```powershell
-scripts/kilomessage.ps1 <session_id>
+pwsh -File scripts/kilomessage.ps1 <session_id>
 ```
 
 List latest 10 messages:
 ```powershell
-scripts/kilomessage.ps1 <session_id> -Limit 10
+pwsh -File scripts/kilomessage.ps1 <session_id> -Limit 10
+```
+
+#### Query Messages by Time Range (PowerShell)
+
+```powershell
+pwsh -File scripts/kilomessage_time.ps1 <session_id> <start_time> <end_time>
+```
+
+Time format: `"2026-06-05 12:00:01"` / `"06-05 12:00:01"` / `"05 12:00:01"` / `"12:00:01"`
+
+Examples:
+```powershell
+pwsh -File scripts/kilomessage_time.ps1 ses_xxx "2026-06-09 11:50" "2026-06-09 11:54"
+pwsh -File scripts/kilomessage_time.ps1 ses_xxx "06-09 11:50" "11:54"
+pwsh -File scripts/kilomessage_time.ps1 ses_xxx "11:50" "11:54"
 ```
 
 #### Query Parts (PowerShell)
 
 List all parts from a specific session:
 ```powershell
-scripts/kilopart.ps1 <session_id>
+pwsh -File scripts/kilopart.ps1 <session_id>
 ```
 
 List parts matching a filter:
 ```powershell
-scripts/kilopart.ps1 <session_id> <filter>
+pwsh -File scripts/kilopart.ps1 <session_id> <filter>
 ```
 
 List latest 10 parts:
 ```powershell
-scripts/kilopart.ps1 <session_id> -Limit 10
+pwsh -File scripts/kilopart.ps1 <session_id> -Limit 10
 ```
 
 List latest 10 parts matching a filter:
 ```powershell
-scripts/kilopart.ps1 <session_id> <filter> -Limit 10
+pwsh -File scripts/kilopart.ps1 <session_id> <filter> -Limit 10
+```
+
+#### Query Parts by Time Range (PowerShell)
+
+```powershell
+pwsh -File scripts/kilopart_time.ps1 <session_id> <start_time> <end_time>
+```
+
+Time format: same as `kilomessage_time.ps1`
+
+Examples:
+```powershell
+pwsh -File scripts/kilopart_time.ps1 ses_xxx "2026-06-09 11:50" "2026-06-09 11:54"
+pwsh -File scripts/kilopart_time.ps1 ses_xxx "06-09 11:50" "11:54"
+pwsh -File scripts/kilopart_time.ps1 ses_xxx "11:50" "11:54"
 ```
 
 ### Linux/macOS (Shell)
 
-To query Kilo sessions, execute `scripts/kilosessions.sh`.
-To query Kilo messages, execute `scripts/kilomessage.sh` with a session ID.
-To query Kilo parts, execute `scripts/kilopart.sh` with a session ID and optional filter.
+Query Kilo sessions with `scripts/kilosessions.sh`.
+Query Kilo messages with `scripts/kilomessage.sh <session_id>`.
+Query Kilo parts with `scripts/kilopart.sh <session_id> [<filter>]`.
+Query messages by time range with `scripts/kilomessage_time.sh <session_id> <start_time> <end_time>`.
+Query parts by time range with `scripts/kilopart_time.sh <session_id> <start_time> <end_time>`.
 
 #### Query Sessions (Shell)
 
@@ -98,6 +135,14 @@ List latest 10 messages:
 scripts/kilomessage.sh <session_id> -L 10
 ```
 
+#### Query Messages by Time Range (Shell)
+
+```bash
+scripts/kilomessage_time.sh <session_id> <start_time> <end_time>
+```
+
+Time format: `"2026-06-05 12:00:01"` / `"06-05 12:00:01"` / `"05 12:00:01"` / `"12:00:01"`
+
 #### Query Parts (Shell)
 
 List all parts from a specific session:
@@ -120,7 +165,15 @@ List latest 10 parts matching a filter:
 scripts/kilopart.sh <session_id> <filter> -L 10
 ```
 
+#### Query Parts by Time Range (Shell)
+
+```bash
+scripts/kilopart_time.sh <session_id> <start_time> <end_time>
+```
+
+Time format: same as `kilomessage_time.sh`
+
 ## Database Path
 
-- PowerShell scripts use database path `C:\Users\shaoke\.local\share\kilo\kilo.db`
-- Shell scripts use database path `~/.local/share/kilo/kilo.db`
+- PowerShell scripts: `$env:USERPROFILE\.local\share\kilo\kilo.db`
+- Shell scripts: `~/.local/share/kilo/kilo.db`

@@ -27,17 +27,17 @@ The main conversion script is located at: `scripts/win-file-encoding-converter.p
 
 ```powershell
 # Basic usage
-powershell -File "C:\Users\shaoke\.kilo\skills\win-file-encoding-converter\scripts\win-file-encoding-converter.ps1" "path\to\your\file.txt" "SourceEncoding" "TargetEncoding"
+powershell -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "SourceEncoding" "TargetEncoding"
 
 # With quiet mode (no output)
-powershell -File "C:\Users\shaoke\.kilo\skills\win-file-encoding-converter\scripts\win-file-encoding-converter.ps1" "path\to\your\file.txt" "SourceEncoding" "TargetEncoding" -Quiet
+powershell -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "SourceEncoding" "TargetEncoding" -Quiet
 ```
 
 ### Calling from PowerShell Directly (Dot-Sourcing)
 
 ```powershell
 # Load the script
-. "C:\Users\shaoke\.kilo\skills\win-file-encoding-converter\scripts\win-file-encoding-converter.ps1"
+. "scripts/win-file-encoding-converter.ps1"
 
 # Call the main function
 $result = FileEncodingConverter -FilePath "path\to\your\file.txt" -SourceEncoding "SourceEncoding" -TargetEncoding "TargetEncoding"
@@ -103,13 +103,13 @@ The script follows these steps:
 
 ```powershell
 # Example 1: Convert from GBK to UTF-8 (without BOM)
-powershell -File "C:\Users\shaoke\.kilo\skills\win-file-encoding-converter\scripts\win-file-encoding-converter.ps1" "document.txt" "GBK" "UTF-8"
+powershell -File "scripts/win-file-encoding-converter.ps1" "document.txt" "GBK" "UTF-8"
 
 # Example 2: Convert from UTF-8 to UTF-8 with BOM
 $result = FileEncodingConverter -FilePath "code.py" -SourceEncoding "UTF-8" -TargetEncoding "UTF-8-BOM"
 
 # Example 3: Quiet mode conversion
-powershell -File "C:\Users\shaoke\.kilo\skills\win-file-encoding-converter\scripts\win-file-encoding-converter.ps1" "config.json" "UTF-16LE-BOM" "UTF-8" -Quiet
+powershell -File "scripts/win-file-encoding-converter.ps1" "config.json" "UTF-16LE-BOM" "UTF-8" -Quiet
 ```
 
 ## Example Output

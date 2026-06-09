@@ -2,7 +2,7 @@ param(
     [int]$Limit
 )
 
-$KILO_DB = "C:\Users\shaoke\.local\share\kilo\kilo.db"
+$KILO_DB = "$env:USERPROFILE\.local\share\kilo\kilo.db"
 
 if ($Limit) {
     Write-Host "=== Kilo Session List (Last $Limit) ==="
