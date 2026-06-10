@@ -18,13 +18,16 @@ win-file-encoding-converter.ps1 - 文件字符编码转换工具
 .PARAMETER Quiet
 静默模式（可选开关，位置3），不显示输出信息
 
-.EXAMPLE
-.\win-file-encoding-converter.ps1 "C:\test\example.txt" "GB2312" "UTF-8"
-将文件从 GB2312 转换为 UTF-8（不带 BOM）
+.PARAMETER LineEnding
+行尾符转换（可选参数，位置4），可选值：LF（Unix格式）、CRLF（Windows格式）。指定后，转换编码后将统一替换为指定行尾符
 
 .EXAMPLE
-.\win-file-encoding-converter.ps1 "C:\test\example.txt" "UTF-8" "UTF-8-BOM" -Quiet
-将文件从 UTF-8（不带 BOM）转换为 UTF-8（带 BOM），静默模式
+.\win-file-encoding-converter.ps1 "C:\test\example.txt" "GB2312" "UTF-8" "CRLF"
+将文件从 GB2312 转换为 UTF-8，并统一替换为 CRLF 行尾符
+
+.EXAMPLE
+.\win-file-encoding-converter.ps1 "C:\test\example.txt" "UTF-8" "UTF-8-BOM" -Quiet -LineEnding "LF"
+将文件从 UTF-8（不带 BOM）转换为 UTF-8（带 BOM），静默模式，并统一替换为 LF 行尾符
 
 .NOTES
 支持的编码格式：
@@ -49,6 +52,7 @@ win-file-encoding-converter.ps1 - 文件字符编码转换工具
 3. 写入临时文件（使用目标编码）
 4. 验证转换结果（对比内容）
 5. 原子操作替换原文件
+6. （可选）转换行尾符为 LF 或 CRLF
 
 输出格式：JSON 结构化数据，包含 Success 和 ErrorMessage 字段
 #>
@@ -559,8 +563,12 @@ function FileEncodingConverter
         [Parameter(Mandatory=$true, Position=2)]
         [string]$TargetEncoding,
 
+        [Parameter(Mandatory=$false)]
+        [switch]$Quiet,
+
         [Parameter(Mandatory=$false, Position=3)]
-        [switch]$Quiet
+        [ValidateSet("LF", "CRLF")]
+        [string]$LineEnding
     )
 
     if ($FilePath -eq "/?")
@@ -614,10 +622,56 @@ function FileEncodingConverter
     $targetCode = $targetResult.EncodingCode
 
     if ($sourceCode -eq $targetCode) {
-        Write-Silent "提醒: 源编码和目标编码相同，无需转换" -ForegroundColor Yellow
-        return [PSCustomObject]@{
-            Success = $true
-            ErrorMessage = ""
+        if ($null -eq $LineEnding -or $LineEnding -eq "") {
+            Write-Silent "提醒: 源编码和目标编码相同，无需转换" -ForegroundColor Yellow
+            return [PSCustomObject]@{
+                Success = $true
+                ErrorMessage = ""
+            }
+        } else {
+            Write-Silent "源编码和目标编码相同，仅转换行尾符..." -ForegroundColor Gray
+            # 继续执行行尾转换（跳过编码转换部分）
+            try
+            {
+                $encResult = Get-EncodingObject $TargetEncoding
+                if (-not $encResult.Success) {
+                    throw $encResult.ErrorMessage
+                }
+                $tgtEncodingObj = $encResult.Encoding
+                
+                $originalBytes = [System.IO.File]::ReadAllBytes($FilePath)
+                $contentResult = Get-ContentWithoutBom $originalBytes $SourceEncoding
+                if (-not $contentResult.Success) {
+                    throw $contentResult.ErrorMessage
+                }
+                $originalContent = $contentResult.Content
+                
+                # 行尾符转换
+                if ($LineEnding -eq "CRLF")
+                {
+                    $originalContent = $originalContent -replace "`r`n", "`n" -replace "`n", "`r`n"
+                }
+                elseif ($LineEnding -eq "LF")
+                {
+                    $originalContent = $originalContent -replace "`r`n", "`n"
+                }
+                
+                [System.IO.File]::WriteAllText($FilePath, $originalContent, $tgtEncodingObj)
+                Write-Silent "行尾符转换完成" -ForegroundColor Green
+                
+                return [PSCustomObject]@{
+                    Success = $true
+                    ErrorMessage = ""
+                }
+            }
+            catch
+            {
+                Write-Silent "行尾符转换失败: $_" -ForegroundColor Red
+                return [PSCustomObject]@{
+                    Success = $false
+                    ErrorMessage = $_.Exception.Message
+                }
+            }
         }
     }
 
@@ -750,6 +804,32 @@ function FileEncodingConverter
                 $finalSize = (Get-Item $FilePath).Length
                 Write-Silent "6. 最终文件大小: $finalSize 字节" -ForegroundColor Gray
             }
+
+            # 行尾符转换（如果指定了 LineEnding 参数）
+            if ($null -ne $LineEnding -and $LineEnding -ne "")
+            {
+                Write-Silent "7. 转换行尾符为 [$LineEnding]..." -ForegroundColor Gray
+                try
+                {
+                    $fileContent = [System.IO.File]::ReadAllText($FilePath, $tgtEncodingObj)
+                    if ($LineEnding -eq "CRLF")
+                    {
+                        # 将 LF 转换为 CRLF
+                        $fileContent = $fileContent -replace "`r`n", "`n" -replace "`n", "`r`n"
+                    }
+                    elseif ($LineEnding -eq "LF")
+                    {
+                        # 将 CRLF 转换为 LF
+                        $fileContent = $fileContent -replace "`r`n", "`n"
+                    }
+                    [System.IO.File]::WriteAllText($FilePath, $fileContent, $tgtEncodingObj)
+                    Write-Silent "   行尾符转换完成" -ForegroundColor Green
+                }
+                catch
+                {
+                    Write-Silent "   行尾符转换失败: $_" -ForegroundColor Yellow
+                }
+            }
             
             return [PSCustomObject]@{
                 Success = $true
@@ -803,7 +883,31 @@ if ($MyInvocation.InvocationName -ne '.')
         exit 1
     }
     
-    $result = FileEncodingConverter @args
+    # 构建参数字典，兼容 switch 参数和命名参数
+    $paramArgs = @{}
+    $posArgs = @()
+    $i = 0
+    while ($i -lt $args.Count) {
+        if ($args[$i] -eq '-Quiet') {
+            $paramArgs['Quiet'] = $true
+        } elseif ($args[$i] -eq '-LineEnding' -and ($i + 1 -lt $args.Count)) {
+            $paramArgs['LineEnding'] = $args[$i + 1]
+            $i++
+        } elseif ($args[$i] -match '^-') {
+            # 其他命名参数跳过
+        } else {
+            $posArgs += $args[$i]
+        }
+        $i++
+    }
+    
+    # 按位置填充必需参数
+    if ($posArgs.Count -ge 1) { $paramArgs['FilePath'] = $posArgs[0] }
+    if ($posArgs.Count -ge 2) { $paramArgs['SourceEncoding'] = $posArgs[1] }
+    if ($posArgs.Count -ge 3) { $paramArgs['TargetEncoding'] = $posArgs[2] }
+    if ($posArgs.Count -ge 4) { $paramArgs['LineEnding'] = $posArgs[3] }
+    
+    $result = FileEncodingConverter @paramArgs
     
     $result | ConvertTo-Json -Depth 10
     

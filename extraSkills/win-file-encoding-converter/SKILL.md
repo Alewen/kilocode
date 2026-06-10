@@ -1,21 +1,23 @@
 ---
 name: win-file-encoding-converter
-description: This skill provides a PowerShell script to convert text file encoding formats between various encodings including UTF-8 (with/without BOM), UTF-16, UTF-32, ASCII, GB2312, and GBK. It includes validation steps to ensure conversion accuracy and atomic operations for safe file replacement. This skill should be used when converting a file from one encoding format to another.
+description: This skill provides a PowerShell script to convert text file encoding formats between various encodings including UTF-8 (with/without BOM), UTF-16, UTF-32, ASCII, GB2312, and GBK. It also supports line ending conversion (LF/CRLF). It includes validation steps to ensure conversion accuracy and atomic operations for safe file replacement. This skill should be used when converting a file from one encoding format to another or when normalizing line endings.
 ---
 
 # File Encoding Converter
 
 ## Purpose
 
-[Windows Only] This skill provides a standalone PowerShell script to convert the encoding format of text files. It supports conversion between multiple encoding types with validation steps to ensure accuracy and uses atomic operations for safe file replacement. This skill is only available on Windows systems as it uses PowerShell scripts.
+[Windows Only] This skill provides a standalone PowerShell script to convert the encoding format of text files. It supports conversion between multiple encoding types with validation steps to ensure accuracy and uses atomic operations for safe file replacement. Additionally, it can convert line endings (LF ↔ CRLF) either alongside encoding conversion or independently. This skill is only available on Windows systems as it uses PowerShell scripts.
 
 ## When to Use
 
 This skill should be used when:
 - Converting a text file from one encoding format to another
+- Normalizing line endings to LF (Unix) or CRLF (Windows)
 - Ensuring accurate encoding conversion with validation
 - Safely replacing files using atomic operations
 - Converting between UTF-8 (with/without BOM), UTF-16, UTF-32, ASCII, GB2312, or GBK
+- Changing line endings without changing encoding (set source = target encoding)
 
 ## How to Use
 
@@ -26,8 +28,17 @@ The main conversion script is located at: `scripts/win-file-encoding-converter.p
 ### Calling from PowerShell
 
 ```powershell
-# Basic usage
+# Basic usage — encoding conversion only
 powershell -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "SourceEncoding" "TargetEncoding"
+
+# Encoding conversion + convert line endings to CRLF
+powershell -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "SourceEncoding" "TargetEncoding" "CRLF"
+
+# Encoding conversion + convert line endings to LF
+powershell -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "SourceEncoding" "TargetEncoding" "LF"
+
+# Line ending only (no encoding change) — set source = target encoding
+powershell -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "GB2312" "GB2312" "CRLF"
 
 # With quiet mode (no output)
 powershell -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "SourceEncoding" "TargetEncoding" -Quiet
@@ -39,8 +50,16 @@ powershell -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.tx
 # Load the script
 . "scripts/win-file-encoding-converter.ps1"
 
-# Call the main function
+# Call the main function (encoding only)
 $result = FileEncodingConverter -FilePath "path\to\your\file.txt" -SourceEncoding "SourceEncoding" -TargetEncoding "TargetEncoding"
+$result | ConvertTo-Json -Depth 10
+
+# With line ending conversion
+$result = FileEncodingConverter -FilePath "path\to\your\file.txt" -SourceEncoding "GB2312" -TargetEncoding "GB2312" -LineEnding "CRLF"
+$result | ConvertTo-Json -Depth 10
+
+# With quiet mode and line ending conversion
+$result = FileEncodingConverter -FilePath "path\to\your\file.txt" -SourceEncoding "UTF-8" -TargetEncoding "GBK" -LineEnding "CRLF" -Quiet
 $result | ConvertTo-Json -Depth 10
 ```
 
@@ -54,6 +73,12 @@ $result | ConvertTo-Json -Depth 10
 | `SourceEncoding` | string | Yes | Source encoding format of the file |
 | `TargetEncoding` | string | Yes | Target encoding format to convert to |
 | `Quiet` | switch | No | Suppress output messages |
+| `LineEnding` | string | No | Line ending conversion: `"LF"` (Unix) or `"CRLF"` (Windows). When source equals target encoding, only line ending conversion is performed. |
+
+### Positional Argument Order (CLI mode)
+
+Call via `powershell -File` with the positional order: `FilePath` `SourceEncoding` `TargetEncoding` `LineEnding`.
+Pass `-Quiet` as a named parameter.
 
 ## Return Value
 
@@ -91,6 +116,9 @@ The script follows these steps:
 3. **Write temporary file** - Writes content to a temporary file using target encoding
 4. **Validate conversion** - Compares original content with converted content to ensure accuracy
 5. **Atomic replacement** - Safely replaces the original file with the converted file
+6. **Line ending conversion** (if `LineEnding` is specified) - Converts line endings to LF or CRLF after successful encoding conversion
+
+> **Note**: If source and target encoding are the same and `LineEnding` is specified, steps 1-5 are skipped and only line ending conversion (step 6) is performed.
 
 ## Safety Features
 
@@ -110,6 +138,16 @@ $result = FileEncodingConverter -FilePath "code.py" -SourceEncoding "UTF-8" -Tar
 
 # Example 3: Quiet mode conversion
 powershell -File "scripts/win-file-encoding-converter.ps1" "config.json" "UTF-16LE-BOM" "UTF-8" -Quiet
+
+# Example 4: Convert encoding to GB2312 and normalize line endings to CRLF
+powershell -File "scripts/win-file-encoding-converter.ps1" "script.cmd" "UTF-8" "GB2312" "CRLF"
+
+# Example 5: Only convert line endings to LF (keep encoding unchanged)
+powershell -File "scripts/win-file-encoding-converter.ps1" "file.txt" "UTF-8" "UTF-8" "LF"
+
+# Example 6: Dot-sourcing with line ending parameter
+$result = FileEncodingConverter -FilePath "config.ini" -SourceEncoding "GB2312" -TargetEncoding "UTF-8" -LineEnding "CRLF" -Quiet
+$result | ConvertTo-Json -Depth 10
 ```
 
 ## Example Output
