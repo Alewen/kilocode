@@ -12,7 +12,7 @@ import sqlite3
 import urllib.parse
 from pathlib import Path
 
-KILO_DB = os.path.expanduser("~/.local/share/kilo/kilo.db")
+KILO_DB = os.environ.get("KILO_DB_PATH") or os.path.expanduser("~/.local/share/kilo/kilo.db")
 STATIC_DIR = Path(__file__).parent
 
 
