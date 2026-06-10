@@ -18,6 +18,7 @@ import { Patch } from "@/patch"
 import { environmentDetails, type EditorContext } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
+import { containsPath } from "@/project/instance-context" // kilocode_change
 import PROMPT_PLAN from "@/session/prompt/plan.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
@@ -391,20 +392,12 @@ export namespace KiloSessionPrompt {
     if (input.toolName === "write" || input.toolName === "edit") {
       const targetPath = input.args.filePath
       if (targetPath) {
-        const normalizedDir = AppFileSystem.resolve(instance.directory)
-        const normalizedWorktree = AppFileSystem.resolve(instance.worktree)
-
-        // 先把相对路径转换为绝对路径，再 resolve
         const absoluteTarget = path.isAbsolute(targetPath)
           ? targetPath
           : path.join(instance.directory, targetPath)
         const normalizedTarget = AppFileSystem.resolve(absoluteTarget)
 
-        const isInWorkspace =
-          AppFileSystem.contains(normalizedDir, normalizedTarget) ||
-          AppFileSystem.contains(normalizedWorktree, normalizedTarget)
-
-        if (!isInWorkspace) {
+        if (!containsPath(normalizedTarget, instance)) {
           throw new Error(
             `The "${input.toolName}" tool does not allow operations on files outside the workspace, and workspace is "${instance.directory}"`
           )
@@ -414,18 +407,14 @@ export namespace KiloSessionPrompt {
 
     // Check apply_patch tool
     if (input.toolName === "apply_patch" && input.args.patchText) {
-      const normalizedDir = AppFileSystem.resolve(instance.directory)
-      const normalizedWorktree = AppFileSystem.resolve(instance.worktree)
       const { hunks } = Patch.parsePatch(input.args.patchText)
       for (const hunk of hunks) {
         const absoluteTarget = path.isAbsolute(hunk.path)
           ? hunk.path
           : path.join(instance.directory, hunk.path)
         const normalizedTarget = AppFileSystem.resolve(absoluteTarget)
-        const isInWorkspace =
-          AppFileSystem.contains(normalizedDir, normalizedTarget) ||
-          AppFileSystem.contains(normalizedWorktree, normalizedTarget)
-        if (!isInWorkspace) {
+
+        if (!containsPath(normalizedTarget, instance)) {
           throw new Error(
             `The "apply_patch" tool does not allow operations on files outside the workspace, and workspace is "${instance.directory}"`
           )
@@ -435,10 +424,8 @@ export namespace KiloSessionPrompt {
             ? hunk.move_path
             : path.join(instance.directory, hunk.move_path)
           const normalizedMove = AppFileSystem.resolve(absoluteMove)
-          const moveInWorkspace =
-            AppFileSystem.contains(normalizedDir, normalizedMove) ||
-            AppFileSystem.contains(normalizedWorktree, normalizedMove)
-          if (!moveInWorkspace) {
+
+          if (!containsPath(normalizedMove, instance)) {
             throw new Error(
               `The "apply_patch" tool does not allow operations on files outside the workspace, and workspace is "${instance.directory}"`
             )
@@ -516,6 +503,15 @@ export namespace KiloSessionPrompt {
       }
 
       /**
+       * 从 PowerShell 命令中提取位置参数路径（用于处理 Copy-Item <src> <dest> 等位置参数写法）
+       */
+      const extractPowerShellPositionalPaths = (cmd: string, cmdName: string): string[] => {
+        // 移除命令名，提取剩余参数部分
+        const afterCmd = cmd.replace(new RegExp(`^\\s*${cmdName}\\s+`, 'i'), '')
+        return extractPaths(afterCmd)
+      }
+
+      /**
        * 检查单个路径是否在工作区内
        */
       const checkPath = (targetPath: string, cmdName: string) => {
@@ -525,11 +521,7 @@ export namespace KiloSessionPrompt {
           : path.join(instance.directory, targetPath)
         const normalizedTarget = AppFileSystem.resolve(absoluteTarget)
 
-        const isInWorkspace =
-          AppFileSystem.contains(normalizedDir, normalizedTarget) ||
-          AppFileSystem.contains(normalizedWorktree, normalizedTarget)
-
-        if (!isInWorkspace) {
+        if (!containsPath(normalizedTarget, instance)) {
           throw new Error(
             `The "bash" tool does not allow "${cmdName}" operations on paths outside the workspace. Workspace is "${instance.directory}", target path is "${targetPath}"`
           )
@@ -587,7 +579,8 @@ export namespace KiloSessionPrompt {
         
         // New-Item - 创建文件/文件夹
         if (/^new-item\s/i.test(cmdLower)) {
-          const targetPath = extractPowerShellPath(cmd, 'Path')
+          const targetPath = extractPowerShellPath(cmd, 'Path') ||
+            extractPowerShellPositionalPaths(cmd, 'New-Item')[0]
           if (targetPath) {
             checkPath(targetPath, 'New-Item')
           }
@@ -595,7 +588,8 @@ export namespace KiloSessionPrompt {
         }
         // Remove-Item - 删除文件/文件夹
         else if (/^remove-item\s/i.test(cmdLower)) {
-          const targetPath = extractPowerShellPath(cmd, 'Path')
+          const targetPath = extractPowerShellPath(cmd, 'Path') ||
+            extractPowerShellPositionalPaths(cmd, 'Remove-Item')[0]
           if (targetPath) {
             checkPath(targetPath, 'Remove-Item')
           }
@@ -603,7 +597,10 @@ export namespace KiloSessionPrompt {
         }
         // Move-Item - 移动文件/文件夹
         else if (/^move-item\s/i.test(cmdLower)) {
-          const destPath = extractPowerShellPath(cmd, 'Destination') || extractPowerShellPath(cmd, 'Path')
+          const positionalPaths = extractPowerShellPositionalPaths(cmd, 'Move-Item')
+          const destPath = extractPowerShellPath(cmd, 'Destination') ||
+            extractPowerShellPath(cmd, 'Path') ||
+            positionalPaths[positionalPaths.length - 1]
           if (destPath) {
             checkPath(destPath, 'Move-Item')
           }
@@ -611,7 +608,10 @@ export namespace KiloSessionPrompt {
         }
         // Copy-Item - 复制文件/文件夹
         else if (/^copy-item\s/i.test(cmdLower)) {
-          const destPath = extractPowerShellPath(cmd, 'Destination') || extractPowerShellPath(cmd, 'Path')
+          const positionalPaths = extractPowerShellPositionalPaths(cmd, 'Copy-Item')
+          const destPath = extractPowerShellPath(cmd, 'Destination') ||
+            extractPowerShellPath(cmd, 'Path') ||
+            positionalPaths[positionalPaths.length - 1]
           if (destPath) {
             checkPath(destPath, 'Copy-Item')
           }
