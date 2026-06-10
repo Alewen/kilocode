@@ -1,27 +1,27 @@
 
-# è¯¥è„šæœ¬æ”¯æŒç¼–è¯‘çš„ kilo æºç æ¥è‡ª gitclone https://github.com/Kilo-Org/kilocode.git v7.3.1
-# æ•´ä¸ªç¼–è¯‘ vsix çš„è€—æ—¶å¤§çº¦ 260 ç§’ï¼Œå‰ææ˜¯ bun install å·²ç»åœ¨æœ¬åœ°æœ‰ç¼“å­˜
-# ç”¨æ³•: .\kilo-compile-windows-x64-vsix.ps1 [version]
-#   ä¸å¸¦å‚æ•°ï¼šä½¿ç”¨ç°æœ‰ç‰ˆæœ¬å·ç¼–è¯‘
-#   å¸¦å‚æ•°ï¼šä¿®æ”¹ç‰ˆæœ¬å·åç¼–è¯‘ï¼ˆä¾‹å¦‚: .\kilo-compile-windows-x64-vsix.ps1 7.3.16.1ï¼‰
+# ¸Ã½Å±¾Ö§³Ö±àÒëµÄ kilo Ô´ÂëÀ´×Ô gitclone https://github.com/Kilo-Org/kilocode.git v7.3.1
+# Õû¸ö±àÒë vsix µÄºÄÊ±´óÔ¼ 260 Ãë£¬Ç°ÌáÊÇ bun install ÒÑ¾­ÔÚ±¾µØÓĞ»º´æ
+# ÓÃ·¨: .\kilo-compile-windows-x64-vsix.ps1 [version]
+#   ²»´ø²ÎÊı£ºÊ¹ÓÃÏÖÓĞ°æ±¾ºÅ±àÒë
+#   ´ø²ÎÊı£ºĞŞ¸Ä°æ±¾ºÅºó±àÒë£¨ÀıÈç: .\kilo-compile-windows-x64-vsix.ps1 7.3.16.1£©
 param(
     [string]$NewVersion
 )
 
 $ErrorActionPreference = "Stop"
 
-# è·å–è„šæœ¬æ‰€åœ¨ç›®å½•ï¼ˆæºç æ ¹ç›®å½•ï¼‰
+# »ñÈ¡½Å±¾ËùÔÚÄ¿Â¼£¨Ô´Âë¸ùÄ¿Â¼£©
 $ScriptDir = Split-Path -Parent -Path $MyInvocation.MyCommand.Path
 
 <#
 .SYNOPSIS
-    åŒæ­¥ package.json ç‰ˆæœ¬å·ã€‚
+    Í¬²½ package.json °æ±¾ºÅ¡£
 
 .DESCRIPTION
-    å°†æŒ‡å®š package.json æ–‡ä»¶ä¸­çš„ version å­—æ®µæ›´æ–°ä¸ºç”¨æˆ·ä¼ å…¥çš„æ–°ç‰ˆæœ¬å·ï¼Œå¹¶ä½¿ç”¨ UTF-8 æ—  BOM å†™å›ã€‚
+    ½«Ö¸¶¨ package.json ÎÄ¼şÖĞµÄ version ×Ö¶Î¸üĞÂÎªÓÃ»§´«ÈëµÄĞÂ°æ±¾ºÅ£¬²¢Ê¹ÓÃ UTF-8 ÎŞ BOM Ğ´»Ø¡£
 
 .PARAMETER FilePath
-    éœ€è¦æ›´æ–°çš„ package.json æ–‡ä»¶è·¯å¾„ã€‚
+    ĞèÒª¸üĞÂµÄ package.json ÎÄ¼şÂ·¾¶¡£
 #>
 function Update-PackageVersion {
     param(
@@ -34,16 +34,16 @@ function Update-PackageVersion {
     [System.IO.File]::WriteAllText($FilePath, $Updated, $Utf8NoBom)
 }
 
-# å¦‚æœæä¾›äº†ç‰ˆæœ¬å·å‚æ•°ï¼ŒåŒæ­¥ä¿®æ”¹åŒ…ç‰ˆæœ¬
+# Èç¹ûÌá¹©ÁË°æ±¾ºÅ²ÎÊı£¬Í¬²½ĞŞ¸Ä°ü°æ±¾
 if ($NewVersion) {
     Write-Host "=========================================="
-    Write-Host " æ­£åœ¨æ›´æ–°ç‰ˆæœ¬å·åˆ°: $NewVersion"
+    Write-Host " ÕıÔÚ¸üĞÂ°æ±¾ºÅµ½: $NewVersion"
     Write-Host "=========================================="
 
     Update-PackageVersion -FilePath (Join-Path -Path $ScriptDir -ChildPath "package.json")
-    Write-Host "  æ›´æ–°: package.json"
+    Write-Host "  ¸üĞÂ: package.json"
 
-    # æ‰€æœ‰éœ€è¦åŒæ­¥çš„åŒ…åˆ—è¡¨
+    # ËùÓĞĞèÒªÍ¬²½µÄ°üÁĞ±í
     $Pkgs = @(
         "core",
         "kilo-vscode",
@@ -69,7 +69,7 @@ if ($NewVersion) {
             $PackagePath = Join-Path -Path $ScriptDir -ChildPath "script\upstream\package.json"
             if (Test-Path -Path $PackagePath) {
                 Update-PackageVersion -FilePath $PackagePath
-                Write-Host "  æ›´æ–°: script/upstream/package.json"
+                Write-Host "  ¸üĞÂ: script/upstream/package.json"
             }
             continue
         }
@@ -77,35 +77,35 @@ if ($NewVersion) {
         $PackagePath = Join-Path -Path $ScriptDir -ChildPath "packages\$Pkg\package.json"
         if (Test-Path -Path $PackagePath) {
             Update-PackageVersion -FilePath $PackagePath
-            Write-Host "  æ›´æ–°: packages/$Pkg/package.json"
+            Write-Host "  ¸üĞÂ: packages/$Pkg/package.json"
         }
     }
 
-    Write-Host "  ç‰ˆæœ¬åŒæ­¥å®Œæˆ"
+    Write-Host "  °æ±¾Í¬²½Íê³É"
 }
 
 Write-Host "=========================================="
-Write-Host " æºç ç›®å½•: $ScriptDir æ‰“åŒ… Kilo VS Code æ‰©å±• (Windows-x64)"
+Write-Host " Ô´ÂëÄ¿Â¼: $ScriptDir ´ò°ü Kilo VS Code À©Õ¹ (Windows-x64)"
 Write-Host "=========================================="
 
-# æ­¥éª¤ 1: æ£€æŸ¥å¹¶å®‰è£…æ ¹ç›®å½•ä¾èµ–
-Write-Host "[1/5] æ£€æŸ¥æ ¹ç›®å½•ä¾èµ–..."
+# ²½Öè 1: ¼ì²é²¢°²×°¸ùÄ¿Â¼ÒÀÀµ
+Write-Host "[1/5] ¼ì²é¸ùÄ¿Â¼ÒÀÀµ..."
 Set-Location -Path $ScriptDir
-Write-Host "  å½“å‰ç›®å½•: $(Get-Location)"
+Write-Host "  µ±Ç°Ä¿Â¼: $(Get-Location)"
 Write-Host ""
 if (-not (Test-Path -Path "node_modules")) {
-    Write-Host "  æ­£åœ¨å®‰è£…ä¾èµ–..."
+    Write-Host "  ÕıÔÚ°²×°ÒÀÀµ..."
     bun install
 } else {
-    Write-Host "  ä¾èµ–å·²å­˜åœ¨"
+    Write-Host "  ÒÀÀµÒÑ´æÔÚ"
 }
 
-# æ­¥éª¤ 2: ç¼–è¯‘ CLI äºŒè¿›åˆ¶
-Write-Host "[2/5] ç¼–è¯‘ CLI äºŒè¿›åˆ¶..."
+# ²½Öè 2: ±àÒë CLI ¶ş½øÖÆ
+Write-Host "[2/5] ±àÒë CLI ¶ş½øÖÆ..."
 Set-Location -Path (Join-Path -Path $ScriptDir -ChildPath "packages\opencode")
-Write-Host "  å½“å‰ç›®å½•: $(Get-Location)"
+Write-Host "  µ±Ç°Ä¿Â¼: $(Get-Location)"
 Write-Host ""
-# ä»æ ¹ç›®å½• package.json è·å–ç‰ˆæœ¬å·
+# ´Ó¸ùÄ¿Â¼ package.json »ñÈ¡°æ±¾ºÅ
 $Version = (Select-String -Path (Join-Path -Path $ScriptDir -ChildPath "package.json") -Pattern '"version":').Line |
     Select-Object -First 1
 $Version = ($Version -split '"')[3]
@@ -114,20 +114,20 @@ $env:KILO_VERSION = $Version
 $env:KILO_CHANNEL = "latest"
 bun run script/build.ts --single
 
-# æ­¥éª¤ 3: ç¼–è¯‘ VS Code æ‰©å±•
-Write-Host "[3/5] ç¼–è¯‘æ‰©å±•ä»£ç ..."
+# ²½Öè 3: ±àÒë VS Code À©Õ¹
+Write-Host "[3/5] ±àÒëÀ©Õ¹´úÂë..."
 Set-Location -Path (Join-Path -Path $ScriptDir -ChildPath "packages\kilo-vscode")
-Write-Host "  å½“å‰ç›®å½•: $(Get-Location)"
+Write-Host "  µ±Ç°Ä¿Â¼: $(Get-Location)"
 Write-Host ""
 bun run compile
 
-# æ­¥éª¤ 4: ç¡®ä¿ CLI äºŒè¿›åˆ¶æƒé™æ­£ç¡®ï¼ˆWindows ä¸éœ€è¦ chmodï¼‰
-Write-Host "[4/5] æ£€æŸ¥ CLI äºŒè¿›åˆ¶..."
-Write-Host "  è·³è¿‡æƒé™è®¾ç½®ï¼ˆWindows å¹³å°æ— éœ€ chmodï¼‰"
+# ²½Öè 4: È·±£ CLI ¶ş½øÖÆÈ¨ÏŞÕıÈ·£¨Windows ²»ĞèÒª chmod£©
+Write-Host "[4/5] ¼ì²é CLI ¶ş½øÖÆ..."
+Write-Host "  Ìø¹ıÈ¨ÏŞÉèÖÃ£¨Windows Æ½Ì¨ÎŞĞè chmod£©"
 
-# æ­¥éª¤ 5: æ‰“åŒ… VSIX
-Write-Host "[5/5] æ‰“åŒ… VSIX..."
-Write-Host "  å½“å‰ç›®å½•: $(Get-Location)"
+# ²½Öè 5: ´ò°ü VSIX
+Write-Host "[5/5] ´ò°ü VSIX..."
+Write-Host "  µ±Ç°Ä¿Â¼: $(Get-Location)"
 Write-Host ""
 $VscePath = Join-Path -Path "node_modules" -ChildPath ".bin" | Join-Path -ChildPath "vsce"
 if (Test-Path -Path $VscePath) {
@@ -137,13 +137,13 @@ if (Test-Path -Path $VscePath) {
 }
 
 Write-Host "=========================================="
-Write-Host " ? æ‰“åŒ…å®Œæˆï¼"
+Write-Host " ? ´ò°üÍê³É£¡"
 $VsixFiles = Get-ChildItem -Filter "kilo-code-*.vsix"
 if ($VsixFiles) {
     foreach ($File in $VsixFiles) {
-        Write-Host " ? æ–‡ä»¶ä½ç½®: $($File.FullName)"
+        Write-Host " ? ÎÄ¼şÎ»ÖÃ: $($File.FullName)"
     }
 } else {
-    Write-Host "  è¯·åœ¨å½“å‰ç›®å½•æŸ¥æ‰¾ç”Ÿæˆçš„ VSIX æ–‡ä»¶"
+    Write-Host "  ÇëÔÚµ±Ç°Ä¿Â¼²éÕÒÉú³ÉµÄ VSIX ÎÄ¼ş"
 }
 Write-Host "=========================================="
