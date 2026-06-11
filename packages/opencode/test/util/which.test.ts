@@ -97,4 +97,15 @@ describe("util.which", () => {
 
     same(which("mixed", envPath(bin)), file)
   })
+
+  test("finds pwsh via where fallback when npm which fails", () => {
+    // App Execution Aliases like pwsh in WindowsApps are 0-byte reparse points
+    // that the npm `which` package cannot resolve.  Falls back to the native
+    // `where` command which uses CreateProcess and resolves them correctly.
+    if (process.platform !== "win32") return
+
+    const result = which("pwsh")
+    expect(result).not.toBeNull()
+    expect(result!.toLowerCase()).toMatch(/pwsh\.exe$/)
+  })
 })
