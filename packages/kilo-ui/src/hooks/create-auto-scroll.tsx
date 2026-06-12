@@ -208,6 +208,18 @@ export function createAutoScroll(options: AutoScrollOptions) {
         return
       }
       if (store.userScrolled) {
+        // Auto-recover: if the agent is still working and content has grown
+        // significantly from the bottom, a stray programmatic scroll event
+        // from the virtualizer likely tripped stop() rather than the user
+        // explicitly scrolling away. Re-enable auto-follow when the user
+        // has not recently interacted.
+        if (active() && el && distanceFromBottom(el) > threshold() * 3) {
+          if (!recentlyInteracted()) {
+            setStore("userScrolled", false)
+            updateOverflowAnchor()
+            scrollToBottom(false)
+          }
+        }
         return
       }
       // Virtualized lists (virtua) re-measure items during user scroll, firing
