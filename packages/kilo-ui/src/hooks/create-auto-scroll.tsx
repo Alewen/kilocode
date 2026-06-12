@@ -24,6 +24,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
   let userInitiated = false
   let lastScrollTop: number | undefined
   let lastInteraction = 0
+  let autoMarker = 0
 
   const threshold = () => options.bottomThreshold ?? 10
 
@@ -31,6 +32,11 @@ export function createAutoScroll(options: AutoScrollOptions) {
     contentRef: undefined as HTMLElement | undefined,
     userScrolled: false,
   })
+
+  const updateOverflowAnchor = () => {
+    if (!scroll) return
+    scroll.style.overflowAnchor = (!store.userScrolled && active()) ? "none" : "auto"
+  }
 
   const active = () => options.working() || settling
 
@@ -60,12 +66,16 @@ export function createAutoScroll(options: AutoScrollOptions) {
     if (!el) return
     if (behavior === "smooth") {
       el.scrollTo({ top: el.scrollHeight, behavior })
+      autoMarker++
+      queueMicrotask(() => { autoMarker-- })
       return
     }
 
     // `scrollTop` assignment bypasses any CSS `scroll-behavior: smooth`.
     el.scrollTop = el.scrollHeight
     lastScrollTop = el.scrollTop
+    autoMarker++
+    queueMicrotask(() => { autoMarker-- })
   }
 
   const scrollToBottom = (force: boolean) => {
@@ -74,7 +84,10 @@ export function createAutoScroll(options: AutoScrollOptions) {
     if (!el) return
 
     if (!force && store.userScrolled) return
-    if (force && store.userScrolled) setStore("userScrolled", false)
+    if (force && store.userScrolled) {
+      setStore("userScrolled", false)
+      updateOverflowAnchor()
+    }
 
     const distance = distanceFromBottom(el)
     if (distance < 2) return
@@ -88,12 +101,16 @@ export function createAutoScroll(options: AutoScrollOptions) {
     const el = scroll
     if (!el) return
     if (!canScroll(el)) {
-      if (store.userScrolled) setStore("userScrolled", false)
+      if (store.userScrolled) {
+        setStore("userScrolled", false)
+        updateOverflowAnchor()
+      }
       return
     }
     if (store.userScrolled) return
 
     setStore("userScrolled", true)
+    updateOverflowAnchor()
     options.onUserInteracted?.()
   }
 
@@ -118,17 +135,30 @@ export function createAutoScroll(options: AutoScrollOptions) {
     const distance = distanceFromBottom(el)
 
     if (!canScroll(el)) {
-      if (store.userScrolled) setStore("userScrolled", false)
+      if (store.userScrolled) {
+        setStore("userScrolled", false)
+        updateOverflowAnchor()
+      }
       return
     }
 
     if (distance < threshold()) {
-      if (store.userScrolled) setStore("userScrolled", false)
+      if (store.userScrolled) {
+        setStore("userScrolled", false)
+        updateOverflowAnchor()
+      }
       lastScrollTop = el.scrollTop
       return
     }
 
     if (!store.userScrolled && !byUser) {
+      // Ignore programmatic scroll events triggered by our own
+      // auto-scroll logic (scrollToBottomNow).
+      if (autoMarker > 0) {
+        lastScrollTop = el.scrollTop
+        return
+      }
+
       // virtua fires programmatic scroll events as it measures virtualized
       // items. Don't let those snap the view back to the bottom while the
       // user is mid-gesture — the wheel event fires before the scroll event,
@@ -164,7 +194,10 @@ export function createAutoScroll(options: AutoScrollOptions) {
     () => {
       const el = scroll
       if (el && !canScroll(el)) {
-        if (store.userScrolled) setStore("userScrolled", false)
+        if (store.userScrolled) {
+          setStore("userScrolled", false)
+          updateOverflowAnchor()
+        }
         return
       }
       if (!active()) {
@@ -201,12 +234,15 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
       if (working) {
         scrollToBottom(true)
+        updateOverflowAnchor()
         return
       }
 
       settling = true
+      updateOverflowAnchor()
       settleTimer = setTimeout(() => {
         settling = false
+        updateOverflowAnchor()
       }, 300)
     }),
   )
@@ -229,7 +265,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
       if (!el) return
 
-      el.style.overflowAnchor = "auto"
+      updateOverflowAnchor()
       el.addEventListener("wheel", handleWheel, { passive: true })
       el.addEventListener("wheel", markUser, { passive: true, capture: true })
       el.addEventListener("pointerdown", markUser, { passive: true })
@@ -249,7 +285,10 @@ export function createAutoScroll(options: AutoScrollOptions) {
     handleInteraction,
     pause: stop,
     resume: () => {
-      if (store.userScrolled) setStore("userScrolled", false)
+      if (store.userScrolled) {
+        setStore("userScrolled", false)
+        updateOverflowAnchor()
+      }
       scrollToBottom(true)
     },
     scrollToBottom: () => scrollToBottom(false),
