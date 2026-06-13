@@ -7,7 +7,7 @@
 <script src="marked.umd.js"></script>
 <link rel="stylesheet" href="github.min.css">
 <script src="highlight.min.js"></script>
-<link rel="stylesheet" href="kiloIndex.css">
+<link rel="stylesheet" href="kiloIndex.css?v=4">
 </head>
 <body>
 
@@ -53,6 +53,236 @@ function getApiBase() {
 }
 const API_BASE = getApiBase();
 
+// 注册 log 语言到 highlight.js，基于 Kilo 插件 Shiki 的 log TextMate 语法翻译
+// 来源: node_modules/@shikijs/langs/dist/log.mjs (Shiki v3.20.0)
+if (typeof hljs !== 'undefined') {
+  hljs.registerLanguage('log', function(hljs) {
+    return {
+      name: 'Log',
+      contains: [
+        // === 日期/时间戳 (Shiki: comment log.date) ===
+        // 2026-06-12 或 2026-06-12T
+        { className: 'comment', begin: /\b\d{4}-\d{2}-\d{2}(?=T|\b)/ },
+        // 12:34:56.789 或 T12:34:56Z 或 T123456Z
+        { className: 'comment',
+          begin: /\bT?\d{1,2}:\d{2}(:\d{2}([,.]\d+)?)?(Z| ?[-+]\d{1,2}:\d{2})?\b/ },
+        // T紧接数字格式: T123456.789Z
+        { className: 'comment',
+          begin: /\bT\d{2}\d{2}(\d{2}([,.]\d+)?)?(Z| ?[-+]\d{1,2}:\d{2})?\b/ },
+
+        // === 错误级别 (Shiki: string.regexp, strong log.error) → 红色高亮 ===
+        { className: 'keyword',
+          begin: /\b(ALERT|CRITICAL|EMERGENCY|ERROR|FAILURE|FAIL|Fatal|FATAL|Error|EE)\b/ },
+        { className: 'keyword', begin: /\b(error):/i },
+        { className: 'keyword', begin: /\[(error|eror|err?|e|fatal|fatl|ftl|fa?)\]/i },
+        // 行首单字符E标记
+        { className: 'keyword', begin: /(?:^|\s)\bE\b/ },
+
+        // === 警告级别 (Shiki: markup.deleted log.warning) ===
+        { className: 'deletion',
+          begin: /\b(WARNING|WARN|Warn|warn|W)\b/ },
+        { className: 'deletion', begin: /\b(warning):/i },
+        { className: 'deletion', begin: /\[(w(?:arning|arn|rn|n?))\]/i },
+        { className: 'deletion', begin: /(?:^|\s)\bW\b/ },
+
+        // === 信息级别 (Shiki: markup.inserted log.info) ===
+        { className: 'addition',
+          begin: /\b(HINT|INFO|INFORMATION|Info|NOTICE|II)\b/ },
+        { className: 'addition', begin: /\b(info(?:rmation)?):/i },
+        { className: 'addition', begin: /\[(i(?:nformation|nfo?|n?))\]/i },
+        { className: 'addition', begin: /(?:^|\s)\bI\b/ },
+
+        // === 调试级别 (Shiki: markup.changed log.debug) ===
+        { className: 'section', begin: /\b(DEBUG|Debug|debug)\b/ },
+        { className: 'section', begin: /\b(debug):/i },
+        { className: 'section', begin: /\[(d(?:ebug|bug|bg|e?))\]/i },
+        { className: 'section', begin: /(?:^|\s)\bD\b/ },
+
+        // === 跟踪/详细 (Shiki: comment log.verbose) ===
+        { className: 'comment', begin: /\b([Tt]race|TRACE)\b:?/ },
+        { className: 'comment', begin: /\[(v(?:erbose|erb|rb|b?))\]/i },
+        { className: 'comment', begin: /(?:^|\s)\bV\b/ },
+
+        // === 双引号字符串 (Shiki: string log.string) ===
+        { className: 'string', begin: /"[^"]*"/ },
+
+        // === 单引号字符串 (Shiki: string log.string) ===
+        // 前导不能是单词字符，模拟 Shiki 的 (?<!\w)
+        { className: 'string', begin: /(?:^|\W)'[^']*'/ },
+
+        // === 数字 (Shiki: constant.language log.constant) ===
+        { className: 'number', begin: /\b\d+(\.\d+)?\b/ },
+
+        // === 布尔/null (Shiki: constant.language log.constant) ===
+        { className: 'literal', begin: /\b(true|false|null)\b/ },
+
+        // === 十六进制 (Shiki: constant.language log.constant) ===
+        { className: 'number', begin: /\b0x[0-9A-Fa-f]+\b/ },
+
+        // === 十六进制哈希 40/10/7位 (Shiki: constant.language) ===
+        { className: 'built_in',
+          begin: /\b[0-9A-Fa-f]{40}\b|\b[0-9A-Fa-f]{10}\b|\b[0-9A-Fa-f]{7}\b/ },
+
+        // === UUID 格式 (Shiki: constant.language log.constant) ===
+        { className: 'built_in',
+          begin: /\b[0-9A-Fa-f]{8}-?([0-9A-Fa-f]{4}-?){3}[0-9A-Fa-f]{12}\b/ },
+
+        // === 异常类名 (Shiki: string.regexp, emphasis log.exceptiontype) ===
+        { className: 'keyword', begin: /\b([.A-Za-z]*Exception)\b/ },
+
+        // === 堆栈跟踪 at ... (Shiki: string.key, emphasis log.exception) ===
+        { className: 'addition', begin: /^[\t ]*at[\t ]/, end: /$/ },
+
+        // === URL (Shiki: constant.language log.constant) ===
+        { className: 'link', begin: /\b[a-z]+:\/\/\S+\b\/?/ },
+
+        // === 文件路径 (Shiki: constant.language log.constant) ===
+        // 如 F:\wtoe\00.WinScripts 或 /usr/local/bin
+        { className: 'built_in',
+          begin: /(?<![/\\\w])([-\w]+\.)+([-\w])+(?![/\\\w])/ },
+      ]
+    };
+  });
+}
+
+// 注册 shellscript 语言 — 基于 Shiki shellscript TextMate 语法增强
+// 覆盖: Bash/Zsh/PowerShell 混合语法，弥补 highlight.js 内置 bash 对
+// PowerShell cmdlet、选项、变量属性的覆盖不足
+if (typeof hljs !== 'undefined') {
+  hljs.registerLanguage('shellscript', function(hljs) {
+    return {
+      name: 'Shell Script',
+      aliases: ['bash', 'sh', 'zsh', 'shell'],
+      keywords: {
+        $pattern: /\b[a-z][a-z0-9._-]+\b/,
+        keyword: [
+          'if','then','else','elif','fi','for','while','until','in','do',
+          'done','case','esac','function','select','coproc','return','break',
+          'continue','exit','exec','eval','source','time','nocorrect'
+        ],
+        literal: ['true','false'],
+        built_in: [
+          // Unix/Linux builtins
+          'cd','pwd','ls','echo','printf','read','test','export','unset',
+          'alias','unalias','type','hash','ulimit','umask','set','shift',
+          'declare','typeset','local','readonly','let','jobs','fg','bg',
+          'kill','disown','wait','trap','getopts',
+          // PowerShell cmdlets (常用)
+          'Get-Command','Get-Content','Set-Content','Out-File','Write-Host',
+          'Write-Output','ForEach-Object','Where-Object','Select-Object',
+          'Sort-Object','Group-Object','Measure-Object','New-Object',
+          'Invoke-Command','Invoke-Expression','Invoke-WebRequest',
+          'Start-Process','Stop-Process','Get-Process','Get-Service',
+          'Copy-Item','Move-Item','Remove-Item','New-Item','Rename-Item',
+          'Get-ChildItem','Set-Location','Push-Location','Pop-Location',
+          'Test-Path','Split-Path','Join-Path','ConvertFrom-Json',
+          'ConvertTo-Json','Import-Module',
+          // Common CLI tools
+          'node','npm','npx','bun','pnpm','yarn','git','docker','kubectl',
+          'python','pip','cargo','go','java','javac','make','cmake',
+          'curl','wget','ssh','scp','rsync','tar','gzip','unzip',
+          'chmod','chown','sudo','su','systemctl','service','ps','top',
+          'grep','awk','sed','cat','head','tail','sort','uniq','wc',
+          'find','xargs','diff','patch','svn','es.exe','pwsh'
+        ]
+      },
+      contains: [
+        hljs.HASH_COMMENT_MODE,
+        // === Shebang ===
+        hljs.SHEBANG(),
+        // === 管道和分隔符 ===
+        { className: 'keyword', begin: /\|\||&&|[|&;]/ },
+        // === 重定向 ===
+        { className: 'keyword', begin: /[<>]{1,2}|&>/ },
+        // === 选项/参数: -File, --verbose, -Encoding ===
+        { className: 'attr',
+          begin: /(?<=[\s|&;])(--?)[\w-]+/,
+          relevance: 0
+        },
+        // === 变量: $VAR, $_, $? , ${VAR} ===
+        {
+          className: 'variable',
+          begin: /\$\{/,
+          end: /\}/,
+          contains: ['self']
+        },
+        {
+          className: 'variable',
+          begin: /\$[_a-zA-Z][\w]*\b/,
+          relevance: 10
+        },
+        // === 变量属性: .Property (PowerShell 特有) ===
+        {
+          className: 'variable',
+          begin: /(?<=\$[_a-zA-Z]\w*)\.\w+/,
+          relevance: 0
+        },
+        // === 命令替换: $(...) 和 `...` ===
+        {
+          className: 'subst',
+          begin: /\$\(/,
+          end: /\)/,
+          contains: [hljs.BACKSLASH_ESCAPE]
+        },
+        {
+          className: 'subst',
+          begin: /`/,
+          end: /`/,
+          contains: [hljs.BACKSLASH_ESCAPE]
+        },
+        // === 双引号字符串 (用 keyword 色模拟 Kilo 的红色) ===
+        {
+          className: 'keyword',
+          begin: /"/,
+          end: /"/,
+          contains: [
+            hljs.BACKSLASH_ESCAPE,
+            { className: 'variable', begin: /\$\{/, end: /\}/ },
+            { className: 'variable', begin: /\$[_a-zA-Z][\w]*/ }
+          ]
+        },
+        // === 单引号字符串 ===
+        {
+          className: 'string',
+          begin: /'/,
+          end: /'/,
+          contains: [hljs.BACKSLASH_ESCAPE]
+        },
+        // === Heredoc ===
+        {
+          className: 'string',
+          begin: /<<-?\s*(?=\w+)/,
+          starts: { contains: [hljs.END_SAME_AS_BEGIN({
+            begin: /(\w+)/,
+            end: /(\w+)/,
+            className: 'string'
+          })]}
+        },
+        // === 花括号块: { ... } ===
+        {
+          className: 'section',
+          begin: /\{/,
+          end: /\}/,
+          contains: ['self']
+        },
+        // === 括号 ===
+        hljs.inherit(hljs.TITLE_MODE, {
+          begin: /\(/,
+          end: /\)/,
+          contains: ['self']
+        }),
+        // === 数字 ===
+        hljs.C_NUMBER_MODE,
+        // === 未加引号的内容（路径、参数值等） ===
+        {
+          begin: /(?<=[\s|&;])([^\s|&;<>"'`(){}]+)/,
+          relevance: 0
+        }
+      ]
+    };
+  });
+}
+
 let allSessions = [];
 let currentSession = null;
 
@@ -66,22 +296,23 @@ const $sid = document.getElementById('main-sid');
 const $search = document.getElementById('search-input');
 
 function fmtTime(ts) {
+  if (!ts) return '';
   const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
   const diff = now - d;
+  const hhmmss = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   if (diff < 86400000 && d.getDate() === now.getDate()) {
-    return `今天 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return `今天 ${hhmmss}`;
   }
   const y = d.getFullYear();
   const m = pad(d.getMonth() + 1);
   const day = pad(d.getDate());
-  const h = pad(d.getHours());
-  const min = pad(d.getMinutes());
   if (y === now.getFullYear()) {
-    return `${m}-${day} ${h}:${min}`;
+    return `${m}-${day} ${hhmmss}`;
   }
-  return `${y}-${m}-${day} ${h}:${min}`;
+  return `${y}-${m}-${day} ${hhmmss}`;
 }
 
 function initIcon(title) {
@@ -204,6 +435,15 @@ function enhanceCodeBlocks(container) {
       if (codeEl) hljs.highlightElement(codeEl);
     }
   }
+  // 对 bash 命令和输出块应用语法高亮（模拟 Kilo 插件的 shellscript/log 高亮）
+  if (window.hljs) {
+    const bashBlocks = container.querySelectorAll('.bash-cmd-block code.language-shellscript, .bash-out-block code.language-json, .bash-out-block code.language-log');
+    for (const codeEl of bashBlocks) {
+      if (!codeEl.dataset.highlighted) {
+        hljs.highlightElement(codeEl);
+      }
+    }
+  }
 }
 
 function toolIcon(type) {
@@ -214,6 +454,8 @@ function toolIcon(type) {
   if (type === 'question') return '?';
   if (type === 'task') return '⚡';
   if (type === 'skill') return '🔧';
+  if (type === 'webfetch') return '🌐';
+  if (type === 'websearch') return '🔎';
   return '◆';
 }
 
@@ -224,6 +466,8 @@ function toolCss(type) {
   if (type === 'question') return 'other';
   if (type === 'task') return 'other';
   if (type === 'skill') return 'bash';
+  if (type === 'webfetch') return 'webfetch';
+  if (type === 'websearch') return 'webfetch';
   return 'other';
 }
 
@@ -242,8 +486,12 @@ function toolTitle(part) {
   if (t === 'glob') return '搜索文件';
   if (t === 'grep') return '搜索内容';
   if (t === 'list') return '列出目录';
-  if (t === 'task') return '子任务';
+  if (t === 'task') return 'Explore 智能体';
+  if (t === 'skill') return '读取技能';
+  if (t === 'invalid') return '无效工具调用';
   if (t === 'todowrite' || t === 'todoread') return '待办事项';
+  if (t === 'webfetch') return '获取网页';
+  if (t === 'websearch') return '搜索 ' + (part.query || '');
   return t || '工具调用';
 }
 
@@ -259,6 +507,16 @@ function toolTitleHtml(part) {
 }
 
 function toolSub(part) {
+  if (part.tool === 'skill') {
+    const parts = [];
+    if (part.skillName) parts.push('[' + part.skillName + ']');
+    if (part.description) parts.push(part.description);
+    return parts.join(' · ');
+  }
+  if (part.tool === 'invalid') {
+    const msg = part.output || '';
+    return msg.length > 80 ? msg.substring(0, 80) + '...' : msg;
+  }
   if (part.description) return part.description;
   if (part.command) return part.command;
   if (part.tool === 'read') {
@@ -289,10 +547,14 @@ function toolSub(part) {
     return parts.join(' · ');
   }
   if (part.filePath) return part.filePath;
+  if (part.tool === 'webfetch') return part.url || '';
+  if (part.tool === 'websearch') return part.query || '';
   return '';
 }
 
 function toolBody(part) {
+    // 先清理输出：剥离 ANSI 转义码，处理回车符
+    var cleanOutput = processCarriageReturns(stripAnsi(part.output || ''));
     let html = '';
     if (part.tool === 'question') {
         html += '<div class="question-body">';
@@ -322,35 +584,35 @@ function toolBody(part) {
     if (part.toolInput && !part.command) {
         html += `<div class="bash-section">
             <div class="bash-section-label">输入<span class="copy-btn" data-copy="${escAttr(part.toolInput)}" onclick="event.stopPropagation();copyText(this, this.getAttribute('data-copy'))">复制</span></div>
-            <div class="bash-out-block">${escHtml(part.toolInput)}</div>
+            <pre class="bash-out-block"><code class="language-json">${escHtml(part.toolInput)}</code></pre>
         </div>`;
     }
     if (part.command) {
         html += `<div class="bash-section">
             <div class="bash-section-label">命令<span class="copy-btn" data-copy="${escAttr(part.command)}" onclick="event.stopPropagation();copyText(this, this.getAttribute('data-copy'))">复制</span></div>
-            <div class="bash-cmd-block">${escHtml(part.command)}</div>`;
+            <pre class="bash-cmd-block"><code class="language-shellscript">${escHtml(part.command)}</code></pre>`;
         if (part.output != null) {
             html += `<div class="bash-separator"></div>
-                <div class="bash-section-label">输出<span class="copy-btn" data-copy="${escAttr(part.output)}" onclick="event.stopPropagation();copyText(this, this.getAttribute('data-copy'))">复制</span></div>
-                <div class="bash-out-block">${escHtml(part.output) || '(无输出)'}</div>`;
+                <div class="bash-section-label">输出<span class="copy-btn" data-copy="${escAttr(cleanOutput)}" onclick="event.stopPropagation();copyText(this, this.getAttribute('data-copy'))">复制</span></div>
+                <pre class="bash-out-block"><code class="language-log">${escHtml(cleanOutput) || '(无输出)'}</code></pre>`;
         }
         html += `</div>`;
     } else if (part.output) {
         if (part.tool === 'read' && part.output && part.output.includes('<path>')) {
             if (part.output.includes('<content>')) {
-                html += renderReadOutput(part.output);
+                html += renderReadOutput(cleanOutput);
             } else if (part.output.includes('<entries>')) {
-                html += renderReadDirectoryOutput(part.output);
+                html += renderReadDirectoryOutput(cleanOutput);
             } else {
                 html += `<div class="bash-section">
-                <div class="bash-section-label">输出<span class="copy-btn" data-copy="${escAttr(part.output)}" onclick="event.stopPropagation();copyText(this, this.getAttribute('data-copy'))">复制</span></div>
-                <div class="bash-out-block">${escHtml(part.output)}</div>
+                <div class="bash-section-label">输出<span class="copy-btn" data-copy="${escAttr(cleanOutput)}" onclick="event.stopPropagation();copyText(this, this.getAttribute('data-copy'))">复制</span></div>
+                <pre class="bash-out-block"><code class="language-log">${escHtml(cleanOutput)}</code></pre>
             </div>`;
             }
         } else {
             html += `<div class="bash-section">
-                <div class="bash-section-label">输出<span class="copy-btn" data-copy="${escAttr(part.output)}" onclick="event.stopPropagation();copyText(this, this.getAttribute('data-copy'))">复制</span></div>
-                <div class="bash-out-block">${escHtml(part.output)}</div>
+                <div class="bash-section-label">输出<span class="copy-btn" data-copy="${escAttr(cleanOutput)}" onclick="event.stopPropagation();copyText(this, this.getAttribute('data-copy'))">复制</span></div>
+                <pre class="bash-out-block"><code class="language-log">${escHtml(cleanOutput)}</code></pre>
             </div>`;
         }
     }
@@ -580,6 +842,34 @@ function copyDiff(btn, diff) {
   copyText(btn, content.trim());
 }
 
+// 剥离 ANSI 转义码，与 Kilo 插件行为一致
+function stripAnsi(text) {
+  if (!text) return '';
+  return text.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '');
+}
+
+// 处理回车符（\r），Windows CLI 工具用 \r 做进度条覆盖
+// 与 Kilo 插件的 processCarriageReturns 行为一致
+function processCarriageReturns(input) {
+  if (!input) return '';
+  // 先将 \r\n 标准化为 \n
+  var normalized = input.replace(/\r\n/g, '\n');
+  return normalized
+    .split('\n')
+    .map(function(line) {
+      if (line.indexOf('\r') === -1) return line;
+      var parts = line.split('\r');
+      // 末尾 \r 产生空段 — 保留上一个可见帧
+      var last = parts[parts.length - 1];
+      if (last !== '') return last;
+      for (var i = parts.length - 2; i >= 0; i--) {
+        if (parts[i] !== '') return parts[i];
+      }
+      return '';
+    })
+    .join('\n');
+}
+
 function formatTokens(tokens) {
   if (!tokens) return '';
   const t = tokens;
@@ -601,12 +891,17 @@ function renderParts(parts) {
             <span class="icon">🧠</span>
             <span class="label">推理</span>
             <span class="summary">${escHtml((p.text || '').substring(0, 80))}</span>
+            <span class="t-expand">▶</span>
           </div>
           <div class="reasoning-body">${simpleMd(p.text || '')}</div>
+          <div class="part-meta">${fmtTime(p.time_created)}</div>
         </div>`;
         break;
       case 'text':
-        html += `<div class="text-part">${simpleMd(p.text || '')}</div>`;
+        html += `<div class="text-part">
+          ${simpleMd(p.text || '')}
+          <div class="part-meta">${fmtTime(p.time_created)}</div>
+        </div>`;
         break;
       case 'tool':
         if (p.tool === 'todowrite') {
@@ -620,11 +915,13 @@ function renderParts(parts) {
               <span class="t-expand">▶</span>
             </div>
             ${renderTodoBody(p)}
+            <div class="part-meta">${fmtTime(p.time_created)}</div>
           </div>`;
         } else {
-          const isError = p.status === 'error' || p.error || p.reason;
+          const isError = p.status === 'error' || p.error || p.reason || p.tool === 'invalid';
           const isModify = p.tool === 'write' || p.tool === 'edit';
-          html += `<div class="tool-part${isError ? ' error' : ''}${isModify ? ' modify' : ''}">
+          const isTask = p.tool === 'task';
+          html += `<div class="tool-part${isError ? ' error' : ''}${isModify ? ' modify' : ''}${isTask ? ' task' : ''}">
             <div class="tool-header" onclick="togglePart(this.parentElement)">
               <span class="t-icon ${toolCss(p.tool)}">${toolIcon(p.tool)}</span>
               <span class="t-summary">
@@ -634,6 +931,7 @@ function renderParts(parts) {
               <span class="t-expand">▶</span>
             </div>
             <div class="tool-body">${toolBody(p)}</div>
+            <div class="part-meta">${fmtTime(p.time_created)}</div>
           </div>`;
         }
         break;
@@ -645,7 +943,9 @@ function renderParts(parts) {
         }
         break;
       case 'compaction':
-        html += `<div style="padding:8px;color:var(--text-muted);font-size:12px;text-align:center;border:1px dashed var(--border);border-radius:var(--radius);margin:8px 0;">[对话压缩]</div>`;
+        html += `<div style="padding:8px;color:var(--text-muted);font-size:12px;text-align:center;border:1px dashed var(--border);border-radius:var(--radius);margin:8px 0;">[对话压缩]
+          <div class="part-meta" style="text-align:center">${fmtTime(p.time_created)}</div>
+        </div>`;
         break;
     }
   }
@@ -690,14 +990,27 @@ function renderMessages(msgs) {
     if (m.role === 'user') {
       const parts = m.parts || []
       const texts = parts.filter(p => p.type === 'text').map(p => p.text).join('\n')
+      // 构建元信息（统一使用 · 连接格式）
+      let userMetaParts = []
+      if (m.agent) userMetaParts.push(m.agent)
+      if (m.model) userMetaParts.push(m.model)
+      userMetaParts.push(fmtTime(m.time_created))
+      userMetaParts = userMetaParts.filter(p => p)
       html += `<div class="turn">
-        <div class="user-msg">
-          <div class="user-msg-bubble">${escHtml(texts)}</div>
-        </div>
-        <div class="user-msg-meta">
-          <span>${m.agent || ''}</span>
-          <span>${m.model || ''}</span>
-          <span>${fmtTime(m.time_created)}</span>
+<div class="user-msg">
+  <div class="user-msg-wrapper">
+    <div class="user-msg-header" onclick="toggleUserMsgFromHeader(this)">
+      <span>用户</span>
+      <span class="user-msg-header-toggle">展开全部</span>
+    </div>
+    <div class="user-msg-bubble">
+      <div class="user-msg-body">${escHtml(texts)}</div>
+      <div class="user-msg-toggle" onclick="toggleUserMsg(this)">展开全部</div>
+    </div>
+  </div>
+</div>
+        <div class="user-msg-meta" style="justify-content:flex-end">
+          <span>${userMetaParts.join(' · ')}</span>
         </div>
       </div>`
     } else if (m.role === 'assistant') {
@@ -733,6 +1046,40 @@ function togglePart(el) {
   el.classList.toggle('open');
 }
 
+function toggleUserMsg(el) {
+  const bubble = el.parentElement;
+  bubble.classList.toggle('expanded');
+  el.textContent = bubble.classList.contains('expanded') ? '收起' : '展开全部';
+  // 同步 header 上的 toggle 文字
+  const wrapper = bubble.parentElement;
+  const headerToggle = wrapper.querySelector('.user-msg-header-toggle');
+  if (headerToggle) headerToggle.textContent = el.textContent;
+}
+
+function toggleUserMsgFromHeader(el) {
+  const wrapper = el.parentElement;
+  const bubble = wrapper.querySelector('.user-msg-bubble');
+  bubble.classList.toggle('expanded');
+  const text = bubble.classList.contains('expanded') ? '收起' : '展开全部';
+  el.querySelector('.user-msg-header-toggle').textContent = text;
+  // 同步行内 toggle 文字
+  const inlineToggle = bubble.querySelector('.user-msg-toggle');
+  if (inlineToggle) inlineToggle.textContent = text;
+}
+
+function checkUserMsgOverflow(container) {
+  container.querySelectorAll('.user-msg-body').forEach(el => {
+    if (el.scrollHeight > el.clientHeight) {
+      el.classList.add('clamped');
+      // 内容超长时显示 header 栏
+      const bubble = el.parentElement;
+      const wrapper = bubble.parentElement;
+      const header = wrapper.querySelector('.user-msg-header');
+      if (header) header.classList.add('visible');
+    }
+  });
+}
+
 function toggleSidebar() {
   const sidebar = document.querySelector('.sidebar');
   sidebar.classList.toggle('collapsed');
@@ -756,7 +1103,7 @@ async function selectSession(id) {
   $header.style.display = 'flex';
   $title.textContent = currentSession.title || '未命名会话';
   $dir.textContent = currentSession.directory || '';
-  $sid.textContent = currentSession.id || '';
+  $sid.innerHTML = escHtml(currentSession.id || '') + ' <a class="sid-link" href="' + escAttr(API_BASE + '/api/sessions/' + encodeURIComponent(currentSession.id) + '/messages') + '" target="_blank" title="在新窗口打开 API">↗</a>';
 
   const $parentContainer = document.getElementById('parent-link-container');
   if (currentSession.parent_id) {
@@ -779,6 +1126,7 @@ async function selectSession(id) {
     const msgs = await res.json();
     $body.innerHTML = renderMessages(msgs);
     enhanceCodeBlocks($body);
+    checkUserMsgOverflow($body);
   } catch (err) {
     $body.innerHTML = '<div class="empty-state"><p style="color:var(--red)">加载失败: ' + escHtml(err.message) + '</p></div>';
   }

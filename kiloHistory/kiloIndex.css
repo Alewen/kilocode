@@ -204,6 +204,18 @@ body {
   margin-top: 2px;
   user-select: all;
 }
+.main-header .sid .sid-link {
+  font-family: var(--font-sans);
+  color: var(--accent);
+  text-decoration: none;
+  margin-left: 6px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+}
+.main-header .sid .sid-link:hover {
+  text-decoration: underline;
+}
 .parent-link {
   display: inline-flex;
   align-items: center;
@@ -253,21 +265,88 @@ body {
   display: flex; justify-content: flex-end;
   margin-bottom: 12px;
 }
+.user-msg-wrapper {
+  max-width: 80%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.user-msg-header {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--bg-card);
+  border-radius: 8px 8px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.user-msg-header.visible {
+  display: flex;
+}
+.user-msg-header:hover {
+  background: var(--bg-hover);
+}
+.user-msg-header-toggle {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+/* header 可见时去掉气泡顶部圆角 */
+.user-msg-header.visible + .user-msg-bubble {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
 .user-msg-bubble {
-  background: var(--accent);
+  background: #4a90d9;
   color: #fff;
   padding: 10px 14px;
   border-radius: 12px 12px 4px 12px;
-  max-width: 80%;
   word-break: break-word;
-  white-space: pre-wrap;
   font-size: 13px; line-height: 1.5;
+}
+.user-msg-body {
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.user-msg-bubble.expanded .user-msg-body {
+  -webkit-line-clamp: unset;
+}
+.user-msg-toggle {
+  cursor: pointer;
+  color: rgba(255,255,255,0.75);
+  font-size: 12px;
+  margin-top: 6px;
+  user-select: none;
+  display: none;
+}
+.user-msg-toggle:hover { text-decoration: underline; }
+.user-msg-bubble.expanded .user-msg-toggle {
+  display: block;
+}
+/* 内容超过3行才显示 toggle 按钮（JS 在渲染后检查） */
+.user-msg-body.clamped + .user-msg-toggle {
+  display: block;
 }
 .user-msg-meta {
   display: flex; justify-content: flex-end;
   gap: 8px; margin-top: 4px;
   font-size: 11px; color: var(--text-muted);
   padding-right: 4px;
+  font-family: var(--font-sans);
+  font-weight: 400;
+}
+.part-meta {
+  font-size: 11px; color: var(--text-muted);
+  margin-top: 4px; padding: 0 0 4px 16px;
+  font-family: var(--font-sans);
+  font-weight: 400;
 }
 
 /* ===== Assistant Parts Container ===== */
@@ -293,7 +372,7 @@ body {
   font-size: 14px; flex-shrink: 0;
   transition: transform 0.2s;
 }
-.reasoning-part.open .reasoning-header .icon { transform: rotate(90deg); }
+.reasoning-part.open .reasoning-header .t-expand { transform: rotate(90deg); }
 .reasoning-header .label {
   color: var(--yellow);
   font-weight: 500;
@@ -301,7 +380,13 @@ body {
 }
 .reasoning-header .summary {
   color: var(--text-weak);
+  flex: 1; min-width: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.reasoning-header .t-expand {
+  font-size: 12px; color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform 0.2s;
 }
 .reasoning-body {
   display: none;
@@ -343,13 +428,27 @@ body {
 .reasoning-body ul, .reasoning-body ol { padding-left: 20px; margin: 4px 0; }
 .reasoning-body li { margin: 2px 0; }
 .reasoning-part.open .reasoning-body { display: block; }
-/* 推理体内代码块的 header 与推理 header 同色 */
+/* 推理体内代码块的 header 使用 body 原有背景色 */
 .reasoning-body .code-block-header {
-  background: var(--bg-card);
-}
-/* 推理体内代码块的 body 比推理 body 背景更深 */
-.reasoning-body .code-block-wrapper pre {
   background: #d8d8d8;
+}
+/* 推理体内代码块的 body 比 header 更淡 */
+.reasoning-body .code-block-wrapper pre {
+  background: #e8e8e8;
+}
+/* 推理体内的块引用：与 Kilo UI 一致的灰色背景 */
+.reasoning-body blockquote {
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: #e8e8e8;
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.reasoning-body blockquote p {
+  margin: 2px 0;
 }
 
 /* ===== Text Part ===== */
@@ -373,6 +472,9 @@ body {
 }
 .tool-part.modify {
   border: 2px solid var(--red);
+}
+.tool-part.task {
+  border: 2px solid var(--blue);
 }
 .tool-part.error .tool-header {
   background: rgba(215, 58, 73, 0.08);
@@ -398,15 +500,22 @@ body {
 .tool-header .t-icon.edit { background: #d4edda; color: #155724; }
 .tool-header .t-icon.read { background: #d1ecf1; color: #0c5460; }
 .tool-header .t-icon.other { background: #e2e3e5; color: #383d41; }
+.tool-header .t-icon.webfetch { background: #d1ecf1; color: #0c5460; }
 .tool-header .t-summary { flex: 1; min-width: 0; }
 .tool-header .t-summary .t-title {
+  display: inline-block;
   font-weight: 500;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 80%;
+  vertical-align: bottom;
 }
 .tool-header .t-summary .t-sub {
+  display: inline-block;
   font-size: 11px; color: var(--text-muted);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  margin-top: 1px;
+  margin-left: 6px;
+  max-width: 80%;
+  vertical-align: bottom;
 }
 .tool-header .t-expand {
   font-size: 12px; color: var(--text-muted);
@@ -492,6 +601,7 @@ body {
   background: var(--bg-card);
 }
 .bash-cmd-block {
+  margin: 0;
   background: var(--bg-input);
   padding: 6px 12px;
   font-family: var(--font-mono);
@@ -501,6 +611,7 @@ body {
   position: relative;
 }
 .bash-out-block {
+  margin: 0;
   background: var(--bg-input);
   padding: 6px 12px;
   font-family: var(--font-mono);
@@ -599,6 +710,7 @@ body {
 }
 .content-block {
   font-family: var(--font-mono);
+  font-variant-ligatures: none;
   font-size: 12px;
   line-height: 1.5;
   padding: 8px 12px;
@@ -623,6 +735,7 @@ body {
 /* Read tool output display */
 .read-output-view {
   font-family: var(--font-mono);
+  font-variant-ligatures: none;
   font-size: 12px;
   line-height: 1.5;
   overflow-x: auto;

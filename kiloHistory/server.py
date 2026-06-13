@@ -134,12 +134,19 @@ def get_parts(message_id):
                     entry["todos"] = meta["todos"]
                 elif "todos" in inp:
                     entry["todos"] = inp["todos"]
+            if entry["tool"] == "skill":
+                if "name" in inp:
+                    entry["skillName"] = inp["name"]
             if "command" in inp:
                 entry["command"] = inp.get("command", "")
             if "description" in inp:
                 entry["description"] = inp.get("description", "")
             if "filePath" in inp:
                 entry["filePath"] = inp.get("filePath", "")
+            if "url" in inp:
+                entry["url"] = inp.get("url", "")
+            if "query" in inp:
+                entry["query"] = inp.get("query", "")
             if "offset" in inp:
                 entry["offset"] = inp.get("offset")
             if "limit" in inp:
