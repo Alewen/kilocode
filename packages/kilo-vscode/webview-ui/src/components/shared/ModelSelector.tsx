@@ -715,6 +715,9 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                                 }}
                               >
                                 <div class="model-selector-item-left">
+                                  <Show when={showProvider()}>
+                                    <span class="model-selector-item-provider-tag">{model.providerName}</span>
+                                  </Show>
                                   <span class="model-selector-item-name">
                                     {(() => {
                                       const full = sanitizeName(model.name)
@@ -730,9 +733,6 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                                   </span>
                                   <Show when={isFree(model)}>
                                     <Tag data-variant="member">{language.t("model.tag.free")}</Tag>
-                                  </Show>
-                                  <Show when={showProvider()}>
-                                    <span class="model-selector-item-provider-tag">{model.providerName}</span>
                                   </Show>
                                 </div>
                                 <Show when={session && props.favorites !== false}>
