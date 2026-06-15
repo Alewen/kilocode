@@ -314,6 +314,7 @@ function wrapWithBwrap(
   command: string,
   cwd: string,
   cfg?: { ro_bind?: string[]; tmpfs?: string[]; symlink?: { from: string; to: string }[]; rw_bind?: string[] },
+  projectDir?: string, // kilocode_change
 ): string {
   const escapedCmd = command.replace(/'/g, "'\\''")
   const home = os.homedir()
@@ -375,7 +376,11 @@ function wrapWithBwrap(
   }
 
   args.push("--tmpfs", "/home")
-  args.push("--bind", `'${cwd}'`, `'${cwd}'`)
+  // kilocode_change start - only RW-bind cwd when inside the project directory to prevent escape
+  if (projectDir && cwd.startsWith(projectDir)) {
+    args.push("--bind", `'${cwd}'`, `'${cwd}'`)
+  }
+  // kilocode_change end
   for (const p of homeRo) {
     args.push("--ro-bind", `'${p}'`, `'${p}'`)
   }
@@ -396,6 +401,7 @@ function cmd(
   cwd: string,
   env: NodeJS.ProcessEnv,
   bwrap?: { ro_bind?: string[]; tmpfs?: string[]; symlink?: { from: string; to: string }[]; rw_bind?: string[] },
+  projectDir?: string, // kilocode_change
 ) {
   if (process.platform === "win32" && Shell.ps(shell)) {
     return ChildProcess.make(shell, Shell.args(shell, command, cwd), { // kilocode_change - encoded PowerShell args
@@ -407,7 +413,7 @@ function cmd(
   }
 
   const isBash = shell.includes("bash") || shell === "sh" || shell === "/bin/sh"
-  const wrappedCommand = isBash ? wrapWithBwrap(command, cwd, bwrap) : command
+  const wrappedCommand = isBash ? wrapWithBwrap(command, cwd, bwrap, projectDir) : command // kilocode_change
 
   return ChildProcess.make(wrappedCommand, [], {
     shell: isBash ? "/bin/bash" : shell,
@@ -554,6 +560,7 @@ export const ShellTool = Tool.define(
         env: NodeJS.ProcessEnv
         timeout: number
         description: string
+        projectDir: string // kilocode_change
       },
       ctx: Tool.Context,
     ) {
@@ -612,7 +619,7 @@ export const ShellTool = Tool.define(
             symlink: global.bwrap?.symlink, // kilocode_change
             tmpfs: merged.bwrap?.tmpfs, // kilocode_change
           } // kilocode_change
-          const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env, bwrapCfg))
+          const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env, bwrapCfg, input.projectDir)) // kilocode_change
 
           yield* Effect.forkScoped(
             Stream.runForEach(Stream.decodeText(handle.all), (chunk) => {
@@ -749,9 +756,7 @@ export const ShellTool = Tool.define(
               const rawCwd = params.workdir
                 ? yield* resolvePath(params.workdir, executeInstance.directory, shell)
                 : executeInstance.directory
-              // kilocode_change start - clamp workdir to project directory to prevent sandbox escape via bwrap --bind
-              const cwd = containsPath(rawCwd, executeInstance) ? rawCwd : executeInstance.directory
-              // kilocode_change end
+              const cwd = rawCwd // kilocode_change - let sandbox handle access control
               if (params.timeout !== undefined && params.timeout < 0) {
                 throw new Error(`Invalid timeout value: ${params.timeout}. Timeout must be a positive number.`)
               }
@@ -781,6 +786,7 @@ export const ShellTool = Tool.define(
                   env: yield* shellEnv(ctx, cwd),
                   timeout,
                   description: params.description ?? params.command, // kilocode_change
+                  projectDir: executeInstance.directory, // kilocode_change
                 },
                 ctx,
               )
