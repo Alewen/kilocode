@@ -1,64 +1,64 @@
 <#
 .SYNOPSIS
-win-file-encoding-converter.ps1 - ÎÄ¼ş×Ö·û±àÂë×ª»»¹¤¾ß
+win-file-encoding-converter.ps1 - æ–‡ä»¶å­—ç¬¦ç¼–ç è½¬æ¢å·¥å…·
 
 .DESCRIPTION
-½«ÎÄ±¾ÎÄ¼ş´ÓÒ»ÖÖ±àÂë¸ñÊ½×ª»»ÎªÁíÒ»ÖÖ±àÂë¸ñÊ½£¬Ö§³Ö UTF-8¡¢UTF-16¡¢UTF-32¡¢ASCII¡¢GB2312¡¢GBK µÈ¶àÖÖ±àÂë
-¾ß±¸Ô´±àÂëÑéÖ¤¡¢×ª»»½á¹ûÑéÖ¤ºÍÔ­×Ó²Ù×÷±£»¤»úÖÆ£¬È·±£ÎÄ¼ş°²È«×ª»»
+å°†æ–‡æœ¬æ–‡ä»¶ä»ä¸€ç§ç¼–ç æ ¼å¼è½¬æ¢ä¸ºå¦ä¸€ç§ç¼–ç æ ¼å¼ï¼Œæ”¯æŒ UTF-8ã€UTF-16ã€UTF-32ã€ASCIIã€GB2312ã€GBK ç­‰å¤šç§ç¼–ç 
+å…·å¤‡æºç¼–ç éªŒè¯ã€è½¬æ¢ç»“æœéªŒè¯å’ŒåŸå­æ“ä½œä¿æŠ¤æœºåˆ¶ï¼Œç¡®ä¿æ–‡ä»¶å®‰å…¨è½¬æ¢
 
 .PARAMETER FilePath
-Òª×ª»»µÄÎÄ¼şÍêÕûÂ·¾¶£¨±ØĞè²ÎÊı£¬Î»ÖÃ0£©£¬²»ÄÜ°üº¬Í¨Åä·û
+è¦è½¬æ¢çš„æ–‡ä»¶å®Œæ•´è·¯å¾„ï¼ˆå¿…éœ€å‚æ•°ï¼Œä½ç½®0ï¼‰ï¼Œä¸èƒ½åŒ…å«é€šé…ç¬¦
 
 .PARAMETER SourceEncoding
-Ô´ÎÄ¼şµÄ±àÂë¸ñÊ½£¨±ØĞè²ÎÊı£¬Î»ÖÃ1£©
+æºæ–‡ä»¶çš„ç¼–ç æ ¼å¼ï¼ˆå¿…éœ€å‚æ•°ï¼Œä½ç½®1ï¼‰
 
 .PARAMETER TargetEncoding
-Ä¿±ê±àÂë¸ñÊ½£¨±ØĞè²ÎÊı£¬Î»ÖÃ2£©
+ç›®æ ‡ç¼–ç æ ¼å¼ï¼ˆå¿…éœ€å‚æ•°ï¼Œä½ç½®2ï¼‰
 
 .PARAMETER Quiet
-¾²Ä¬Ä£Ê½£¨¿ÉÑ¡¿ª¹Ø£¬Î»ÖÃ3£©£¬²»ÏÔÊ¾Êä³öĞÅÏ¢
+é™é»˜æ¨¡å¼ï¼ˆå¯é€‰å¼€å…³ï¼Œä½ç½®3ï¼‰ï¼Œä¸æ˜¾ç¤ºè¾“å‡ºä¿¡æ¯
 
 .PARAMETER LineEnding
-ĞĞÎ²·û×ª»»£¨¿ÉÑ¡²ÎÊı£¬Î»ÖÃ4£©£¬¿ÉÑ¡Öµ£ºLF£¨Unix¸ñÊ½£©¡¢CRLF£¨Windows¸ñÊ½£©¡£Ö¸¶¨ºó£¬×ª»»±àÂëºó½«Í³Ò»Ìæ»»ÎªÖ¸¶¨ĞĞÎ²·û
+è¡Œå°¾ç¬¦è½¬æ¢ï¼ˆå¯é€‰å‚æ•°ï¼Œä½ç½®4ï¼‰ï¼Œå¯é€‰å€¼ï¼šLFï¼ˆUnixæ ¼å¼ï¼‰ã€CRLFï¼ˆWindowsæ ¼å¼ï¼‰ã€‚æŒ‡å®šåï¼Œè½¬æ¢ç¼–ç åå°†ç»Ÿä¸€æ›¿æ¢ä¸ºæŒ‡å®šè¡Œå°¾ç¬¦
 
 .EXAMPLE
 .\win-file-encoding-converter.ps1 "C:\test\example.txt" "GB2312" "UTF-8" "CRLF"
-½«ÎÄ¼ş´Ó GB2312 ×ª»»Îª UTF-8£¬²¢Í³Ò»Ìæ»»Îª CRLF ĞĞÎ²·û
+å°†æ–‡ä»¶ä» GB2312 è½¬æ¢ä¸º UTF-8ï¼Œå¹¶ç»Ÿä¸€æ›¿æ¢ä¸º CRLF è¡Œå°¾ç¬¦
 
 .EXAMPLE
 .\win-file-encoding-converter.ps1 "C:\test\example.txt" "UTF-8" "UTF-8-BOM" -Quiet -LineEnding "LF"
-½«ÎÄ¼ş´Ó UTF-8£¨²»´ø BOM£©×ª»»Îª UTF-8£¨´ø BOM£©£¬¾²Ä¬Ä£Ê½£¬²¢Í³Ò»Ìæ»»Îª LF ĞĞÎ²·û
+å°†æ–‡ä»¶ä» UTF-8ï¼ˆä¸å¸¦ BOMï¼‰è½¬æ¢ä¸º UTF-8ï¼ˆå¸¦ BOMï¼‰ï¼Œé™é»˜æ¨¡å¼ï¼Œå¹¶ç»Ÿä¸€æ›¿æ¢ä¸º LF è¡Œå°¾ç¬¦
 
 .NOTES
-Ö§³ÖµÄ±àÂë¸ñÊ½£º
-- UTF-8 / UTF8: UTF-8 ±àÂë£¨²»´ø BOM£©
-- UTF-8-BOM / UTF8-BOM / UTF8BOM: UTF-8 ±àÂë£¨´ø BOM£©
-- UTF-16LE / UTF16LE: UTF-16 Ğ¡¶ËĞò£¨²»´ø BOM£©
-- UTF-16LE-BOM / UTF16LE-BOM / UTF16LEBOM / UNICODE: UTF-16 Ğ¡¶ËĞò£¨´ø BOM£©
-- UTF-16BE / UTF16BE: UTF-16 ´ó¶ËĞò£¨²»´ø BOM£©
-- UTF-16BE-BOM / UTF16BE-BOM / UTF16BEBOM: UTF-16 ´ó¶ËĞò£¨´ø BOM£©
-- UTF-32LE / UTF32LE: UTF-32 Ğ¡¶ËĞò£¨²»´ø BOM£©
-- UTF-32LE-BOM / UTF32LE-BOM / UTF32LEBOM: UTF-32 Ğ¡¶ËĞò£¨´ø BOM£©
-- UTF-32BE / UTF32BE: UTF-32 ´ó¶ËĞò£¨²»´ø BOM£©
-- UTF-32BE-BOM / UTF32BE-BOM / UTF32BEBOM: UTF-32 ´ó¶ËĞò£¨´ø BOM£©
-- ASCII: ASCII ±àÂë
-- GB2312: GB2312 ±àÂë
-- GBK: GBK ±àÂë
-- DEFAULT: ÏµÍ³Ä¬ÈÏ±àÂë
+æ”¯æŒçš„ç¼–ç æ ¼å¼ï¼š
+- UTF-8 / UTF8: UTF-8 ç¼–ç ï¼ˆä¸å¸¦ BOMï¼‰
+- UTF-8-BOM / UTF8-BOM / UTF8BOM: UTF-8 ç¼–ç ï¼ˆå¸¦ BOMï¼‰
+- UTF-16LE / UTF16LE: UTF-16 å°ç«¯åºï¼ˆä¸å¸¦ BOMï¼‰
+- UTF-16LE-BOM / UTF16LE-BOM / UTF16LEBOM / UNICODE: UTF-16 å°ç«¯åºï¼ˆå¸¦ BOMï¼‰
+- UTF-16BE / UTF16BE: UTF-16 å¤§ç«¯åºï¼ˆä¸å¸¦ BOMï¼‰
+- UTF-16BE-BOM / UTF16BE-BOM / UTF16BEBOM: UTF-16 å¤§ç«¯åºï¼ˆå¸¦ BOMï¼‰
+- UTF-32LE / UTF32LE: UTF-32 å°ç«¯åºï¼ˆä¸å¸¦ BOMï¼‰
+- UTF-32LE-BOM / UTF32LE-BOM / UTF32LEBOM: UTF-32 å°ç«¯åºï¼ˆå¸¦ BOMï¼‰
+- UTF-32BE / UTF32BE: UTF-32 å¤§ç«¯åºï¼ˆä¸å¸¦ BOMï¼‰
+- UTF-32BE-BOM / UTF32BE-BOM / UTF32BEBOM: UTF-32 å¤§ç«¯åºï¼ˆå¸¦ BOMï¼‰
+- ASCII: ASCII ç¼–ç 
+- GB2312: GB2312 ç¼–ç 
+- GBK: GBK ç¼–ç 
+- DEFAULT: ç³»ç»Ÿé»˜è®¤ç¼–ç 
 
-×ª»»Á÷³Ì£º
-1. ÑéÖ¤Ô´±àÂëÊÇ·ñÕıÈ·£¨Í¨¹ıÁÙÊ±ÎÄ¼ş¶Ô±È£©
-2. ¶ÁÈ¡Ô´ÎÄ¼şÄÚÈİ
-3. Ğ´ÈëÁÙÊ±ÎÄ¼ş£¨Ê¹ÓÃÄ¿±ê±àÂë£©
-4. ÑéÖ¤×ª»»½á¹û£¨¶Ô±ÈÄÚÈİ£©
-5. Ô­×Ó²Ù×÷Ìæ»»Ô­ÎÄ¼ş
-6. £¨¿ÉÑ¡£©×ª»»ĞĞÎ²·ûÎª LF »ò CRLF
+è½¬æ¢æµç¨‹ï¼š
+1. éªŒè¯æºç¼–ç æ˜¯å¦æ­£ç¡®ï¼ˆé€šè¿‡ä¸´æ—¶æ–‡ä»¶å¯¹æ¯”ï¼‰
+2. è¯»å–æºæ–‡ä»¶å†…å®¹
+3. å†™å…¥ä¸´æ—¶æ–‡ä»¶ï¼ˆä½¿ç”¨ç›®æ ‡ç¼–ç ï¼‰
+4. éªŒè¯è½¬æ¢ç»“æœï¼ˆå¯¹æ¯”å†…å®¹ï¼‰
+5. åŸå­æ“ä½œæ›¿æ¢åŸæ–‡ä»¶
+6. ï¼ˆå¯é€‰ï¼‰è½¬æ¢è¡Œå°¾ç¬¦ä¸º LF æˆ– CRLF
 
-Êä³ö¸ñÊ½£ºJSON ½á¹¹»¯Êı¾İ£¬°üº¬ Success ºÍ ErrorMessage ×Ö¶Î
+è¾“å‡ºæ ¼å¼ï¼šJSON ç»“æ„åŒ–æ•°æ®ï¼ŒåŒ…å« Success å’Œ ErrorMessage å­—æ®µ
 #>
 $SCRIPTNAME = $MyInvocation.MyCommand.Name
 
-# Ö§³ÖµÄ±àÂë¸ñÊ½ÁĞ±í
+# æ”¯æŒçš„ç¼–ç æ ¼å¼åˆ—è¡¨
 $SUPPORTED_ENCODINGS = @(
     "UTF-8", "UTF8",
     "UTF-8-BOM", "UTF8-BOM", "UTF8BOM",                     # UTF-8
@@ -66,8 +66,8 @@ $SUPPORTED_ENCODINGS = @(
     "UTF-16LE-BOM", "UTF16LE-BOM", "UTF16LEBOM", "UNICODE", # UTF-16 LE
     "UTF-16BE", "UTF16BE",
     "UTF-16BE-BOM", "UTF16BE-BOM", "UTF16BEBOM",            # UTF-16 BE
-    "ASCII",                                                # µ¥×Ö½Ú±àÂë
-    "GB2312", "GBK",                                        # ÖĞÎÄ×Ö·û¼¯
+    "ASCII",                                                # å•å­—èŠ‚ç¼–ç 
+    "GB2312", "GBK",                                        # ä¸­æ–‡å­—ç¬¦é›†
     "UTF-32LE", "UTF32LE",
     "UTF-32LE-BOM", "UTF32LE-BOM", "UTF32LEBOM",            # UTF-32 LE
     "UTF-32BE", "UTF32BE",
@@ -76,13 +76,13 @@ $SUPPORTED_ENCODINGS = @(
 )
 
 # =======================================================
-# º¯Êı£ºIs-Supported-Encoding
-# ¹¦ÄÜ£ºÅĞ¶ÏÖ¸¶¨±àÂë¸ñÊ½ÊÇ·ñÖ§³Ö
-# ²ÎÊı£º
-#   - Encoding: string (±ØĞè) - ±àÂë¸ñÊ½Ãû³Æ
-# ·µ»ØÖµ£º½á¹¹»¯¶ÔÏó
-#   - IsSupported: bool - true=Ö§³Ö£¬false=²»Ö§³Ö
-#   - EncodingCode: int - ²»Ö§³ÖÊ±=0£¬Ö§³ÖÊ±=1-12
+# å‡½æ•°ï¼šIs-Supported-Encoding
+# åŠŸèƒ½ï¼šåˆ¤æ–­æŒ‡å®šç¼–ç æ ¼å¼æ˜¯å¦æ”¯æŒ
+# å‚æ•°ï¼š
+#   - Encoding: string (å¿…éœ€) - ç¼–ç æ ¼å¼åç§°
+# è¿”å›å€¼ï¼šç»“æ„åŒ–å¯¹è±¡
+#   - IsSupported: bool - true=æ”¯æŒï¼Œfalse=ä¸æ”¯æŒ
+#   - EncodingCode: int - ä¸æ”¯æŒæ—¶=0ï¼Œæ”¯æŒæ—¶=1-13
 # =======================================================
 function Is-Supported-Encoding
 {
@@ -172,7 +172,7 @@ function Is-Supported-Encoding
                 { $_ -in @("DEFAULT") } { 
                     return [PSCustomObject]@{
                         IsSupported = $true
-                        EncodingCode = 9
+                        EncodingCode = 13
                     }
                 }
             }
@@ -185,14 +185,14 @@ function Is-Supported-Encoding
 }
 
 # =======================================================
-# º¯Êı£ºGet-EncodingObject
-# ¹¦ÄÜ£º½«±àÂëÃû³Æ×ª»»Îª .NET Encoding ¶ÔÏó
-# ²ÎÊı£º
-#   - EncodingName: string (±ØĞè) - ±àÂë¸ñÊ½Ãû³Æ
-# ·µ»ØÖµ£º½á¹¹»¯¶ÔÏó
-#   - Success: bool - true=³É¹¦£¬false=Ê§°Ü
-#   - Encoding: object - ³É¹¦Ê±=.NET Encoding¶ÔÏó£¬Ê§°ÜÊ±=$null
-#   - ErrorMessage: string - Ê§°ÜÊ±=´íÎóĞÅÏ¢£¬³É¹¦Ê±=¿Õ×Ö·û´®
+# å‡½æ•°ï¼šGet-EncodingObject
+# åŠŸèƒ½ï¼šå°†ç¼–ç åç§°è½¬æ¢ä¸º .NET Encoding å¯¹è±¡
+# å‚æ•°ï¼š
+#   - EncodingName: string (å¿…éœ€) - ç¼–ç æ ¼å¼åç§°
+# è¿”å›å€¼ï¼šç»“æ„åŒ–å¯¹è±¡
+#   - Success: bool - true=æˆåŠŸï¼Œfalse=å¤±è´¥
+#   - Encoding: object - æˆåŠŸæ—¶=.NET Encodingå¯¹è±¡ï¼Œå¤±è´¥æ—¶=$null
+#   - ErrorMessage: string - å¤±è´¥æ—¶=é”™è¯¯ä¿¡æ¯ï¼ŒæˆåŠŸæ—¶=ç©ºå­—ç¬¦ä¸²
 # =======================================================
 function Get-EncodingObject
 {
@@ -207,7 +207,7 @@ function Get-EncodingObject
         return [PSCustomObject]@{
             Success = $false
             Encoding = $null
-            ErrorMessage = "²»Ö§³ÖµÄ±àÂë¸ñÊ½: $EncodingName"
+            ErrorMessage = "ä¸æ”¯æŒçš„ç¼–ç æ ¼å¼: $EncodingName"
         }
     }
     
@@ -219,17 +219,17 @@ function Get-EncodingObject
         "1" { $encodingObj = [System.Text.UTF8Encoding]::new($false) }
         "2" { $encodingObj = [System.Text.UTF8Encoding]::new($true) }
 
-        # UTF-16 LE ²»´ø BOM
-        # ²ÎÊıÒ»£ºtrue ±íÊ¾´ó¶ËĞò UTF-16 BE£¬false ±íÊ¾Ğ¡¶ËĞò UTF-16 LE£¬²ÎÊı¶ş£ºÊÇ·ñ´ø BOM
+        # UTF-16 LE ä¸å¸¦ BOM
+        # å‚æ•°ä¸€ï¼štrue è¡¨ç¤ºå¤§ç«¯åº UTF-16 BEï¼Œfalse è¡¨ç¤ºå°ç«¯åº UTF-16 LEï¼Œå‚æ•°äºŒï¼šæ˜¯å¦å¸¦ BOM
         "3" { $encodingObj = [System.Text.UnicodeEncoding]::new($false, $false, $true) }
 
-        # UTF-16 LE ´ø BOM
+        # UTF-16 LE å¸¦ BOM
         "4" { $encodingObj = [System.Text.UnicodeEncoding]::new($false, $true, $true) }
 
-        # UTF-16 BE ²»´ø BOM
+        # UTF-16 BE ä¸å¸¦ BOM
         "5" { $encodingObj = [System.Text.UnicodeEncoding]::new($true, $false, $true) }
 
-        # UTF-16 BE ´ø BOM
+        # UTF-16 BE å¸¦ BOM
         "6" { $encodingObj = [System.Text.UnicodeEncoding]::new($true, $true, $true) }
 
         "7" { $encodingObj = [System.Text.Encoding]::ASCII }
@@ -247,6 +247,9 @@ function Get-EncodingObject
         # UTF-32 BE with BOM
         "12" { $encodingObj = [System.Text.UTF32Encoding]::new($true, $true, $true) }
 
+        # DEFAULT / ç³»ç»Ÿé»˜è®¤ç¼–ç 
+        "13" { $encodingObj = [System.Text.Encoding]::Default }
+
         default {
             $encodingObj = [System.Text.Encoding]::Default
         }
@@ -260,15 +263,15 @@ function Get-EncodingObject
 }
 
 # =======================================================
-# º¯Êı£ºGet-ContentWithoutBom
-# ¹¦ÄÜ£º¶ÁÈ¡×Ö½ÚÊı×é£¬È¥³ı¿ÉÄÜµÄ BOM Í·£¬½âÂëÎª×Ö·û´®
-# ²ÎÊı£º
-#   - Bytes: byte[] (±ØĞè) - ÎÄ¼şÔ­Ê¼×Ö½ÚÊı×é
-#   - EncodingName: string (±ØĞè) - ±àÂë¸ñÊ½Ãû³Æ
-# ·µ»ØÖµ£º½á¹¹»¯¶ÔÏó
-#   - Success: bool - true=³É¹¦£¬false=Ê§°Ü
-#   - Content: string - ³É¹¦Ê±=½âÂëºóµÄ×Ö·û´®£¬Ê§°ÜÊ±=¿Õ×Ö·û´®
-#   - ErrorMessage: string - Ê§°ÜÊ±=´íÎóĞÅÏ¢£¬³É¹¦Ê±=¿Õ×Ö·û´®
+# å‡½æ•°ï¼šGet-ContentWithoutBom
+# åŠŸèƒ½ï¼šè¯»å–å­—èŠ‚æ•°ç»„ï¼Œå»é™¤å¯èƒ½çš„ BOM å¤´ï¼Œè§£ç ä¸ºå­—ç¬¦ä¸²
+# å‚æ•°ï¼š
+#   - Bytes: byte[] (å¿…éœ€) - æ–‡ä»¶åŸå§‹å­—èŠ‚æ•°ç»„
+#   - EncodingName: string (å¿…éœ€) - ç¼–ç æ ¼å¼åç§°
+# è¿”å›å€¼ï¼šç»“æ„åŒ–å¯¹è±¡
+#   - Success: bool - true=æˆåŠŸï¼Œfalse=å¤±è´¥
+#   - Content: string - æˆåŠŸæ—¶=è§£ç åçš„å­—ç¬¦ä¸²ï¼Œå¤±è´¥æ—¶=ç©ºå­—ç¬¦ä¸²
+#   - ErrorMessage: string - å¤±è´¥æ—¶=é”™è¯¯ä¿¡æ¯ï¼ŒæˆåŠŸæ—¶=ç©ºå­—ç¬¦ä¸²
 # =======================================================
 function Get-ContentWithoutBom
 {
@@ -285,7 +288,7 @@ function Get-ContentWithoutBom
             return [PSCustomObject]@{
                 Success = $false
                 Content = ""
-                ErrorMessage = "×Ö½ÚÊı×éÎª¿Õ»ò null"
+                ErrorMessage = "å­—èŠ‚æ•°ç»„ä¸ºç©ºæˆ– null"
             }
         }
 
@@ -294,14 +297,20 @@ function Get-ContentWithoutBom
             return [PSCustomObject]@{
                 Success = $false
                 Content = ""
-                ErrorMessage = "²»Ö§³ÖµÄ±àÂë¸ñÊ½: $EncodingName"
+                ErrorMessage = "ä¸æ”¯æŒçš„ç¼–ç æ ¼å¼: $EncodingName"
             }
         }
         $encodingCode = $checkResult.EncodingCode
 
         $offset = 0
 
-        if ($Bytes.Length -ge 3 -and $Bytes[0] -eq 0xEF -and $Bytes[1] -eq 0xBB -and $Bytes[2] -eq 0xBF) {
+        if ($Bytes.Length -ge 4 -and $Bytes[0] -eq 0xFF -and $Bytes[1] -eq 0xFE -and $Bytes[2] -eq 0x00 -and $Bytes[3] -eq 0x00) {
+            $offset = 4
+        }
+        elseif ($Bytes.Length -ge 4 -and $Bytes[0] -eq 0x00 -and $Bytes[1] -eq 0x00 -and $Bytes[2] -eq 0xFE -and $Bytes[3] -eq 0xFF) {
+            $offset = 4
+        }
+        elseif ($Bytes.Length -ge 3 -and $Bytes[0] -eq 0xEF -and $Bytes[1] -eq 0xBB -and $Bytes[2] -eq 0xBF) {
             $offset = 3
         }
         elseif ($Bytes.Length -ge 2 -and $Bytes[0] -eq 0xFF -and $Bytes[1] -eq 0xFE) {
@@ -309,12 +318,6 @@ function Get-ContentWithoutBom
         }
         elseif ($Bytes.Length -ge 2 -and $Bytes[0] -eq 0xFE -and $Bytes[1] -eq 0xFF) {
             $offset = 2
-        }
-        elseif ($Bytes.Length -ge 4 -and $Bytes[0] -eq 0xFF -and $Bytes[1] -eq 0xFE -and $Bytes[2] -eq 0x00 -and $Bytes[3] -eq 0x00) {
-            $offset = 4
-        }
-        elseif ($Bytes.Length -ge 4 -and $Bytes[0] -eq 0x00 -and $Bytes[1] -eq 0x00 -and $Bytes[2] -eq 0xFE -and $Bytes[3] -eq 0xFF) {
-            $offset = 4
         }
 
         if ($offset -gt 0) {
@@ -353,19 +356,19 @@ function Get-ContentWithoutBom
         return [PSCustomObject]@{
             Success = $false
             Content = ""
-            ErrorMessage = "½âÂëÊ§°Ü: $($_.Exception.Message)"
+            ErrorMessage = "è§£ç å¤±è´¥: $($_.Exception.Message)"
         }
     }
 }
 
 # =======================================================
-# º¯Êı£ºWrite-Silent
-# ¹¦ÄÜ£º¾²Ä¬Ä£Ê½Êä³öº¯Êı£¨¸øÈËÀàÓÃ»§¿´µÄ¸¨ÖúÊä³ö£©
-# ²ÎÊı£º
-#   - Message: string - ÒªÊä³öµÄÏûÏ¢
-#   - ForegroundColor: ConsoleColor - Êä³öÎÄ×ÖÑÕÉ«£¨Ä¬ÈÏYellow£©
-# ·µ»ØÖµ£ºÎŞ
-# ËµÃ÷£ºÒÀÀµ¸¸×÷ÓÃÓòµÄ $Quiet ±äÁ¿ÅĞ¶ÏÊÇ·ñÊä³ö
+# å‡½æ•°ï¼šWrite-Silent
+# åŠŸèƒ½ï¼šé™é»˜æ¨¡å¼è¾“å‡ºå‡½æ•°ï¼ˆç»™äººç±»ç”¨æˆ·çœ‹çš„è¾…åŠ©è¾“å‡ºï¼‰
+# å‚æ•°ï¼š
+#   - Message: string - è¦è¾“å‡ºçš„æ¶ˆæ¯
+#   - ForegroundColor: ConsoleColor - è¾“å‡ºæ–‡å­—é¢œè‰²ï¼ˆé»˜è®¤Yellowï¼‰
+# è¿”å›å€¼ï¼šæ— 
+# è¯´æ˜ï¼šä¾èµ–çˆ¶ä½œç”¨åŸŸçš„ $Quiet å˜é‡åˆ¤æ–­æ˜¯å¦è¾“å‡º
 # =======================================================
 function Write-Silent
 {
@@ -381,15 +384,15 @@ function Write-Silent
 }
 
 # =======================================================
-# º¯Êı£ºValidate-SourceEncodingWithTempFile
-# ¹¦ÄÜ£ºÑéÖ¤Ô´ÎÄ¼ş±àÂëÊÇ·ñÕıÈ·
-# ²ÎÊı£º
-#   - FilePath: string (±ØĞè) - ÎÄ¼şÂ·¾¶
-#   - SourceEncoding: string (±ØĞè) - Ô´ÎÄ¼ş±àÂë
-# ·µ»ØÖµ£º½á¹¹»¯¶ÔÏó
-#   - Success: bool - true=ÑéÖ¤¹ı³Ì³É¹¦Íê³É£¬false=ÑéÖ¤¹ı³Ì·¢ÉúÒì³£
-#   - IsValid: bool - true=Ô´±àÂëÕıÈ·£¬false=Ô´±àÂë¿ÉÄÜ²»ÕıÈ·
-#   - ErrorMessage: string - Ê§°ÜÊ±=´íÎóĞÅÏ¢£¬³É¹¦Ê±=¿Õ×Ö·û´®
+# å‡½æ•°ï¼šValidate-SourceEncodingWithTempFile
+# åŠŸèƒ½ï¼šéªŒè¯æºæ–‡ä»¶ç¼–ç æ˜¯å¦æ­£ç¡®
+# å‚æ•°ï¼š
+#   - FilePath: string (å¿…éœ€) - æ–‡ä»¶è·¯å¾„
+#   - SourceEncoding: string (å¿…éœ€) - æºæ–‡ä»¶ç¼–ç 
+# è¿”å›å€¼ï¼šç»“æ„åŒ–å¯¹è±¡
+#   - Success: bool - true=éªŒè¯è¿‡ç¨‹æˆåŠŸå®Œæˆï¼Œfalse=éªŒè¯è¿‡ç¨‹å‘ç”Ÿå¼‚å¸¸
+#   - IsValid: bool - true=æºç¼–ç æ­£ç¡®ï¼Œfalse=æºç¼–ç å¯èƒ½ä¸æ­£ç¡®
+#   - ErrorMessage: string - å¤±è´¥æ—¶=é”™è¯¯ä¿¡æ¯ï¼ŒæˆåŠŸæ—¶=ç©ºå­—ç¬¦ä¸²
 # =======================================================
 function Validate-SourceEncodingWithTempFile
 {
@@ -404,7 +407,7 @@ function Validate-SourceEncodingWithTempFile
     try {
         $encResult = Get-EncodingObject $SourceEncoding
         if (-not $encResult.Success) {
-            Write-Silent "´íÎó: $($encResult.ErrorMessage)" -ForegroundColor Red
+            Write-Silent "é”™è¯¯: $($encResult.ErrorMessage)" -ForegroundColor Red
             return [PSCustomObject]@{
                 Success = $false
                 IsValid = $false
@@ -412,11 +415,11 @@ function Validate-SourceEncodingWithTempFile
             }
         }
         $srcEncodingObj = $encResult.Encoding
-        Write-Silent "1. ÕıÔÚÑéÖ¤Ô´±àÂë [ $SourceEncoding ] ÊÇ·ñÕıÈ·..." -ForegroundColor Gray
+        Write-Silent "1. æ­£åœ¨éªŒè¯æºç¼–ç  [ $SourceEncoding ] æ˜¯å¦æ­£ç¡®..." -ForegroundColor Gray
 
         $tempFileName = [System.IO.Path]::GetRandomFileName()
         $tempFilePath = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), $tempFileName)
-        Write-Silent "   ÁÙÊ±ÑéÖ¤ÎÄ¼ş: [ $tempFilePath ]" -ForegroundColor Gray
+        Write-Silent "   ä¸´æ—¶éªŒè¯æ–‡ä»¶: [ $tempFilePath ]" -ForegroundColor Gray
 
         $originalContent = [System.IO.File]::ReadAllText($FilePath, $srcEncodingObj)
         [System.IO.File]::WriteAllText($tempFilePath, $originalContent, $srcEncodingObj)
@@ -424,18 +427,25 @@ function Validate-SourceEncodingWithTempFile
         $originalBytes = [System.IO.File]::ReadAllBytes($FilePath)
         $tempBytes = [System.IO.File]::ReadAllBytes($tempFilePath)
         
-        Write-Silent "   Ô­Ê¼ÎÄ¼ş´óĞ¡: $($originalBytes.Length) ×Ö½Ú" -ForegroundColor Gray
-        Write-Silent "   ÁÙÊ±ÎÄ¼ş´óĞ¡: $($tempBytes.Length) ×Ö½Ú" -ForegroundColor Gray
+        Write-Silent "   åŸå§‹æ–‡ä»¶å¤§å°: $($originalBytes.Length) å­—èŠ‚" -ForegroundColor Gray
+        Write-Silent "   ä¸´æ—¶æ–‡ä»¶å¤§å°: $($tempBytes.Length) å­—èŠ‚" -ForegroundColor Gray
 
         if ($originalBytes.Length -ne $tempBytes.Length)
         {
-            Write-Silent "   ´óĞ¡²îÒì: $($originalBytes.Length - $tempBytes.Length) ×Ö½Ú" -ForegroundColor Yellow
-            Write-Silent "   ¿ÉÄÜÔ­Òò: BOM´¦Àí²»Ò»ÖÂ»ò±àÂë×ª»»ËğÊ§" -ForegroundColor Yellow
+            Write-Silent "   å¤§å°å·®å¼‚: $($originalBytes.Length - $tempBytes.Length) å­—èŠ‚" -ForegroundColor Yellow
+            Write-Silent "   å¯èƒ½åŸå› : BOMå¤„ç†ä¸ä¸€è‡´æˆ–ç¼–ç è½¬æ¢æŸå¤±" -ForegroundColor Yellow
 
             $originalHasBOM = $false
             $tempHasBOM = $false
 
-            if ($originalBytes.Length -ge 3 -and $originalBytes[0] -eq 0xEF -and $originalBytes[1] -eq 0xBB -and $originalBytes[2] -eq 0xBF) {
+            # æ£€æµ‹åŸå§‹æ–‡ä»¶çš„ BOMï¼ˆå…ˆ 4 å­—èŠ‚ã€å† 3 å­—èŠ‚ã€å† 2 å­—èŠ‚ï¼‰
+            if ($originalBytes.Length -ge 4 -and $originalBytes[0] -eq 0xFF -and $originalBytes[1] -eq 0xFE -and $originalBytes[2] -eq 0x00 -and $originalBytes[3] -eq 0x00) {
+                $originalHasBOM = $true
+            }
+            elseif ($originalBytes.Length -ge 4 -and $originalBytes[0] -eq 0x00 -and $originalBytes[1] -eq 0x00 -and $originalBytes[2] -eq 0xFE -and $originalBytes[3] -eq 0xFF) {
+                $originalHasBOM = $true
+            }
+            elseif ($originalBytes.Length -ge 3 -and $originalBytes[0] -eq 0xEF -and $originalBytes[1] -eq 0xBB -and $originalBytes[2] -eq 0xBF) {
                 $originalHasBOM = $true
             }
             elseif ($originalBytes.Length -ge 2 -and $originalBytes[0] -eq 0xFF -and $originalBytes[1] -eq 0xFE) {
@@ -445,7 +455,14 @@ function Validate-SourceEncodingWithTempFile
                 $originalHasBOM = $true
             }
 
-            if ($tempBytes.Length -ge 3 -and $tempBytes[0] -eq 0xEF -and $tempBytes[1] -eq 0xBB -and $tempBytes[2] -eq 0xBF) {
+            # æ£€æµ‹ä¸´æ—¶æ–‡ä»¶çš„ BOMï¼ˆå…ˆ 4 å­—èŠ‚ã€å† 3 å­—èŠ‚ã€å† 2 å­—èŠ‚ï¼‰
+            if ($tempBytes.Length -ge 4 -and $tempBytes[0] -eq 0xFF -and $tempBytes[1] -eq 0xFE -and $tempBytes[2] -eq 0x00 -and $tempBytes[3] -eq 0x00) {
+                $tempHasBOM = $true
+            }
+            elseif ($tempBytes.Length -ge 4 -and $tempBytes[0] -eq 0x00 -and $tempBytes[1] -eq 0x00 -and $tempBytes[2] -eq 0xFE -and $tempBytes[3] -eq 0xFF) {
+                $tempHasBOM = $true
+            }
+            elseif ($tempBytes.Length -ge 3 -and $tempBytes[0] -eq 0xEF -and $tempBytes[1] -eq 0xBB -and $tempBytes[2] -eq 0xBF) {
                 $tempHasBOM = $true
             }
             elseif ($tempBytes.Length -ge 2 -and $tempBytes[0] -eq 0xFF -and $tempBytes[1] -eq 0xFE) {
@@ -456,8 +473,8 @@ function Validate-SourceEncodingWithTempFile
             }
 
             if ($originalHasBOM -ne $tempHasBOM) {
-                Write-Silent "   BOM´¦Àí²»Ò»ÖÂ: Ô­Ê¼ÎÄ¼ş$(if ($originalHasBOM) { "ÓĞ" } else { "ÎŞ" })BOM" -ForegroundColor Yellow
-                Write-Silent "   BOM´¦Àí²»Ò»ÖÂ: ÁÙÊ±ÎÄ¼ş$(if ($tempHasBOM) { "ÓĞ" } else { "ÎŞ" })BOM" -ForegroundColor Yellow
+                Write-Silent "   BOMå¤„ç†ä¸ä¸€è‡´: åŸå§‹æ–‡ä»¶$(if ($originalHasBOM) { "æœ‰" } else { "æ— " })BOM" -ForegroundColor Yellow
+                Write-Silent "   BOMå¤„ç†ä¸ä¸€è‡´: ä¸´æ—¶æ–‡ä»¶$(if ($tempHasBOM) { "æœ‰" } else { "æ— " })BOM" -ForegroundColor Yellow
             }
             
             if (Test-Path -LiteralPath $tempFilePath) {
@@ -467,7 +484,7 @@ function Validate-SourceEncodingWithTempFile
             return [PSCustomObject]@{
                 Success = $true
                 IsValid = $false
-                ErrorMessage = "ÎÄ¼ş´óĞ¡²»Æ¥Åä£¬¿ÉÄÜÊÇ BOM ´¦Àí²»Ò»ÖÂ"
+                ErrorMessage = "æ–‡ä»¶å¤§å°ä¸åŒ¹é…ï¼Œå¯èƒ½æ˜¯ BOM å¤„ç†ä¸ä¸€è‡´"
             }
         }
 
@@ -481,26 +498,26 @@ function Validate-SourceEncodingWithTempFile
 
                 if ($mismatchCount -le 5)
                 {
-                    Write-Silent "   ×Ö½ÚÎ»ÖÃ $i ²»Æ¥Åä: Ô­Ê¼ 0x$($originalBytes[$i].ToString('X2'))" -ForegroundColor Yellow
-                    Write-Silent "   ×Ö½ÚÎ»ÖÃ $i ²»Æ¥Åä: ÁÙÊ± 0x$($tempBytes[$i].ToString('X2'))" -ForegroundColor Yellow
+                    Write-Silent "   å­—èŠ‚ä½ç½® $i ä¸åŒ¹é…: åŸå§‹ 0x$($originalBytes[$i].ToString('X2'))" -ForegroundColor Yellow
+                    Write-Silent "   å­—èŠ‚ä½ç½® $i ä¸åŒ¹é…: ä¸´æ—¶ 0x$($tempBytes[$i].ToString('X2'))" -ForegroundColor Yellow
                 }
             }
         }
         
         if (-not $allMatch) {
-            Write-Silent "   ´íÎó: ·¢ÏÖ [ $mismatchCount ] ´¦×Ö½Ú²»Æ¥Åä" -ForegroundColor Red
-            Write-Silent "   ËµÃ÷: Ô´±àÂë [ $SourceEncoding ] ¿ÉÄÜ²»ÕıÈ·" -ForegroundColor Yellow
-            Write-Silent "   ÁÙÊ±ÑéÖ¤ÎÄ¼şÒÑ±£Áô: [ $tempFilePath ]" -ForegroundColor Yellow
+            Write-Silent "   é”™è¯¯: å‘ç° [ $mismatchCount ] å¤„å­—èŠ‚ä¸åŒ¹é…" -ForegroundColor Red
+            Write-Silent "   è¯´æ˜: æºç¼–ç  [ $SourceEncoding ] å¯èƒ½ä¸æ­£ç¡®" -ForegroundColor Yellow
+            Write-Silent "   ä¸´æ—¶éªŒè¯æ–‡ä»¶å·²ä¿ç•™: [ $tempFilePath ]" -ForegroundColor Yellow
             
             return [PSCustomObject]@{
                 Success = $true
                 IsValid = $false
-                ErrorMessage = "·¢ÏÖ $mismatchCount ´¦×Ö½Ú²»Æ¥Åä£¬Ô´±àÂë¿ÉÄÜ²»ÕıÈ·"
+                ErrorMessage = "å‘ç° $mismatchCount å¤„å­—èŠ‚ä¸åŒ¹é…ï¼Œæºç¼–ç å¯èƒ½ä¸æ­£ç¡®"
             }
         }
 
         Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue
-        Write-Silent "   ÑéÖ¤Í¨¹ı: Ô´±àÂëÕıÈ·" -ForegroundColor Green
+        Write-Silent "   éªŒè¯é€šè¿‡: æºç¼–ç æ­£ç¡®" -ForegroundColor Green
         
         return [PSCustomObject]@{
             Success = $true
@@ -510,8 +527,8 @@ function Validate-SourceEncodingWithTempFile
     }
     catch [System.Text.DecoderFallbackException]
     {
-        Write-Silent "   ´íÎó: ½âÂëÊ§°Ü - ÎÄ¼ş°üº¬ÎŞ·¨ÓÃ '$SourceEncoding' ½âÂëµÄ×Ö½Ú" -ForegroundColor Red
-        Write-Silent "   ËµÃ÷: Ô´ÎÄ¼şºÜ¿ÉÄÜ²»ÊÇ '$SourceEncoding' ±àÂë" -ForegroundColor Yellow
+        Write-Silent "   é”™è¯¯: è§£ç å¤±è´¥ - æ–‡ä»¶åŒ…å«æ— æ³•ç”¨ '$SourceEncoding' è§£ç çš„å­—èŠ‚" -ForegroundColor Red
+        Write-Silent "   è¯´æ˜: æºæ–‡ä»¶å¾ˆå¯èƒ½ä¸æ˜¯ '$SourceEncoding' ç¼–ç " -ForegroundColor Yellow
         if (Test-Path -LiteralPath $tempFilePath)
         {
             Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue
@@ -520,12 +537,12 @@ function Validate-SourceEncodingWithTempFile
         return [PSCustomObject]@{
             Success = $false
             IsValid = $false
-            ErrorMessage = "½âÂëÊ§°Ü: ÎÄ¼ş°üº¬ÎŞ·¨ÓÃ '$SourceEncoding' ½âÂëµÄ×Ö½Ú"
+            ErrorMessage = "è§£ç å¤±è´¥: æ–‡ä»¶åŒ…å«æ— æ³•ç”¨ '$SourceEncoding' è§£ç çš„å­—èŠ‚"
         }
     }
     catch
     {
-        Write-Silent "   ´íÎó: ÑéÖ¤¹ı³ÌÖĞ·¢ÉúÒì³£: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Silent "   é”™è¯¯: éªŒè¯è¿‡ç¨‹ä¸­å‘ç”Ÿå¼‚å¸¸: $($_.Exception.Message)" -ForegroundColor Red
         if (Test-Path -LiteralPath $tempFilePath)
         {
             Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue
@@ -534,22 +551,22 @@ function Validate-SourceEncodingWithTempFile
         return [PSCustomObject]@{
             Success = $false
             IsValid = $false
-            ErrorMessage = "ÑéÖ¤Òì³£: $($_.Exception.Message)"
+            ErrorMessage = "éªŒè¯å¼‚å¸¸: $($_.Exception.Message)"
         }
     }
 }
 
 # =======================================================
-# º¯Êı£ºFileEncodingConverter
-# ¹¦ÄÜ£ºÖ÷º¯Êı - ×ª»»ÎÄ¼ş±àÂë¸ñÊ½
-# ²ÎÊı£º
-#   - FilePath: string (±ØĞè) - ÎÄ¼şÂ·¾¶
-#   - SourceEncoding: string (±ØĞè) - Ô´ÎÄ¼ş±àÂë
-#   - TargetEncoding: string (±ØĞè) - Ä¿±ê±àÂë
-#   - Quiet: switch (¿ÉÑ¡) - ¾²Ä¬Ä£Ê½£¬²»ÏÔÊ¾Êä³öĞÅÏ¢
-# ·µ»ØÖµ£º½á¹¹»¯¶ÔÏó
-#   - Success: bool - true=×ª»»³É¹¦£¬false=×ª»»Ê§°Ü
-#   - ErrorMessage: string - Ê§°ÜÊ±=´íÎóĞÅÏ¢£¬³É¹¦Ê±=¿Õ×Ö·û´®
+# å‡½æ•°ï¼šFileEncodingConverter
+# åŠŸèƒ½ï¼šä¸»å‡½æ•° - è½¬æ¢æ–‡ä»¶ç¼–ç æ ¼å¼
+# å‚æ•°ï¼š
+#   - FilePath: string (å¿…éœ€) - æ–‡ä»¶è·¯å¾„
+#   - SourceEncoding: string (å¿…éœ€) - æºæ–‡ä»¶ç¼–ç 
+#   - TargetEncoding: string (å¿…éœ€) - ç›®æ ‡ç¼–ç 
+#   - Quiet: switch (å¯é€‰) - é™é»˜æ¨¡å¼ï¼Œä¸æ˜¾ç¤ºè¾“å‡ºä¿¡æ¯
+# è¿”å›å€¼ï¼šç»“æ„åŒ–å¯¹è±¡
+#   - Success: bool - true=è½¬æ¢æˆåŠŸï¼Œfalse=è½¬æ¢å¤±è´¥
+#   - ErrorMessage: string - å¤±è´¥æ—¶=é”™è¯¯ä¿¡æ¯ï¼ŒæˆåŠŸæ—¶=ç©ºå­—ç¬¦ä¸²
 # =======================================================
 function FileEncodingConverter
 {
@@ -575,36 +592,36 @@ function FileEncodingConverter
     {
         return [PSCustomObject]@{
             Success = $false
-            ErrorMessage = "ÏÔÊ¾°ïÖúĞÅÏ¢"
+            ErrorMessage = "æ˜¾ç¤ºå¸®åŠ©ä¿¡æ¯"
         }
     }
 
     if ([System.Management.Automation.WildcardPattern]::ContainsWildcardCharacters($FilePath)) {
-        Write-Silent "´íÎó£º²ÎÊıÒ» [ $FilePath ] ²»ÄÜ°üº¬Í¨Åä·û" -ForegroundColor Red
+        Write-Silent "é”™è¯¯ï¼šå‚æ•°ä¸€ [ $FilePath ] ä¸èƒ½åŒ…å«é€šé…ç¬¦" -ForegroundColor Red
         return [PSCustomObject]@{
             Success = $false
-            ErrorMessage = "ÎÄ¼şÂ·¾¶²»ÄÜ°üº¬Í¨Åä·û"
+            ErrorMessage = "æ–‡ä»¶è·¯å¾„ä¸èƒ½åŒ…å«é€šé…ç¬¦"
         }
     }
 
     $FilePath = Resolve-Path $FilePath
     if (-not (Test-Path -LiteralPath $FilePath))
     {
-        Write-Silent "´íÎó: ÎÄ¼ş²»´æÔÚ - $FilePath" -ForegroundColor Red
+        Write-Silent "é”™è¯¯: æ–‡ä»¶ä¸å­˜åœ¨ - $FilePath" -ForegroundColor Red
         return [PSCustomObject]@{
             Success = $false
-            ErrorMessage = "ÎÄ¼ş²»´æÔÚ: $FilePath"
+            ErrorMessage = "æ–‡ä»¶ä¸å­˜åœ¨: $FilePath"
         }
     }
 
     $sourceResult = Is-Supported-Encoding $SourceEncoding
     if (-not $sourceResult.IsSupported)
     {
-        Write-Silent "´íÎó: ²»Ö§³ÖµÄÔ´±àÂë¸ñÊ½: $SourceEncoding" -ForegroundColor Red
-        Write-Silent "Ö§³ÖµÄÔ´±àÂë¸ñÊ½: $($SUPPORTED_ENCODINGS -join ', ')" -ForegroundColor Green
+        Write-Silent "é”™è¯¯: ä¸æ”¯æŒçš„æºç¼–ç æ ¼å¼: $SourceEncoding" -ForegroundColor Red
+        Write-Silent "æ”¯æŒçš„æºç¼–ç æ ¼å¼: $($SUPPORTED_ENCODINGS -join ', ')" -ForegroundColor Green
         return [PSCustomObject]@{
             Success = $false
-            ErrorMessage = "²»Ö§³ÖµÄÔ´±àÂë¸ñÊ½: $SourceEncoding"
+            ErrorMessage = "ä¸æ”¯æŒçš„æºç¼–ç æ ¼å¼: $SourceEncoding"
         }
     }
     $sourceCode = $sourceResult.EncodingCode
@@ -612,25 +629,25 @@ function FileEncodingConverter
     $targetResult = Is-Supported-Encoding $TargetEncoding
     if (-not $targetResult.IsSupported)
     {
-        Write-Silent "´íÎó: ²»Ö§³ÖµÄÄ¿±ê±àÂë¸ñÊ½: $TargetEncoding" -ForegroundColor Red
-        Write-Silent "Ö§³ÖµÄÄ¿±ê±àÂë¸ñÊ½: $($SUPPORTED_ENCODINGS -join ', ')" -ForegroundColor Green
+        Write-Silent "é”™è¯¯: ä¸æ”¯æŒçš„ç›®æ ‡ç¼–ç æ ¼å¼: $TargetEncoding" -ForegroundColor Red
+        Write-Silent "æ”¯æŒçš„ç›®æ ‡ç¼–ç æ ¼å¼: $($SUPPORTED_ENCODINGS -join ', ')" -ForegroundColor Green
         return [PSCustomObject]@{
             Success = $false
-            ErrorMessage = "²»Ö§³ÖµÄÄ¿±ê±àÂë¸ñÊ½: $TargetEncoding"
+            ErrorMessage = "ä¸æ”¯æŒçš„ç›®æ ‡ç¼–ç æ ¼å¼: $TargetEncoding"
         }
     }
     $targetCode = $targetResult.EncodingCode
 
     if ($sourceCode -eq $targetCode) {
         if ($null -eq $LineEnding -or $LineEnding -eq "") {
-            Write-Silent "ÌáĞÑ: Ô´±àÂëºÍÄ¿±ê±àÂëÏàÍ¬£¬ÎŞĞè×ª»»" -ForegroundColor Yellow
+            Write-Silent "æé†’: æºç¼–ç å’Œç›®æ ‡ç¼–ç ç›¸åŒï¼Œæ— éœ€è½¬æ¢" -ForegroundColor Yellow
             return [PSCustomObject]@{
                 Success = $true
                 ErrorMessage = ""
             }
         } else {
-            Write-Silent "Ô´±àÂëºÍÄ¿±ê±àÂëÏàÍ¬£¬½ö×ª»»ĞĞÎ²·û..." -ForegroundColor Gray
-            # ¼ÌĞøÖ´ĞĞĞĞÎ²×ª»»£¨Ìø¹ı±àÂë×ª»»²¿·Ö£©
+            Write-Silent "æºç¼–ç å’Œç›®æ ‡ç¼–ç ç›¸åŒï¼Œä»…è½¬æ¢è¡Œå°¾ç¬¦..." -ForegroundColor Gray
+            # ç»§ç»­æ‰§è¡Œè¡Œå°¾è½¬æ¢ï¼ˆè·³è¿‡ç¼–ç è½¬æ¢éƒ¨åˆ†ï¼‰
             try
             {
                 $encResult = Get-EncodingObject $TargetEncoding
@@ -646,7 +663,7 @@ function FileEncodingConverter
                 }
                 $originalContent = $contentResult.Content
                 
-                # ĞĞÎ²·û×ª»»
+                # è¡Œå°¾ç¬¦è½¬æ¢
                 if ($LineEnding -eq "CRLF")
                 {
                     $originalContent = $originalContent -replace "`r`n", "`n" -replace "`n", "`r`n"
@@ -657,7 +674,7 @@ function FileEncodingConverter
                 }
                 
                 [System.IO.File]::WriteAllText($FilePath, $originalContent, $tgtEncodingObj)
-                Write-Silent "ĞĞÎ²·û×ª»»Íê³É" -ForegroundColor Green
+                Write-Silent "è¡Œå°¾ç¬¦è½¬æ¢å®Œæˆ" -ForegroundColor Green
                 
                 return [PSCustomObject]@{
                     Success = $true
@@ -666,7 +683,7 @@ function FileEncodingConverter
             }
             catch
             {
-                Write-Silent "ĞĞÎ²·û×ª»»Ê§°Ü: $_" -ForegroundColor Red
+                Write-Silent "è¡Œå°¾ç¬¦è½¬æ¢å¤±è´¥: $_" -ForegroundColor Red
                 return [PSCustomObject]@{
                     Success = $false
                     ErrorMessage = $_.Exception.Message
@@ -680,26 +697,26 @@ function FileEncodingConverter
         $validateResult = Validate-SourceEncodingWithTempFile $FilePath $SourceEncoding
         if (-not $validateResult.Success -or -not $validateResult.IsValid)
         {
-            Write-Silent "   ´íÎó: Ô´±àÂëÑéÖ¤Ê§°Ü£¬ÎŞ·¨Ê¹ÓÃ [ $SourceEncoding ] ÕıÈ·¶ÁÈ¡ÎÄ¼ş" -ForegroundColor Red
-            Write-Silent "   ÌáÊ¾: ÇëÊ¹ÓÃÎÄ¼ş±àÂë¼ì²â¹¤¾ß¼ì²éÎÄ¼şµÄÊµ¼Ê±àÂë" -ForegroundColor Red
-            Write-Silent "   ÏêÏ¸ĞÅÏ¢: $($validateResult.ErrorMessage)" -ForegroundColor Yellow
+            Write-Silent "   é”™è¯¯: æºç¼–ç éªŒè¯å¤±è´¥ï¼Œæ— æ³•ä½¿ç”¨ [ $SourceEncoding ] æ­£ç¡®è¯»å–æ–‡ä»¶" -ForegroundColor Red
+            Write-Silent "   æç¤º: è¯·ä½¿ç”¨æ–‡ä»¶ç¼–ç æ£€æµ‹å·¥å…·æ£€æŸ¥æ–‡ä»¶çš„å®é™…ç¼–ç " -ForegroundColor Red
+            Write-Silent "   è¯¦ç»†ä¿¡æ¯: $($validateResult.ErrorMessage)" -ForegroundColor Yellow
             return [PSCustomObject]@{
                 Success = $false
                 ErrorMessage = $validateResult.ErrorMessage
             }
         }
 
-        Write-Silent "2. ¿ªÊ¼×ª»»ÎÄ¼ş±àÂë..." -ForegroundColor Gray
-        Write-Silent "   ÎÄ¡¡¼ş: [ $FilePath ]" -ForegroundColor Gray
-        Write-Silent "   Ô´±àÂë: [ $SourceEncoding ] -> Ä¿±ê±àÂë: [ $TargetEncoding ]" -ForegroundColor Red
-        Write-Silent "   ¶ÁÈ¡Ô´ÎÄ¼şÄÚÈİ..." -ForegroundColor Gray
+        Write-Silent "2. å¼€å§‹è½¬æ¢æ–‡ä»¶ç¼–ç ..." -ForegroundColor Gray
+        Write-Silent "   æ–‡ã€€ä»¶: [ $FilePath ]" -ForegroundColor Gray
+        Write-Silent "   æºç¼–ç : [ $SourceEncoding ] -> ç›®æ ‡ç¼–ç : [ $TargetEncoding ]" -ForegroundColor Red
+        Write-Silent "   è¯»å–æºæ–‡ä»¶å†…å®¹..." -ForegroundColor Gray
 
         $tempFilePath = $FilePath + ".orig"
 
         if (Test-Path -LiteralPath $tempFilePath)
         {
             Remove-Item -Path $tempFilePath -Force -ErrorAction SilentlyContinue
-            Write-Silent "   É¾³ıÒÑ´æÔÚµÄÁÙÊ±ÎÄ¼ş: $tempFilePath" -ForegroundColor Gray
+            Write-Silent "   åˆ é™¤å·²å­˜åœ¨çš„ä¸´æ—¶æ–‡ä»¶: $tempFilePath" -ForegroundColor Gray
         }
 
         $originalBytes = [System.IO.File]::ReadAllBytes($FilePath)
@@ -710,9 +727,9 @@ function FileEncodingConverter
         $originalContent = $contentResult.Content
 
         $originalCharCount = $originalContent.Length
-        Write-Silent "   Ô­Ê¼ÎÄ¼ş´óĞ¡: $($originalBytes.Length) ×Ö½Ú" -ForegroundColor Gray
-        Write-Silent "   Ô­Ê¼ÎÄ¼ş×Ö·ûÊı: $originalCharCount ¸ö" -ForegroundColor Gray
-        Write-Silent "3. Ğ´ÈëÁÙÊ±ÎÄ¼ş£¨Ê¹ÓÃÄ¿±ê±àÂë£©..." -ForegroundColor Gray
+        Write-Silent "   åŸå§‹æ–‡ä»¶å¤§å°: $($originalBytes.Length) å­—èŠ‚" -ForegroundColor Gray
+        Write-Silent "   åŸå§‹æ–‡ä»¶å­—ç¬¦æ•°: $originalCharCount ä¸ª" -ForegroundColor Gray
+        Write-Silent "3. å†™å…¥ä¸´æ—¶æ–‡ä»¶ï¼ˆä½¿ç”¨ç›®æ ‡ç¼–ç ï¼‰..." -ForegroundColor Gray
 
         $encResult = Get-EncodingObject $TargetEncoding
         if (-not $encResult.Success) {
@@ -723,14 +740,14 @@ function FileEncodingConverter
 
         if (-not (Test-Path -LiteralPath $tempFilePath))
         {
-            throw "ÁÙÊ±ÎÄ¼ş´´½¨Ê§°Ü: $tempFilePath"
+            throw "ä¸´æ—¶æ–‡ä»¶åˆ›å»ºå¤±è´¥: $tempFilePath"
         }
         else
         {
-            Write-Silent "   Ğ´ÈëÁÙÊ±ÎÄ¼ş³É¹¦ $tempFilePath Ê¹ÓÃ±àÂë [ $TargetEncoding ]" -ForegroundColor Gray
+            Write-Silent "   å†™å…¥ä¸´æ—¶æ–‡ä»¶æˆåŠŸ $tempFilePath ä½¿ç”¨ç¼–ç  [ $TargetEncoding ]" -ForegroundColor Gray
         }
 
-        Write-Silent "4. ÑéÖ¤×ª»»½á¹û..." -ForegroundColor Gray
+        Write-Silent "4. éªŒè¯è½¬æ¢ç»“æœ..." -ForegroundColor Gray
 
         $tempFileSize = (Get-Item $tempFilePath).Length
         $tempBytes = [System.IO.File]::ReadAllBytes($tempFilePath)
@@ -739,19 +756,19 @@ function FileEncodingConverter
             throw $contentResult.ErrorMessage
         }
         $tempContent = $contentResult.Content
-        Write-Silent "   ÁÙÊ±ÎÄ¼ş´óĞ¡: $tempFileSize ×Ö½Ú" -ForegroundColor Gray
-        Write-Silent "   ÁÙÊ±ÎÄ¼ş×Ö·ûÊı: $($tempContent.Length) ¸ö" -ForegroundColor Gray
-        Write-Silent "   ÏÖÔÚ¿ªÊ¼±È½ÏÔ­ÎÄ¼şµÄÄÚÈİºÍÁÙÊ±ÎÄ¼şµÄÄÚÈİ (È¥³ıÁË BOM ÇÒ½âÂëÖ®ºóµÄÄÚÈİ)..." -ForegroundColor Gray
+        Write-Silent "   ä¸´æ—¶æ–‡ä»¶å¤§å°: $tempFileSize å­—èŠ‚" -ForegroundColor Gray
+        Write-Silent "   ä¸´æ—¶æ–‡ä»¶å­—ç¬¦æ•°: $($tempContent.Length) ä¸ª" -ForegroundColor Gray
+        Write-Silent "   ç°åœ¨å¼€å§‹æ¯”è¾ƒåŸæ–‡ä»¶çš„å†…å®¹å’Œä¸´æ—¶æ–‡ä»¶çš„å†…å®¹ (å»é™¤äº† BOM ä¸”è§£ç ä¹‹åçš„å†…å®¹)..." -ForegroundColor Gray
 
         if ($originalContent -eq $tempContent)
         {
-            Write-Silent "   ÑéÖ¤Í¨¹ı: ÄÚÈİÒ»ÖÂ£¬×ª»»½á¹ûÕıÈ·" -ForegroundColor Green
+            Write-Silent "   éªŒè¯é€šè¿‡: å†…å®¹ä¸€è‡´ï¼Œè½¬æ¢ç»“æœæ­£ç¡®" -ForegroundColor Green
         }
         else
         {
             if (-not $Quiet)
             {
-                Write-Silent "  ÄÚÈİ²»Í¬£¬¿ªÊ¼ÏêÏ¸±È½Ï..." -ForegroundColor Yellow
+                Write-Silent "  å†…å®¹ä¸åŒï¼Œå¼€å§‹è¯¦ç»†æ¯”è¾ƒ..." -ForegroundColor Yellow
                 
                 $minLength = [Math]::Min($originalContent.Length, $tempContent.Length)
                 $diffIndex = -1
@@ -763,16 +780,16 @@ function FileEncodingConverter
                 }
 
                 if ($diffIndex -ge 0) {
-                    Write-Silent "   µÚÒ»¸ö²»Í¬×Ö·ûÔÚÎ»ÖÃ $diffIndex" -ForegroundColor Yellow
-                    Write-Silent "   Ô­Ê¼: '$($originalContent[$diffIndex])' (U+$([int]$originalContent[$diffIndex]))" -ForegroundColor Gray
-                    Write-Silent "   ÁÙÊ±: '$($tempContent[$diffIndex])' (U+$([int]$tempContent[$diffIndex]))" -ForegroundColor Gray
+                    Write-Silent "   ç¬¬ä¸€ä¸ªä¸åŒå­—ç¬¦åœ¨ä½ç½® $diffIndex" -ForegroundColor Yellow
+                    Write-Silent "   åŸå§‹: '$($originalContent[$diffIndex])' (U+$([int]$originalContent[$diffIndex]))" -ForegroundColor Gray
+                    Write-Silent "   ä¸´æ—¶: '$($tempContent[$diffIndex])' (U+$([int]$tempContent[$diffIndex]))" -ForegroundColor Gray
 
                     $startIndex = [Math]::Max(0, $diffIndex - 10)
                     $endIndex = [Math]::Min($originalContent.Length - 1, $diffIndex + 10)
-                    Write-Silent "   ÖÜÎ§ÎÄ±¾ (Ô­Ê¼): '$($originalContent.Substring($startIndex, $endIndex - $startIndex + 1))'" -ForegroundColor Gray
-                    Write-Silent "   ÖÜÎ§ÎÄ±¾ (ÁÙÊ±): '$($tempContent.Substring($startIndex, $endIndex - $startIndex + 1))'" -ForegroundColor Gray
+                    Write-Silent "   å‘¨å›´æ–‡æœ¬ (åŸå§‹): '$($originalContent.Substring($startIndex, $endIndex - $startIndex + 1))'" -ForegroundColor Gray
+                    Write-Silent "   å‘¨å›´æ–‡æœ¬ (ä¸´æ—¶): '$($tempContent.Substring($startIndex, $endIndex - $startIndex + 1))'" -ForegroundColor Gray
                 } else {
-                    Write-Silent "   ×Ö·û³¤¶È²»Í¬: Ô­Ê¼ $($originalContent.Length) ×Ö·û, ÁÙÊ± $($tempContent.Length) ×Ö·û" -ForegroundColor Yellow
+                    Write-Silent "   å­—ç¬¦é•¿åº¦ä¸åŒ: åŸå§‹ $($originalContent.Length) å­—ç¬¦, ä¸´æ—¶ $($tempContent.Length) å­—ç¬¦" -ForegroundColor Yellow
                 }
 
                 $debugOriginalPath = $FilePath + ".orig_content.txt"
@@ -781,53 +798,53 @@ function FileEncodingConverter
                 [System.IO.File]::WriteAllText($debugOriginalPath, $originalContent, [System.Text.UTF8Encoding]::new($false))
                 [System.IO.File]::WriteAllText($debugTempPath, $tempContent, [System.Text.UTF8Encoding]::new($false))
 
-                Write-Silent "   Ô­Ê¼ÎÄ¼ş½âÂëºóµÄÄÚÈİ±»±£´æÖÁ: $debugOriginalPath" -ForegroundColor Gray
-                Write-Silent "   ÁÙÊ±ÎÄ¼ş½âÂëºóµÄÄÚÈİ±»±£´æÖÁ: $debugTempPath" -ForegroundColor Gray
+                Write-Silent "   åŸå§‹æ–‡ä»¶è§£ç åçš„å†…å®¹è¢«ä¿å­˜è‡³: $debugOriginalPath" -ForegroundColor Gray
+                Write-Silent "   ä¸´æ—¶æ–‡ä»¶è§£ç åçš„å†…å®¹è¢«ä¿å­˜è‡³: $debugTempPath" -ForegroundColor Gray
             }
-            throw "ÑéÖ¤Ê§°Ü: È¥³ıBOMºóÄÚÈİ²»Í¬"
+            throw "éªŒè¯å¤±è´¥: å»é™¤BOMåå†…å®¹ä¸åŒ"
         }
 
-        Write-Silent "5. Ö´ĞĞÔ­×Ó²Ù×÷: Ìæ»»Ô­ÎÄ¼ş..." -ForegroundColor Gray
+        Write-Silent "5. æ‰§è¡ŒåŸå­æ“ä½œ: æ›¿æ¢åŸæ–‡ä»¶..." -ForegroundColor Gray
 
         try
         {
             Remove-Item -Path $FilePath -Force
-            Write-Silent "   ÒÑÉ¾³ıÔ­ÎÄ¼ş: $FilePath" -ForegroundColor Gray
+            Write-Silent "   å·²åˆ é™¤åŸæ–‡ä»¶: $FilePath" -ForegroundColor Gray
 
             Move-Item -Path $tempFilePath -Destination $FilePath -Force
-            Write-Silent "   ÒÑÖØÃüÃûÎÄ¼ş: $tempFilePath -->" -ForegroundColor Gray
-            Write-Silent "   ÒÑÖØÃüÃûÎÄ¼ş: $FilePath <--" -ForegroundColor Gray
-            Write-Silent "   ×ª»»³É¹¦Íê³É!" -ForegroundColor Green
+            Write-Silent "   å·²é‡å‘½åæ–‡ä»¶: $tempFilePath -->" -ForegroundColor Gray
+            Write-Silent "   å·²é‡å‘½åæ–‡ä»¶: $FilePath <--" -ForegroundColor Gray
+            Write-Silent "   è½¬æ¢æˆåŠŸå®Œæˆ!" -ForegroundColor Green
 
             if ((-not $Quiet) -and (Test-Path -LiteralPath $FilePath))
             {
                 $finalSize = (Get-Item $FilePath).Length
-                Write-Silent "6. ×îÖÕÎÄ¼ş´óĞ¡: $finalSize ×Ö½Ú" -ForegroundColor Gray
+                Write-Silent "6. æœ€ç»ˆæ–‡ä»¶å¤§å°: $finalSize å­—èŠ‚" -ForegroundColor Gray
             }
 
-            # ĞĞÎ²·û×ª»»£¨Èç¹ûÖ¸¶¨ÁË LineEnding ²ÎÊı£©
+            # è¡Œå°¾ç¬¦è½¬æ¢ï¼ˆå¦‚æœæŒ‡å®šäº† LineEnding å‚æ•°ï¼‰
             if ($null -ne $LineEnding -and $LineEnding -ne "")
             {
-                Write-Silent "7. ×ª»»ĞĞÎ²·ûÎª [$LineEnding]..." -ForegroundColor Gray
+                Write-Silent "7. è½¬æ¢è¡Œå°¾ç¬¦ä¸º [$LineEnding]..." -ForegroundColor Gray
                 try
                 {
                     $fileContent = [System.IO.File]::ReadAllText($FilePath, $tgtEncodingObj)
                     if ($LineEnding -eq "CRLF")
                     {
-                        # ½« LF ×ª»»Îª CRLF
+                        # å°† LF è½¬æ¢ä¸º CRLF
                         $fileContent = $fileContent -replace "`r`n", "`n" -replace "`n", "`r`n"
                     }
                     elseif ($LineEnding -eq "LF")
                     {
-                        # ½« CRLF ×ª»»Îª LF
+                        # å°† CRLF è½¬æ¢ä¸º LF
                         $fileContent = $fileContent -replace "`r`n", "`n"
                     }
                     [System.IO.File]::WriteAllText($FilePath, $fileContent, $tgtEncodingObj)
-                    Write-Silent "   ĞĞÎ²·û×ª»»Íê³É" -ForegroundColor Green
+                    Write-Silent "   è¡Œå°¾ç¬¦è½¬æ¢å®Œæˆ" -ForegroundColor Green
                 }
                 catch
                 {
-                    Write-Silent "   ĞĞÎ²·û×ª»»Ê§°Ü: $_" -ForegroundColor Yellow
+                    Write-Silent "   è¡Œå°¾ç¬¦è½¬æ¢å¤±è´¥: $_" -ForegroundColor Yellow
                 }
             }
             
@@ -838,27 +855,27 @@ function FileEncodingConverter
         }
         catch
         {
-            Write-Silent "  Ô­×Ó²Ù×÷Ê§°Ü: $_" -ForegroundColor Red
+            Write-Silent "  åŸå­æ“ä½œå¤±è´¥: $_" -ForegroundColor Red
             if (Test-Path -LiteralPath $tempFilePath)
             {
-                Write-Silent "³¢ÊÔ»Ö¸´ÁÙÊ±ÎÄ¼ş..." -ForegroundColor Yellow
+                Write-Silent "å°è¯•æ¢å¤ä¸´æ—¶æ–‡ä»¶..." -ForegroundColor Yellow
                 if (-not (Test-Path -LiteralPath $FilePath))
                 {
                     Move-Item -Path $tempFilePath -Destination $FilePath -Force
-                    Write-Silent "ÒÑ»Ö¸´ÁÙÊ±ÎÄ¼şÎªÔ­ÎÄ¼ş" -ForegroundColor Green
+                    Write-Silent "å·²æ¢å¤ä¸´æ—¶æ–‡ä»¶ä¸ºåŸæ–‡ä»¶" -ForegroundColor Green
                 }
             }
-            throw "Ô­×Ó²Ù×÷Ê§°Ü: $_"
+            throw "åŸå­æ“ä½œå¤±è´¥: $_"
         }
     }
     catch
     {
         if (-not $Quiet)
         {
-            Write-Silent "×ª»»Ê§°Ü: $_" -ForegroundColor Red
+            Write-Silent "è½¬æ¢å¤±è´¥: $_" -ForegroundColor Red
             if (Test-Path -LiteralPath $tempFilePath)
             {
-                Write-Silent "Ò»×ª²úÉúµÄÁÙÊ±ÎÄ¼şÒÑ±£Áô: $tempFilePath" -ForegroundColor Yellow
+                Write-Silent "è½¬æ¢äº§ç”Ÿçš„ä¸´æ—¶æ–‡ä»¶å·²ä¿ç•™: $tempFilePath" -ForegroundColor Yellow
             }
         }
         return [PSCustomObject]@{
@@ -869,13 +886,13 @@ function FileEncodingConverter
 }
 
 # =======================================================
-# ½Å±¾Èë¿Úµã
+# è„šæœ¬å…¥å£ç‚¹
 # =======================================================
-# ¹¦ÄÜ£º×÷Îª¶ÀÁ¢½Å±¾Ö´ĞĞÊ±µÄÈë¿Úµã
-# ËµÃ÷£º
-#   - ½«ËùÓĞÃüÁîĞĞ²ÎÊı´«µİ¸ø FileEncodingConverter Ö÷º¯Êı
-#   - Êä³ö JSON ¸ñÊ½µÄ½á¹û£¬±ãÓÚ AI Agent ½âÎö
-#   - ÉèÖÃÍË³öÂë£º0=³É¹¦£¬1=Ê§°Ü
+# åŠŸèƒ½ï¼šä½œä¸ºç‹¬ç«‹è„šæœ¬æ‰§è¡Œæ—¶çš„å…¥å£ç‚¹
+# è¯´æ˜ï¼š
+#   - å°†æ‰€æœ‰å‘½ä»¤è¡Œå‚æ•°ä¼ é€’ç»™ FileEncodingConverter ä¸»å‡½æ•°
+#   - è¾“å‡º JSON æ ¼å¼çš„ç»“æœï¼Œä¾¿äº AI Agent è§£æ
+#   - è®¾ç½®é€€å‡ºç ï¼š0=æˆåŠŸï¼Œ1=å¤±è´¥
 # =======================================================
 if ($MyInvocation.InvocationName -ne '.')
 {
@@ -883,7 +900,7 @@ if ($MyInvocation.InvocationName -ne '.')
         exit 1
     }
     
-    # ¹¹½¨²ÎÊı×Öµä£¬¼æÈİ switch ²ÎÊıºÍÃüÃû²ÎÊı
+    # æ„å»ºå‚æ•°å­—å…¸ï¼Œå…¼å®¹ switch å‚æ•°å’Œå‘½åå‚æ•°
     $paramArgs = @{}
     $posArgs = @()
     $i = 0
@@ -894,14 +911,14 @@ if ($MyInvocation.InvocationName -ne '.')
             $paramArgs['LineEnding'] = $args[$i + 1]
             $i++
         } elseif ($args[$i] -match '^-') {
-            # ÆäËûÃüÃû²ÎÊıÌø¹ı
+            # å…¶ä»–å‘½åå‚æ•°è·³è¿‡
         } else {
             $posArgs += $args[$i]
         }
         $i++
     }
     
-    # °´Î»ÖÃÌî³ä±ØĞè²ÎÊı
+    # æŒ‰ä½ç½®å¡«å……å¿…éœ€å‚æ•°
     if ($posArgs.Count -ge 1) { $paramArgs['FilePath'] = $posArgs[0] }
     if ($posArgs.Count -ge 2) { $paramArgs['SourceEncoding'] = $posArgs[1] }
     if ($posArgs.Count -ge 3) { $paramArgs['TargetEncoding'] = $posArgs[2] }

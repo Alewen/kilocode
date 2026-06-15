@@ -1,47 +1,40 @@
 <#
 .SYNOPSIS
-win-file-encoding-detector.ps1 - ÎÄ¼ş±àÂë¼ì²â¹¤¾ß£¨¶ÀÁ¢°æ±¾£©
+win-file-encoding-detector.ps1 - æ–‡ä»¶ç¼–ç æ£€æµ‹å·¥å…·ï¼ˆç‹¬ç«‹ç‰ˆæœ¬ï¼‰
 
 .DESCRIPTION
-¼ì²âÎÄ±¾ÎÄ¼şµÄ±àÂë¸ñÊ½ºÍĞĞÎ²±êÖ¾£¬Ö§³Ö UTF-8¡¢UTF-16¡¢UTF-32¡¢ASCII¡¢GB2312¡¢GBK¡¢GB18030 µÈ¶àÖÖ±àÂë¸ñÊ½
-Í¨¹ı BOM ¼ì²â¡¢±àÂëÑéÖ¤µÈ·½Ê½¾«×¼Ê¶±ğÎÄ¼ş±àÂë£¬Í¬Ê±¿É¼ì²âĞĞÎ²¸ñÊ½£¨LF/CRLF/Mixed£©
+æ£€æµ‹æ–‡æœ¬æ–‡ä»¶çš„ç¼–ç æ ¼å¼å’Œè¡Œå°¾æ ‡å¿—ï¼Œæ”¯æŒ UTF-8ã€UTF-16ã€UTF-32ã€ASCIIã€GB2312ã€GBKã€GB18030 ç­‰å¤šç§ç¼–ç æ ¼å¼
+é€šè¿‡ BOM æ£€æµ‹ã€ç¼–ç éªŒè¯ç­‰æ–¹å¼ç²¾å‡†è¯†åˆ«æ–‡ä»¶ç¼–ç ï¼ŒåŒæ—¶å¯æ£€æµ‹è¡Œå°¾æ ¼å¼ï¼ˆLF/CRLF/Mixedï¼‰
 
 .PARAMETER FilePath
-Òª¼ì²âµÄÎÄ¼şÍêÕûÂ·¾¶£¨±ØĞè²ÎÊı£©£¬²»ÄÜ°üº¬Í¨Åä·û
-
-.PARAMETER CheckLineEnding
-ÊÇ·ñ¼ì²â²¢·µ»ØĞĞÎ²¸ñÊ½£¨¿ÉÑ¡¿ª¹Ø£©£¬Ä¬ÈÏ²»¼ì²â
+è¦æ£€æµ‹çš„æ–‡ä»¶å®Œæ•´è·¯å¾„ï¼ˆå¿…éœ€å‚æ•°ï¼‰ï¼Œä¸èƒ½åŒ…å«é€šé…ç¬¦
 
 .EXAMPLE
 .\win-file-encoding-detector.ps1 -FilePath "C:\test\example.txt"
-¼ì²âÎÄ¼ş±àÂë¸ñÊ½£¬·µ»Ø JSON ½á¹û
-
-.EXAMPLE
-.\win-file-encoding-detector.ps1 -FilePath "C:\test\example.txt" -CheckLineEnding
-¼ì²âÎÄ¼ş±àÂë¸ñÊ½ºÍĞĞÎ²¸ñÊ½£¬·µ»Ø JSON ½á¹û
+æ£€æµ‹æ–‡ä»¶ç¼–ç æ ¼å¼ï¼Œè¿”å› JSON ç»“æœ
 
 .NOTES
-Ö§³ÖµÄ±àÂë¸ñÊ½£º
-- UTF-8 ±àÂë£¨´ø BOM: UTF-8-BOM / ²»´ø BOM: UTF-8£©
-- UTF-16 LE£¨´ø BOM: UTF-16LE-BOM / ²»´ø BOM: UTF-16LE£©
-- UTF-16 BE£¨´ø BOM: UTF-16BE-BOM / ²»´ø BOM: UTF-16BE£©
-- UTF-32 LE£¨´ø BOM: UTF-32LE-BOM / ²»´ø BOM: UTF-32LE£©
-- UTF-32 BE£¨´ø BOM: UTF-32BE-BOM / ²»´ø BOM: UTF-32BE£©
-- ASCII ±àÂë
-- GB ÏµÁĞ±àÂë£¨GB2312/GBK/GB18030£©
+æ”¯æŒçš„ç¼–ç æ ¼å¼ï¼š
+- UTF-8 ç¼–ç ï¼ˆå¸¦ BOM: UTF-8-BOM / ä¸å¸¦ BOM: UTF-8ï¼‰
+- UTF-16 LEï¼ˆå¸¦ BOM: UTF-16LE-BOM / ä¸å¸¦ BOM: UTF-16LEï¼‰
+- UTF-16 BEï¼ˆå¸¦ BOM: UTF-16BE-BOM / ä¸å¸¦ BOM: UTF-16BEï¼‰
+- UTF-32 LEï¼ˆå¸¦ BOM: UTF-32LE-BOM / ä¸å¸¦ BOM: UTF-32LEï¼‰
+- UTF-32 BEï¼ˆå¸¦ BOM: UTF-32BE-BOM / ä¸å¸¦ BOM: UTF-32BEï¼‰
+- ASCII ç¼–ç 
+- GB ç³»åˆ—ç¼–ç ï¼ˆGB2312/GBK/GB18030ï¼‰
 
-ÎÄ¼ş´óĞ¡ÏŞÖÆ£º5 ×Ö½Ú - 10 MB
+æ–‡ä»¶å¤§å°é™åˆ¶ï¼š5 å­—èŠ‚ - 10 MB
 
-Êä³ö¸ñÊ½£ºJSON ½á¹¹»¯Êı¾İ
+è¾“å‡ºæ ¼å¼ï¼šJSON ç»“æ„åŒ–æ•°æ®
 #>
 
 # ================================================
 # FileSize-Format
-# ½«ÎÄ¼ş´óĞ¡(ÒÔ×Ö½ÚÎªµ¥Î»)×ª»¯ÎªÒÔ K/M Îªµ¥Î»µÄ×Ö·û´®±íÊ¾
-# ²ÎÊı£º
-#   $sizeInBytes - [long] ÎÄ¼ş´óĞ¡£¨×Ö½ÚÊı£©
-# ·µ»ØÖµ£º
-#   [string] ¸ñÊ½»¯ºóµÄÎÄ¼ş´óĞ¡£¬Èç "1.23 K"¡¢"4.56 M"¡¢"789 B"
+# å°†æ–‡ä»¶å¤§å°(ä»¥å­—èŠ‚ä¸ºå•ä½)è½¬åŒ–ä¸ºä»¥ K/M ä¸ºå•ä½çš„å­—ç¬¦ä¸²è¡¨ç¤º
+# å‚æ•°ï¼š
+#   $sizeInBytes - [long] æ–‡ä»¶å¤§å°ï¼ˆå­—èŠ‚æ•°ï¼‰
+# è¿”å›å€¼ï¼š
+#   [string] æ ¼å¼åŒ–åçš„æ–‡ä»¶å¤§å°ï¼Œå¦‚ "1.23 K"ã€"4.56 M"ã€"789 B"
 # ================================================
 function FileSize-Format
 {
@@ -62,19 +55,18 @@ function FileSize-Format
 }
 
 # ================================================
-# Detect-BOM
-# ¼ì²âÎÄ¼şµÄ BOM£¨×Ö½ÚË³Ğò±ê¼Ç£©ÀàĞÍ
-# ²ÎÊı£º
-#   $FilePath - [string] Òª¼ì²âµÄÎÄ¼şÍêÕûÂ·¾¶
-# ·µ»ØÖµ£º
-#   [string] ¿ÉÄÜÖµ£º
-#     "UTF-8-BOM" - UTF-8 ±àÂë´ø BOM
-#     "UTF-16LE-BOM" - UTF-16 Ğ¡¶ËĞò´ø BOM
-#     "UTF-16BE-BOM" - UTF-16 ´ó¶ËĞò´ø BOM
-#     "UTF-32LE-BOM" - UTF-32 Ğ¡¶ËĞò´ø BOM
-#     "UTF-32BE-BOM" - UTF-32 ´ó¶ËĞò´ø BOM
-#     "NO_BOM" - Ã»ÓĞ¼ì²âµ½ BOM
-#     "UNKNOWN" - ¼ì²â¹ı³Ì³ö´í
+# æ£€æµ‹æ–‡ä»¶çš„ BOMï¼ˆå­—èŠ‚é¡ºåºæ ‡è®°ï¼‰ç±»å‹
+# å‚æ•°ï¼š
+#   $FilePath - [string] è¦æ£€æµ‹çš„æ–‡ä»¶å®Œæ•´è·¯å¾„
+# è¿”å›å€¼ï¼š
+#   [string] å¯èƒ½å€¼ï¼š
+#     "UTF-32LE-BOM" - UTF-32 å°ç«¯åºå¸¦ BOM -- FF FE 00 00
+#     "UTF-32BE-BOM" - UTF-32 å¤§ç«¯åºå¸¦ BOM -- 00 00 FE FF
+#     "UTF-8-BOM"    - UTF-8    ç¼–ç å¸¦ BOM -- EF BB BF
+#     "UTF-16LE-BOM" - UTF-16 å°ç«¯åºå¸¦ BOM -- FF FE
+#     "UTF-16BE-BOM" - UTF-16 å¤§ç«¯åºå¸¦ BOM -- FE FF
+#     "NO_BOM" - æ²¡æœ‰æ£€æµ‹åˆ° BOM
+#     "UNKNOWN" - æ£€æµ‹è¿‡ç¨‹å‡ºé”™
 # ================================================
 function Detect-BOM
 {
@@ -86,6 +78,18 @@ function Detect-BOM
         $bytes = New-Object byte[] 4
         $bytesRead = $stream.Read($bytes, 0, 4)
         $stream.Close()
+
+        if ($bytesRead -ge 4)
+        {
+            # UTF-32 LE with BOM: FF FE 00 00
+            if ($bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE -and $bytes[2] -eq 0x00 -and $bytes[3] -eq 0x00) {
+                return "UTF-32LE-BOM"
+            }
+            # UTF-32 BE with BOM: 00 00 FE FF
+            if ($bytes[0] -eq 0x00 -and $bytes[1] -eq 0x00 -and $bytes[2] -eq 0xFE -and $bytes[3] -eq 0xFF) {
+                return "UTF-32BE-BOM"
+            }
+        }
 
         if ($bytesRead -ge 3)
         {
@@ -110,17 +114,6 @@ function Detect-BOM
             }
         }
 
-        if ($bytesRead -ge 4)
-        {
-            # UTF-32 LE with BOM: FF FE 00 00
-            if ($bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE -and $bytes[2] -eq 0x00 -and $bytes[3] -eq 0x00) {
-                return "UTF-32LE-BOM"
-            }
-            # UTF-32 BE with BOM: 00 00 FE FF
-            if ($bytes[0] -eq 0x00 -and $bytes[1] -eq 0x00 -and $bytes[2] -eq 0xFE -and $bytes[3] -eq 0xFF) {
-                return "UTF-32BE-BOM"
-            }
-        }
         return "NO_BOM"
     }
     catch
@@ -131,12 +124,12 @@ function Detect-BOM
 
 # ================================================
 # Is-ASCII-File
-# ¼ì²âÎÄ¼şÊÇ·ñÎª ASCII ±àÂë
-# ²ÎÊı£º
-#   $FilePath - [string] Òª¼ì²âµÄÎÄ¼şÍêÕûÂ·¾¶
-# ·µ»ØÖµ£º
-#   [bool] $true - ÎÄ¼ş·ûºÏ ASCII ±àÂë¹æ·¶
-#          $false - ²»·ûºÏ»ò¼ì²â³ö´í
+# æ£€æµ‹æ–‡ä»¶æ˜¯å¦ä¸º ASCII ç¼–ç 
+# å‚æ•°ï¼š
+#   $FilePath - [string] è¦æ£€æµ‹çš„æ–‡ä»¶å®Œæ•´è·¯å¾„
+# è¿”å›å€¼ï¼š
+#   [bool] $true - æ–‡ä»¶ç¬¦åˆ ASCII ç¼–ç è§„èŒƒ
+#          $false - ä¸ç¬¦åˆæˆ–æ£€æµ‹å‡ºé”™
 # ================================================
 function Is-ASCII-File
 {
@@ -144,10 +137,10 @@ function Is-ASCII-File
 
     try
     {
-        # ¶ÁÈ¡ÎÄ¼ş×Ö½Ú
+        # è¯»å–æ–‡ä»¶å­—èŠ‚
         $bytes = [System.IO.File]::ReadAllBytes($FilePath)
 
-        # ¼ì²éÊÇ·ñÓĞ¸ßÎ»×Ö½Ú (0x80-0xFF)
+        # æ£€æŸ¥æ˜¯å¦æœ‰é«˜ä½å­—èŠ‚ (0x80-0xFF)
         foreach ($byte in $bytes)
         {
             if ($byte -ge 0x80)
@@ -156,9 +149,9 @@ function Is-ASCII-File
             }
         }
 
-        # ¼ì²é½ûÖ¹µÄ¿ØÖÆ×Ö·û
-        # ÔÊĞí: 0x09(tab), 0x0A(LF), 0x0D(CR), 0x20(space)
-        # ½ûÖ¹: 0x00-0x08, 0x0B-0x0C, 0x0E-0x1F, 0x7F
+        # æ£€æŸ¥ç¦æ­¢çš„æ§åˆ¶å­—ç¬¦
+        # å…è®¸: 0x09(tab), 0x0A(LF), 0x0D(CR), 0x20(space)
+        # ç¦æ­¢: 0x00-0x08, 0x0B-0x0C, 0x0E-0x1F, 0x7F
         $forbiddenRanges = @(
             @{Start=0x00; End=0x08},
             @{Start=0x0B; End=0x0C},
@@ -187,12 +180,12 @@ function Is-ASCII-File
 
 # ================================================
 # Is-UTF8-WithoutBom-File
-# ¼ì²âÎÄ¼şÊÇ·ñÎª UTF-8 ±àÂë£¨ÎŞ BOM£©
-# ²ÎÊı£º
-#   $FilePath - [string] Òª¼ì²âµÄÎÄ¼şÍêÕûÂ·¾¶
-# ·µ»ØÖµ£º
-#   [bool] $true - ÎÄ¼ş·ûºÏ UTF-8£¨ÎŞ BOM£©±àÂë¹æ·¶
-#          $false - ²»·ûºÏ»ò¼ì²â³ö´í
+# æ£€æµ‹æ–‡ä»¶æ˜¯å¦ä¸º UTF-8 ç¼–ç ï¼ˆæ—  BOMï¼‰
+# å‚æ•°ï¼š
+#   $FilePath - [string] è¦æ£€æµ‹çš„æ–‡ä»¶å®Œæ•´è·¯å¾„
+# è¿”å›å€¼ï¼š
+#   [bool] $true - æ–‡ä»¶ç¬¦åˆ UTF-8ï¼ˆæ—  BOMï¼‰ç¼–ç è§„èŒƒ
+#          $false - ä¸ç¬¦åˆæˆ–æ£€æµ‹å‡ºé”™
 # ================================================
 function Is-UTF8-WithoutBom-File
 {
@@ -200,31 +193,31 @@ function Is-UTF8-WithoutBom-File
 
     try
     {
-        # ¶ÁÈ¡Ô­Ê¼ÎÄ¼ş×Ö½Ú
+        # è¯»å–åŸå§‹æ–‡ä»¶å­—èŠ‚
         $bytes = [System.IO.File]::ReadAllBytes($FilePath)
-        # Ê¹ÓÃUTF-8ÎŞBOM±àÂë
+        # ä½¿ç”¨UTF-8æ— BOMç¼–ç 
         $utf8NoBOM = [System.Text.UTF8Encoding]::new($false)
 
-        # ³¢ÊÔ½âÂë
+        # å°è¯•è§£ç 
         $content = $utf8NoBOM.GetString($bytes)
 
-        # ¼ì²éÊÇ·ñÓĞÌæ»»×Ö·û (U+FFFD) - ÕæÕıµÄ½âÂë´íÎó
+        # æ£€æŸ¥æ˜¯å¦æœ‰æ›¿æ¢å­—ç¬¦ (U+FFFD) - çœŸæ­£çš„è§£ç é”™è¯¯
         $replacementChar = [char]0xFFFD
         if ($content.Contains($replacementChar))
         {
             return $false
         }
 
-        # ÖØĞÂ±àÂë
+        # é‡æ–°ç¼–ç 
         $reencodedBytes = $utf8NoBOM.GetBytes($content)
 
-        # ±È½Ï×Ö½Ú³¤¶È
+        # æ¯”è¾ƒå­—èŠ‚é•¿åº¦
         if ($bytes.Length -ne $reencodedBytes.Length)
         {
             return $false
         }
 
-        # Öğ¸ö±È½Ï×Ö½Ú
+        # é€ä¸ªæ¯”è¾ƒå­—èŠ‚
         for ($i = 0; $i -lt $bytes.Length; $i++)
         {
             if ($bytes[$i] -ne $reencodedBytes[$i])
@@ -237,19 +230,19 @@ function Is-UTF8-WithoutBom-File
     }
     catch # [System.Text.DecoderFallbackException]
     {
-        # UTF-8½âÂëÊ§°Ü
+        # UTF-8è§£ç å¤±è´¥
         return $false
     }
 }
 
 # ================================================
 # Is-GB2312-Bytes
-# ÑÏ¸ñ¼ì²â×Ö½ÚÊı×éÊÇ·ñ·ûºÏ GB2312 ±àÂë¹æ·¶£¨²»º¬±¸ÓÃÇø£©
-# ²ÎÊı£º
-#   $bytes - [byte[]] Òª¼ì²âµÄ×Ö½ÚÊı×é
-# ·µ»ØÖµ£º
-#   [bool] $true - ×Ö½Ú·ûºÏ GB2312 ¹æ·¶
-#          $false - ²»·ûºÏ»ò°üº¬ BOM
+# ä¸¥æ ¼æ£€æµ‹å­—èŠ‚æ•°ç»„æ˜¯å¦ç¬¦åˆ GB2312 ç¼–ç è§„èŒƒï¼ˆä¸å«å¤‡ç”¨åŒºï¼‰
+# å‚æ•°ï¼š
+#   $bytes - [byte[]] è¦æ£€æµ‹çš„å­—èŠ‚æ•°ç»„
+# è¿”å›å€¼ï¼š
+#   [bool] $true - å­—èŠ‚ç¬¦åˆ GB2312 è§„èŒƒ
+#          $false - ä¸ç¬¦åˆæˆ–åŒ…å« BOM
 # ================================================
 function Is-GB2312-Bytes
 {
@@ -258,12 +251,12 @@ function Is-GB2312-Bytes
     )
 
     $len = $bytes.Length
-    # ¿ÕÎÄ¼şÊÓÎªºÏ·¨ GB2312
+    # ç©ºæ–‡ä»¶è§†ä¸ºåˆæ³• GB2312
     if ($len -eq 0) {
         return $true
     }
 
-    # --- 1. ¼ì²â³£¼û BOM£¨´¿ GB2312 ²»Ó¦ÓĞÈÎºÎ BOM£©---
+    # --- 1. æ£€æµ‹å¸¸è§ BOMï¼ˆçº¯ GB2312 ä¸åº”æœ‰ä»»ä½• BOMï¼‰---
     if ($len -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
         # UTF-8 BOM
         return $false
@@ -274,50 +267,50 @@ function Is-GB2312-Bytes
         return $false
     }
     if ($len -ge 2 -and $bytes[0] -eq 0xFE -and $bytes[1] -eq 0xFF) {
-        # UTF-16 BE BOM (FE FF)£¬µÚÒ»¸ö×Ö½Ú 0xFE »áÔÚºóÃæ±»ÅĞ·Ç·¨£¬ÕâÀïÌáÇ°À¹½Ø
+        # UTF-16 BE BOM (FE FF)ï¼Œç¬¬ä¸€ä¸ªå­—èŠ‚ 0xFE ä¼šåœ¨åé¢è¢«åˆ¤éæ³•ï¼Œè¿™é‡Œæå‰æ‹¦æˆª
         return $false
     }
 
-    # --- 2. ±éÀúËùÓĞ×Ö½Ú½øĞĞÑÏ¸ñ GB2312 ½âÂë ---
+    # --- 2. éå†æ‰€æœ‰å­—èŠ‚è¿›è¡Œä¸¥æ ¼ GB2312 è§£ç  ---
     $i = 0
     while ($i -lt $len) {
         $b = $bytes[$i]
 
         if ($b -le 0x7F) {
-            # µ¥×Ö½Ú ASCII£¨º¬¿ØÖÆ×Ö·û£©
+            # å•å­—èŠ‚ ASCIIï¼ˆå«æ§åˆ¶å­—ç¬¦ï¼‰
             $i++
         }
         elseif (($b -ge 0xA1 -and $b -le 0xA9) -or ($b -ge 0xB0 -and $b -le 0xF7)) {
-            # Ë«×Ö½Ú×Ö·ûµÄµÚÒ»×Ö½Ú£¨1-9 Çø »ò 16-87 Çø£©
+            # åŒå­—èŠ‚å­—ç¬¦çš„ç¬¬ä¸€å­—èŠ‚ï¼ˆ1-9 åŒº æˆ– 16-87 åŒºï¼‰
             if ($i + 1 -ge $len) {
-                # ÎÄ¼şÄ©Î²½Ø¶Ï£¬È±ÉÙµÚ¶ş×Ö½Ú
+                # æ–‡ä»¶æœ«å°¾æˆªæ–­ï¼Œç¼ºå°‘ç¬¬äºŒå­—èŠ‚
                 return $false
             }
             $next = $bytes[$i + 1]
             if ($next -lt 0xA1 -or $next -gt 0xFE) {
-                # µÚ¶ş×Ö½Ú±ØĞëÔÚ 0xA1-0xFE Ö®¼ä
+                # ç¬¬äºŒå­—èŠ‚å¿…é¡»åœ¨ 0xA1-0xFE ä¹‹é—´
                 return $false
             }
             $i += 2
         }
         else {
-            # ·Ç·¨×Ö½Ú£º0x80-0xA0, 0xAA-0xAF£¨±¸ÓÃÇø 10-15 Çø£©, 0xF8-0xFF£¨±¸ÓÃÇø 88-94 Çø¼°ÆäËü£©
+            # éæ³•å­—èŠ‚ï¼š0x80-0xA0, 0xAA-0xAFï¼ˆå¤‡ç”¨åŒº 10-15 åŒºï¼‰, 0xF8-0xFFï¼ˆå¤‡ç”¨åŒº 88-94 åŒºåŠå…¶å®ƒï¼‰
             return $false
         }
     }
 
-    # È«²¿Í¨¹ı¼ì²â
+    # å…¨éƒ¨é€šè¿‡æ£€æµ‹
     return $true
 }
 
 # ================================================
 # Is-GB-File
-# ¼ì²âÎÄ¼şÊÇ·ñÎª GB ÏµÁĞ±àÂë£¨GB2312/GBK/GB18030£©
-# ²ÎÊı£º
-#   $FilePath - [string] Òª¼ì²âµÄÎÄ¼şÍêÕûÂ·¾¶
-# ·µ»ØÖµ£º
-#   [string] ¼ì²âµ½µÄ±àÂëÃû³Æ£º"GB2312" / "GBK" / "GB18030"
-#   [null] Î´¼ì²âµ½·ûºÏµÄ GB ±àÂë»ò³ö´í
+# æ£€æµ‹æ–‡ä»¶æ˜¯å¦ä¸º GB ç³»åˆ—ç¼–ç ï¼ˆGB2312/GBK/GB18030ï¼‰
+# å‚æ•°ï¼š
+#   $FilePath - [string] è¦æ£€æµ‹çš„æ–‡ä»¶å®Œæ•´è·¯å¾„
+# è¿”å›å€¼ï¼š
+#   [string] æ£€æµ‹åˆ°çš„ç¼–ç åç§°ï¼š"GB2312" / "GBK" / "GB18030"
+#   [null] æœªæ£€æµ‹åˆ°ç¬¦åˆçš„ GB ç¼–ç æˆ–å‡ºé”™
 # ================================================
 function Is-GB-File
 {
@@ -337,19 +330,19 @@ function Is-GB-File
         {
             try
             {
-                # Ê¹ÓÃ¼ì²âµ½µÄ±àÂë¶ÁÈ¡
+                # ä½¿ç”¨æ£€æµ‹åˆ°çš„ç¼–ç è¯»å–
                 $text = $enc.Encoding.GetString($bytes)
 
-                # ¼ì²éÊÇ·ñÓĞÌæ»»×Ö·û
+                # æ£€æŸ¥æ˜¯å¦æœ‰æ›¿æ¢å­—ç¬¦
                 if ($text.Contains([char]0xFFFD))
                 {
                     continue
                 }
 
-                # ÖØĞÂ±àÂëÑéÖ¤
+                # é‡æ–°ç¼–ç éªŒè¯
                 $reencodedBytes = $enc.Encoding.GetBytes($text)
 
-                # ±È½Ï×Ö½ÚĞòÁĞ
+                # æ¯”è¾ƒå­—èŠ‚åºåˆ—
                 if ($bytes.Length -ne $reencodedBytes.Length)
                 {
                     continue
@@ -367,17 +360,17 @@ function Is-GB-File
 
                 if ($match)
                 {
-                    # Èç¹ûÊÇ GB2312£¬¶îÍâ¼ì²é×Ö½ÚÊÇ·ñÊÇÕæÕıµÄ GB2312£¨¶ø²»ÊÇ GBK À©Õ¹£©
+                    # å¦‚æœæ˜¯ GB2312ï¼Œé¢å¤–æ£€æŸ¥å­—èŠ‚æ˜¯å¦æ˜¯çœŸæ­£çš„ GB2312ï¼ˆè€Œä¸æ˜¯ GBK æ‰©å±•ï¼‰
                     if ($enc.Name -eq "GB2312" -and -not (Is-GB2312-Bytes $bytes))
                     {
-                        continue  # ¼ÌĞø¼ì²âÏÂÒ»¸ö±àÂë
+                        continue  # ç»§ç»­æ£€æµ‹ä¸‹ä¸€ä¸ªç¼–ç 
                     }
                     return $enc.Name
                 }
             }
             catch
             {
-                # ±àÂëÊ§°Ü£¬³¢ÊÔÏÂÒ»¸ö
+                # ç¼–ç å¤±è´¥ï¼Œå°è¯•ä¸‹ä¸€ä¸ª
                 continue
             }
         }
@@ -392,15 +385,15 @@ function Is-GB-File
 
 # ================================================
 # Detect-LineEnding
-# ¼ì²âÎÄ¼şµÄĞĞÎ²¸ñÊ½
-# ²ÎÊı£º
-#   $FilePath - [string] Òª¼ì²âµÄÎÄ¼şÍêÕûÂ·¾¶
-# ·µ»ØÖµ£º
-#   [hashtable] °üº¬£º
-#     Conclusion - [string] ĞĞÎ²½áÂÛ£º"LF" / "CRLF" / "Mixed" / "NoEOL" / "unknown"
-#     TotalLines - [int] ×ÜĞĞÊı
-#     LFLines - [int] LF ½áÎ²µÄĞĞÊı
-#     CRLFLines - [int] CRLF ½áÎ²µÄĞĞÊı
+# æ£€æµ‹æ–‡ä»¶çš„è¡Œå°¾æ ¼å¼
+# å‚æ•°ï¼š
+#   $FilePath - [string] è¦æ£€æµ‹çš„æ–‡ä»¶å®Œæ•´è·¯å¾„
+# è¿”å›å€¼ï¼š
+#   [hashtable] åŒ…å«ï¼š
+#     Conclusion - [string] è¡Œå°¾ç»“è®ºï¼š"LF" / "CRLF" / "Mixed" / "NoEOL" / "unknown"
+#     TotalLines - [int] æ€»è¡Œæ•°
+#     LFLines - [int] LF ç»“å°¾çš„è¡Œæ•°
+#     CRLFLines - [int] CRLF ç»“å°¾çš„è¡Œæ•°
 # ================================================
 function Detect-LineEnding
 {
@@ -482,7 +475,7 @@ function Detect-LineEnding
             }
         }
 
-        # ·µ»Ø½á¹û¶ÔÏó
+        # è¿”å›ç»“æœå¯¹è±¡
         return @{
             Conclusion = $conclusion
             TotalLines = $totalLines
@@ -501,35 +494,28 @@ function Detect-LineEnding
     }
 }
 
-
-
 # ================================================
-# Check-FileFormat
-# Ö÷º¯Êı£º¼ì²âÎÄ¼ş±àÂë¸ñÊ½ºÍĞĞÎ²±êÖ¾
-# ²ÎÊı£º
-#   $FilePath - [string] ±ØĞè£¬Òª¼ì²âµÄÎÄ¼şÍêÕûÂ·¾¶
-#   $CheckLineEnding - [switch] ¿ÉÑ¡£¬ÊÇ·ñ¼ì²â²¢·µ»ØĞĞÎ²¸ñÊ½
-# ·µ»ØÖµ£º
-#   [hashtable] ½á¹¹»¯¶ÔÏó£¬°üº¬£º
-#     Success - [bool] ÊÇ·ñ¼ì²â³É¹¦
-#     FilePath - [string] ¼ì²âµÄÎÄ¼şÍêÕûÂ·¾¶
-#     FileSize - [string] ÈËÀà¿É¶ÁµÄÎÄ¼ş´óĞ¡£¨´øµ¥Î»£©
-#     FileSizeBytes - [long] ÎÄ¼ş´óĞ¡£¨×Ö½ÚÊı£©
-#     Encoding - [string] ¼ì²âµ½µÄÎÄ¼ş±àÂë
-#     LineEnding - [string] ĞĞÎ²¸ñÊ½£¨"skip" ±íÊ¾Î´¼ì²â£©
-#     ErrorMessage - [string] ´íÎóĞÅÏ¢£¨³É¹¦Îª¿Õ×Ö·û´®£©
+# ä¸»å‡½æ•°ï¼šæ£€æµ‹æ–‡ä»¶ç¼–ç æ ¼å¼å’Œè¡Œå°¾æ ‡å¿—
+# å‚æ•°ï¼š
+#   $FilePath - [string] å¿…éœ€ï¼Œè¦æ£€æµ‹çš„æ–‡ä»¶å®Œæ•´è·¯å¾„
+# è¿”å›å€¼ï¼š
+#   [hashtable] ç»“æ„åŒ–å¯¹è±¡ï¼ŒåŒ…å«ï¼š
+#     Success - [bool] æ˜¯å¦æ£€æµ‹æˆåŠŸ
+#     FilePath - [string] æ£€æµ‹çš„æ–‡ä»¶å®Œæ•´è·¯å¾„
+#     FileSize - [string] äººç±»å¯è¯»çš„æ–‡ä»¶å¤§å°ï¼ˆå¸¦å•ä½ï¼‰
+#     FileSizeBytes - [long] æ–‡ä»¶å¤§å°ï¼ˆå­—èŠ‚æ•°ï¼‰
+#     Encoding - [string] æ£€æµ‹åˆ°çš„æ–‡ä»¶ç¼–ç 
+#     LineEnding - [string] è¡Œå°¾æ ¼å¼
+#     ErrorMessage - [string] é”™è¯¯ä¿¡æ¯ï¼ˆæˆåŠŸä¸ºç©ºå­—ç¬¦ä¸²ï¼‰
 # ================================================
 function Check-FileFormat
 {
     param(
-        [Parameter(Mandatory=$true, HelpMessage="Òª¼ì²âµÄÎÄ¼şÂ·¾¶")]
-        [string]$FilePath,
-
-        [Parameter(HelpMessage="ÊÇ·ñÍ³¼ÆĞĞÎ²±êÖ¾")]
-        [switch]$CheckLineEnding
+        [Parameter(Mandatory=$true, HelpMessage="è¦æ£€æµ‹çš„æ–‡ä»¶è·¯å¾„")]
+        [string]$FilePath
     )
 
-    # ³õÊ¼»¯½á¹û¶ÔÏó
+    # åˆå§‹åŒ–ç»“æœå¯¹è±¡
     $result = @{
         Success = $false
         FilePath = ""
@@ -540,28 +526,28 @@ function Check-FileFormat
         ErrorMessage = ""
     }
 
-    # ¼ì²éÊÇ·ñ°üº¬Í¨Åä·û
+    # æ£€æŸ¥æ˜¯å¦åŒ…å«é€šé…ç¬¦
     if ([System.Management.Automation.WildcardPattern]::ContainsWildcardCharacters($FilePath)) {
-        $result.ErrorMessage = "Â·¾¶²»ÄÜ°üº¬Í¨Åä·û"
+        $result.ErrorMessage = "è·¯å¾„ä¸èƒ½åŒ…å«é€šé…ç¬¦"
         return $result
     }
 
     if ([string]::IsNullOrWhiteSpace($FilePath)) {
-        $result.ErrorMessage = "ÎÄ¼şÂ·¾¶²»ÄÜÎª¿Õ"
+        $result.ErrorMessage = "æ–‡ä»¶è·¯å¾„ä¸èƒ½ä¸ºç©º"
         return $result
     }
 
-    # ¼ì²éÊÇ·ñÎªÆÕÍ¨ÎÄ¼ş
+    # æ£€æŸ¥æ˜¯å¦ä¸ºæ™®é€šæ–‡ä»¶
     if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf))
     {
-        $result.ErrorMessage = "²»ÊÇÓĞĞ§ÎÄ¼ş»òÎÄ¼ş²»´æÔÚ"
+        $result.ErrorMessage = "ä¸æ˜¯æœ‰æ•ˆæ–‡ä»¶æˆ–æ–‡ä»¶ä¸å­˜åœ¨"
         return $result
     }
 
     $FilePath = Resolve-Path $FilePath
     $result.FilePath = $FilePath
 
-    # ¼ì²éÎÄ¼şÊÇ·ñ¿É¶Á²¢»ñÈ¡´óĞ¡
+    # æ£€æŸ¥æ–‡ä»¶æ˜¯å¦å¯è¯»å¹¶è·å–å¤§å°
     try
     {
         $fileItem = Get-Item $FilePath -Force
@@ -571,92 +557,77 @@ function Check-FileFormat
     }
     catch
     {
-        $result.ErrorMessage = "ÎÄ¼ş²»¿É¶Á"
+        $result.ErrorMessage = "æ–‡ä»¶ä¸å¯è¯»"
         return $result
     }
 
-    # ¼ì²éÎÄ¼ş´óĞ¡ÏŞÖÆ
+    # æ£€æŸ¥æ–‡ä»¶å¤§å°é™åˆ¶
     $MIN_FILE_SIZE_LIMITED = 5
     $MAX_FILE_SIZE_LIMITED = 10MB
     if ($fileSize -lt $MIN_FILE_SIZE_LIMITED)
     {
-        $result.ErrorMessage = "ÎÄ¼şÌ«Ğ¡"
+        $result.ErrorMessage = "æ–‡ä»¶å¤ªå°"
         return $result
     }
 
     if ($fileSize -gt $MAX_FILE_SIZE_LIMITED)
     {
-        $result.ErrorMessage = "ÎÄ¼şÌ«´ó"
+        $result.ErrorMessage = "æ–‡ä»¶å¤ªå¤§"
         return $result
     }
 
-    # ¼ì²éBOM
+    # æ£€æŸ¥BOM
     $bomResult = Detect-BOM $FilePath
     if ($bomResult -ne "NO_BOM" -and $bomResult -ne "UNKNOWN")
     {
         $result.Encoding = $bomResult
-        if ($CheckLineEnding)
-        {
-            $leInfo = Detect-LineEnding $FilePath
-            $result.LineEnding = $leInfo.Conclusion
-        }
+        $leInfo = Detect-LineEnding $FilePath
+        $result.LineEnding = $leInfo.Conclusion
         $result.Success = $true
         return $result
     }
 
-    # ¼ì²éASCII
+    # æ£€æŸ¥ASCII
     if (Is-ASCII-File $FilePath)
     {
         $result.Encoding = "ASCII"
-        if ($CheckLineEnding)
-        {
-            $leInfo = Detect-LineEnding $FilePath
-            $result.LineEnding = $leInfo.Conclusion
-        }
+        $leInfo = Detect-LineEnding $FilePath
+        $result.LineEnding = $leInfo.Conclusion
         $result.Success = $true
         return $result
     }
 
-    # ¼ì²éUTF-8 (ÎŞBOM)
+    # æ£€æŸ¥UTF-8 (æ— BOM)
     if (Is-UTF8-WithoutBom-File $FilePath)
     {
         $result.Encoding = "UTF-8"
-        if ($CheckLineEnding)
-        {
-            $leInfo = Detect-LineEnding $FilePath
-            $result.LineEnding = $leInfo.Conclusion
-        }
+        $leInfo = Detect-LineEnding $FilePath
+        $result.LineEnding = $leInfo.Conclusion
         $result.Success = $true
         return $result
     }
 
-    # ¼ì²éGBÏµÁĞ±àÂë
+    # æ£€æŸ¥GBç³»åˆ—ç¼–ç 
     $gbResult = Is-GB-File $FilePath
     if ($null -ne $gbResult)
     {
         $result.Encoding = $gbResult
-        if ($CheckLineEnding)
-        {
-            $leInfo = Detect-LineEnding $FilePath
-            $result.LineEnding = $leInfo.Conclusion
-        }
+        $leInfo = Detect-LineEnding $FilePath
+        $result.LineEnding = $leInfo.Conclusion
         $result.Success = $true
         return $result
     }
 
-    # Î´Öª±àÂë
+    # æœªçŸ¥ç¼–ç 
     $result.Encoding = "----"
-    if ($CheckLineEnding)
-    {
-        $leInfo = Detect-LineEnding $FilePath
-        $result.LineEnding = $leInfo.Conclusion
-    }
+    $leInfo = Detect-LineEnding $FilePath
+    $result.LineEnding = $leInfo.Conclusion
     $result.Success = $true
     return $result
 }
 
 # ================================================
-# ½Å±¾Èë¿Úµã
+# è„šæœ¬å…¥å£ç‚¹
 # ================================================
 if ($MyInvocation.InvocationName -ne '.')
 {

@@ -76,7 +76,7 @@ echo "时间范围: $START_TIME ~ $END_TIME"
 echo ""
 
 sqlite3 -header -column "$KILO_DB" \
-  "SELECT id, datetime(time_created/1000, 'unixepoch', 'localtime') as created, datetime(time_updated/1000, 'unixepoch', 'localtime') as updated, substr(data, 1, 200) as preview FROM message WHERE session_id = '$SESSION_ID' AND time_updated/1000 >= $START_TS AND time_updated/1000 <= $END_TS ORDER BY time_updated ASC;"
+  "SELECT id, datetime(time_created/1000, 'unixepoch', 'localtime') as created, datetime(time_updated/1000, 'unixepoch', 'localtime') as updated, data as preview FROM message WHERE session_id = '$SESSION_ID' AND time_updated/1000 >= $START_TS AND time_updated/1000 <= $END_TS ORDER BY time_updated ASC;"
 
 echo ""
 echo "查询完成"

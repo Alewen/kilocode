@@ -1,74 +1,74 @@
 <#
 .SYNOPSIS
-win-hex-file-viewer.ps1 - ÒÔÊ®Áù½øÖÆ¸ñÊ½²é¿´ÎÄ¼şÄÚÈİµÄ PowerShell ½Å±¾
+win-hex-file-viewer.ps1 - ä»¥åå…­è¿›åˆ¶æ ¼å¼æŸ¥çœ‹æ–‡ä»¶å†…å®¹çš„ PowerShell è„šæœ¬
 
 .DESCRIPTION
-¸Ã½Å±¾¶ÁÈ¡Ö¸¶¨ÎÄ¼şµÄ¶ş½øÖÆÄÚÈİ£¬²¢ÒÔÊ®Áù½øÖÆ¸ñÊ½ÏÔÊ¾£¬
-Í¬Ê±ÏÔÊ¾Æ«ÒÆµØÖ·£¬·½±ãÓÃ»§²é¿´ºÍ·ÖÎöÎÄ¼şµÄÔ­Ê¼¶ş½øÖÆÊı¾İ¡£
+è¯¥è„šæœ¬è¯»å–æŒ‡å®šæ–‡ä»¶çš„äºŒè¿›åˆ¶å†…å®¹ï¼Œå¹¶ä»¥åå…­è¿›åˆ¶æ ¼å¼æ˜¾ç¤ºï¼Œ
+åŒæ—¶æ˜¾ç¤ºåç§»åœ°å€ï¼Œæ–¹ä¾¿ç”¨æˆ·æŸ¥çœ‹å’Œåˆ†ææ–‡ä»¶çš„åŸå§‹äºŒè¿›åˆ¶æ•°æ®ã€‚
 
 .PARAMETER File
-Òª²é¿´µÄÎÄ¼şÂ·¾¶¡£±ØÌî²ÎÊı£¬²»ÄÜ°üº¬Í¨Åä·û¡£
+è¦æŸ¥çœ‹çš„æ–‡ä»¶è·¯å¾„ã€‚å¿…å¡«å‚æ•°ï¼Œä¸èƒ½åŒ…å«é€šé…ç¬¦ã€‚
 
 .PARAMETER BytesPerLine
-Ã¿ĞĞÏÔÊ¾µÄ×Ö½ÚÊı¡£¿ÉÑ¡²ÎÊı£¬·¶Î§Îª 10-50 Ö®¼äµÄÕûÊı£¬Ä¬ÈÏÖµÎª 20¡£
+æ¯è¡Œæ˜¾ç¤ºçš„å­—èŠ‚æ•°ã€‚å¯é€‰å‚æ•°ï¼ŒèŒƒå›´ä¸º 10-50 ä¹‹é—´çš„æ•´æ•°ï¼Œé»˜è®¤å€¼ä¸º 20ã€‚
 
 .EXAMPLE
 .\win-hex-file-viewer.ps1 "C:\test\example.bin"
-Ê¹ÓÃÄ¬ÈÏÉèÖÃ£¨Ã¿ĞĞ 20 ×Ö½Ú£©²é¿´ example.bin ÎÄ¼ş
+ä½¿ç”¨é»˜è®¤è®¾ç½®ï¼ˆæ¯è¡Œ 20 å­—èŠ‚ï¼‰æŸ¥çœ‹ example.bin æ–‡ä»¶
 
 .EXAMPLE
 .\win-hex-file-viewer.ps1 "C:\test\example.bin" 32
-Ã¿ĞĞÏÔÊ¾ 32 ×Ö½Ú²é¿´ example.bin ÎÄ¼ş
+æ¯è¡Œæ˜¾ç¤º 32 å­—èŠ‚æŸ¥çœ‹ example.bin æ–‡ä»¶
 
 .NOTES
-×÷Õß£ºKilo
-ÈÕÆÚ£º2026-05-27
+ä½œè€…ï¼šKilo
+æ—¥æœŸï¼š2026-05-27
 #>
 
 param(
-    [Parameter(Mandatory=$false, Position=0, HelpMessage="ÎÄ¼şÂ·¾¶")]
+    [Parameter(Mandatory=$true, Position=0, HelpMessage="æ–‡ä»¶è·¯å¾„")]
     [string]$File,
 
-    [Parameter(Mandatory=$false, Position=1, HelpMessage="Ã¿ĞĞÏÔÊ¾×Ö½ÚÊı")]
+    [Parameter(Mandatory=$false, Position=1, HelpMessage="æ¯è¡Œæ˜¾ç¤ºå­—èŠ‚æ•°")]
     [int]$BytesPerLine = 20
 )
 
-# ¼ì²éÊÇ·ñ°üº¬Í¨Åä·û
+# æ£€æŸ¥æ˜¯å¦åŒ…å«é€šé…ç¬¦
 if ([System.Management.Automation.WildcardPattern]::ContainsWildcardCharacters($File)) {
-    Write-Host "´íÎó£º²ÎÊıÒ» [ $File ] ²»ÄÜ°üº¬Í¨Åä·û" -ForegroundColor Red
+    Write-Host "é”™è¯¯ï¼šå‚æ•°ä¸€ [ $File ] ä¸èƒ½åŒ…å«é€šé…ç¬¦" -ForegroundColor Red
     return
 }
 
-# ²ÎÊı¼ì²é
+# å‚æ•°æ£€æŸ¥
 if ([string]::IsNullOrWhiteSpace($File)) {
-    Write-Host "´íÎó£º²ÎÊıÒ» [ $File ] ÊÇÎŞĞ§µÄ¿ÕÖµ»ò¿Õ¸ñ" -ForegroundColor Red
-    Write-Host "ÓÃ·¨: win-hex-file-viewer <ÎÄ¼ş> [Ã¿ĞĞ×Ö½ÚÊı]"
-    Write-Host "       Ã¿ĞĞ×Ö½ÚÊı: 10-50 Ö®¼äµÄÕûÊı£¬Ä¬ÈÏ 20"
+    Write-Host "é”™è¯¯ï¼šå‚æ•°ä¸€ [ $File ] æ˜¯æ— æ•ˆçš„ç©ºå€¼æˆ–ç©ºæ ¼" -ForegroundColor Red
+    Write-Host "ç”¨æ³•: win-hex-file-viewer <æ–‡ä»¶> [æ¯è¡Œå­—èŠ‚æ•°]"
+    Write-Host "       æ¯è¡Œå­—èŠ‚æ•°: 10-50 ä¹‹é—´çš„æ•´æ•°ï¼Œé»˜è®¤ 20"
     return
 }
 
-# ÎÄ¼ş¼ì²é
+# æ–‡ä»¶æ£€æŸ¥
 if (-not (Test-Path -LiteralPath $File)) {
-    Write-Host "´íÎó: ÎÄ¼ş [ $File ] ²»´æÔÚ" -ForegroundColor Red
+    Write-Host "é”™è¯¯: æ–‡ä»¶ [ $File ] ä¸å­˜åœ¨" -ForegroundColor Red
     return
 }
 
 $File = Resolve-Path $File
 
-# ÑéÖ¤Ã¿ĞĞ×Ö½ÚÊı²ÎÊı
+# éªŒè¯æ¯è¡Œå­—èŠ‚æ•°å‚æ•°
 if ($BytesPerLine -lt 10 -or $BytesPerLine -gt 50) {
-    Write-Host "´íÎó: Ã¿ĞĞ×Ö½ÚÊı±ØĞëÔÚ 10-50 Ö®¼ä"
+    Write-Host "é”™è¯¯: æ¯è¡Œå­—èŠ‚æ•°å¿…é¡»åœ¨ 10-50 ä¹‹é—´"
     return
 }
 
-# »ñÈ¡ÎÄ¼ş´óĞ¡
+# è·å–æ–‡ä»¶å¤§å°
 $fileSize = (Get-Item $File).Length
 
-# ¶ÁÈ¡ÎÄ¼ş¶ş½øÖÆÊı¾İ
+# è¯»å–æ–‡ä»¶äºŒè¿›åˆ¶æ•°æ®
 $bytes = [System.IO.File]::ReadAllBytes($File)
 $offset = 0
 
-# ´¦Àí²¢ÏÔÊ¾Ê®Áù½øÖÆÊı¾İ
+# å¤„ç†å¹¶æ˜¾ç¤ºåå…­è¿›åˆ¶æ•°æ®
 while ($offset -lt $bytes.Length)
 {
     $remainingBytes = $bytes.Length - $offset

@@ -7,108 +7,105 @@ description: This skill provides a PowerShell script to detect text file encodin
 
 ## Purpose
 
-[Windows Only] This skill provides a standalone PowerShell script to detect the encoding format and line ending style of text files. It supports detection of multiple encoding types and can be easily called by AI agents. This skill is only available on Windows systems as it uses PowerShell scripts.
+[Windows Only] Provide a standalone PowerShell script to detect the encoding format and line ending style of text files. BOM detection, byte-level validation, and .NET encoding round-trip verification are used for accurate identification.
+
+Supports: UTF-8-BOM / UTF-8 / UTF-16LE-BOM / UTF-16BE-BOM / UTF-32LE-BOM / UTF-32BE-BOM / ASCII / GB2312 / GBK / GB18030.
 
 ## When to Use
 
-This skill should be used when:
+Use this skill when:
+
 - Determining the encoding format of a text file
-- Checking the line ending style (LF/CRLF/Mixed) of a file
-- Verifying if a file uses a specific encoding (UTF-8, GB2312, etc.)
+- Checking the line ending style (LF / CRLF / Mixed / NoEOL) of a file
+- Verifying whether a file uses a specific encoding (UTF-8, GB2312, etc.)
 
-## How to Use
+## Main Script
 
-### Main Script Location
+`scripts/win-file-encoding-detector.ps1` (636 lines)
 
-The main detection script is located at: `scripts/win-file-encoding-detector.ps1`
+Contains all detection functions:
 
-### Calling from PowerShell
+| Function | Purpose |
+|----------|---------|
+| `Detect-BOM` | Read first 4 bytes to identify BOM (UTF-32 LE/BE → UTF-8 → UTF-16 LE/BE) |
+| `Is-ASCII-File` | Verify all bytes are in ASCII printable range |
+| `Is-UTF8-WithoutBom-File` | Decode/re-encode round-trip via `UTF8Encoding` |
+| `Is-GB-File` | Try GB2312/GBK/GB18030 with round-trip check |
+| `Is-GB2312-Bytes` | Strict byte-level GB2312 validation (excludes reserved zones) |
+| `Detect-LineEnding` | Scan bytes for CRLF / LF and classify |
+| `Check-FileFormat` | Main entry point, orchestrates detection pipeline |
+| `FileSize-Format` | Format byte count to human-readable string |
 
-```powershell
-# Basic usage - detect encoding only
-powershell -File "scripts/win-file-encoding-detector.ps1" -FilePath "path\to\your\file.txt"
-
-# Detect encoding AND line endings
-powershell -File "scripts/win-file-encoding-detector.ps1" -FilePath "path\to\your\file.txt" -CheckLineEnding
-```
-
-### Calling from PowerShell Directly (Dot-Sourcing)
-
-```powershell
-# Load the script
-. "scripts/win-file-encoding-detector.ps1"
-
-# Call the main function
-$result = Check-FileFormat -FilePath "path\to\your\file.txt" -CheckLineEnding
-$result | ConvertTo-Json -Depth 10
-```
+Detection pipeline order: BOM → ASCII → UTF-8 (no BOM) → GB series → unknown.
 
 ## Parameters
 
-### Check-FileFormat Parameters
+### Check-FileFormat
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `FilePath` | string | Yes | Full path of the file to detect |
-| `CheckLineEnding` | switch | No | Whether to detect and return line ending style |
+| `-FilePath` | string | Yes | Full path of the file to detect (no wildcards) |
+
+File size limits: 5 bytes minimum, 10 MB maximum.
 
 ## Return Value
 
-The script returns a structured object (JSON when called from command line) with the following fields:
+Structured object (JSON when called from command line):
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `Success` | bool | Indicates whether detection was successful |
-| `FilePath` | string | Full path of the detected file |
-| `FileSize` | string | Human-readable file size with units (e.g., "1.23 K", "4.56 M") |
-| `FileSizeBytes` | long | File size in bytes |
-| `Encoding` | string | Detected encoding format |
-| `LineEnding` | string | Detected line ending style (or "skip" if not detected) |
-| `ErrorMessage` | string | Error message (empty string if successful) |
+| `Success` | bool | Detection result |
+| `FilePath` | string | Resolved full path of the detected file |
+| `FileSize` | string | Human-readable size (e.g. "1.23 K", "4.56 M") |
+| `FileSizeBytes` | long | Size in bytes |
+| `Encoding` | string | Detected encoding (see table below) |
+| `LineEnding` | string | Detected line ending (see table below) |
+| `ErrorMessage` | string | Empty on success, error text on failure |
 
-### Possible Encoding Values
-
-| Value | Description |
-|-------|-------------|
-| "UTF-8-BOM" | UTF-8 with BOM |
-| "UTF-16LE-BOM" | UTF-16 little-endian with BOM |
-| "UTF-16BE-BOM" | UTF-16 big-endian with BOM |
-| "UTF-32LE-BOM" | UTF-32 little-endian with BOM |
-| "UTF-32BE-BOM" | UTF-32 big-endian with BOM |
-| "ASCII" | ASCII encoding |
-| "UTF-8" | UTF-8 without BOM |
-| "GB2312" | GB2312 encoding |
-| "GBK" | GBK encoding |
-| "GB18030" | GB18030 encoding |
-| "----" | Unknown encoding |
-
-### Possible Line Ending Values
+### Encoding Values
 
 | Value | Description |
 |-------|-------------|
-| "LF" | Unix-style line endings (\\n) |
-| "CRLF" | Windows-style line endings (\\r\\n) |
-| "Mixed" | Mixed line endings |
-| "NoEOL" | No line endings detected |
-| "skip" | Line ending detection was skipped |
-| "unknown" | Error during line ending detection |
+| `UTF-8-BOM` | UTF-8 with BOM (`EF BB BF`) |
+| `UTF-8` | UTF-8 without BOM |
+| `UTF-16LE-BOM` | UTF-16 little-endian with BOM (`FF FE`) |
+| `UTF-16BE-BOM` | UTF-16 big-endian with BOM (`FE FF`) |
+| `UTF-32LE-BOM` | UTF-32 little-endian with BOM (`FF FE 00 00`) |
+| `UTF-32BE-BOM` | UTF-32 big-endian with BOM (`00 00 FE FF`) |
+| `ASCII` | Pure ASCII (no byte ≥ 0x80, no forbidden control chars) |
+| `GB2312` | GB2312 (strict, excludes reserved zones) |
+| `GBK` | GBK (superset of GB2312) |
+| `GB18030` | GB18030 (superset of GBK) |
+| `----` | Unknown encoding |
 
-## File Size Limits
+### Line Ending Values
 
-- Minimum: 5 bytes
-- Maximum: 10 MB
+| Value | Description |
+|-------|-------------|
+| `LF` | Unix-style line endings (`\n`) |
+| `CRLF` | Windows-style line endings (`\r\n`) |
+| `Mixed` | Mixed LF and CRLF |
+| `NoEOL` | No line terminators found |
+| `unknown` | Error during line ending detection |
 
-Files outside this range will return an error.
+## Usage
 
-## Example Usage
+### From pwsh (PowerShell 7)
 
 ```powershell
-# Example 1: Detect a file's encoding
-$result = powershell -File "scripts/win-file-encoding-detector.ps1" -FilePath "document.txt"
-# Output JSON with encoding information
+# Detect encoding and line endings
+pwsh -File "scripts/win-file-encoding-detector.ps1" -FilePath "path\to\your\file.txt"
+```
 
-# Example 2: Detect encoding and line endings
-powershell -File "scripts/win-file-encoding-detector.ps1" -FilePath "code.py" -CheckLineEnding
+### From PowerShell (Dot-Sourcing)
+
+```powershell
+# Load functions into current session
+. "scripts/win-file-encoding-detector.ps1"
+
+# Call main function
+$result = Check-FileFormat -FilePath "path\to\your\file.txt"
+$result | ConvertTo-Json -Depth 10
 ```
 
 ## Example Output
@@ -116,7 +113,7 @@ powershell -File "scripts/win-file-encoding-detector.ps1" -FilePath "code.py" -C
 ```json
 {
     "Success": true,
-    "FilePath": "F:\\Winscripts\\ckFile_standalone.ps1",
+    "FilePath": "F:\\Winscripts\\example.txt",
     "FileSize": "16.18 K",
     "FileSizeBytes": 16569,
     "Encoding": "GB2312",
@@ -124,3 +121,12 @@ powershell -File "scripts/win-file-encoding-detector.ps1" -FilePath "code.py" -C
     "ErrorMessage": ""
 }
 ```
+
+## Error Conditions
+
+- `"路径不能包含通配符"` — wildcard characters detected in path
+- `"文件路径不能为空"` — empty or whitespace-only path
+- `"不是有效文件或文件不存在"` — path does not point to a file
+- `"文件不可读"` — file cannot be accessed
+- `"文件太小"` — file size < 5 bytes
+- `"文件太大"` — file size > 10 MB

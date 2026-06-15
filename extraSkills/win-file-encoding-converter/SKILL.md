@@ -11,7 +11,7 @@ description: This skill provides a PowerShell script to convert text file encodi
 
 ## When to Use
 
-This skill should be used when:
+Use this skill when:
 - Converting a text file from one encoding format to another
 - Normalizing line endings to LF (Unix) or CRLF (Windows)
 - Ensuring accurate encoding conversion with validation
@@ -25,23 +25,23 @@ This skill should be used when:
 
 The main conversion script is located at: `scripts/win-file-encoding-converter.ps1`
 
-### Calling from PowerShell
+### Calling from pwsh (PowerShell 7)
 
 ```powershell
 # Basic usage — encoding conversion only
-powershell -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "SourceEncoding" "TargetEncoding"
+pwsh -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "SourceEncoding" "TargetEncoding"
 
 # Encoding conversion + convert line endings to CRLF
-powershell -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "SourceEncoding" "TargetEncoding" "CRLF"
+pwsh -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "SourceEncoding" "TargetEncoding" "CRLF"
 
 # Encoding conversion + convert line endings to LF
-powershell -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "SourceEncoding" "TargetEncoding" "LF"
+pwsh -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "SourceEncoding" "TargetEncoding" "LF"
 
 # Line ending only (no encoding change) — set source = target encoding
-powershell -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "GB2312" "GB2312" "CRLF"
+pwsh -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "GB2312" "GB2312" "CRLF"
 
 # With quiet mode (no output)
-powershell -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "SourceEncoding" "TargetEncoding" -Quiet
+pwsh -File "scripts/win-file-encoding-converter.ps1" "path\to\your\file.txt" "SourceEncoding" "TargetEncoding" -Quiet
 ```
 
 ### Calling from PowerShell Directly (Dot-Sourcing)
@@ -77,7 +77,7 @@ $result | ConvertTo-Json -Depth 10
 
 ### Positional Argument Order (CLI mode)
 
-Call via `powershell -File` with the positional order: `FilePath` `SourceEncoding` `TargetEncoding` `LineEnding`.
+Call via `pwsh -File` with the positional order: `FilePath` `SourceEncoding` `TargetEncoding` `LineEnding`.
 Pass `-Quiet` as a named parameter.
 
 ## Return Value
@@ -131,19 +131,19 @@ The script follows these steps:
 
 ```powershell
 # Example 1: Convert from GBK to UTF-8 (without BOM)
-powershell -File "scripts/win-file-encoding-converter.ps1" "document.txt" "GBK" "UTF-8"
+pwsh -File "scripts/win-file-encoding-converter.ps1" "document.txt" "GBK" "UTF-8"
 
 # Example 2: Convert from UTF-8 to UTF-8 with BOM
-$result = FileEncodingConverter -FilePath "code.py" -SourceEncoding "UTF-8" -TargetEncoding "UTF-8-BOM"
+pwsh -File "scripts/win-file-encoding-converter.ps1" "code.py" "UTF-8" "UTF-8-BOM"
 
 # Example 3: Quiet mode conversion
-powershell -File "scripts/win-file-encoding-converter.ps1" "config.json" "UTF-16LE-BOM" "UTF-8" -Quiet
+pwsh -File "scripts/win-file-encoding-converter.ps1" "config.json" "UTF-16LE-BOM" "UTF-8" -Quiet
 
 # Example 4: Convert encoding to GB2312 and normalize line endings to CRLF
-powershell -File "scripts/win-file-encoding-converter.ps1" "script.cmd" "UTF-8" "GB2312" "CRLF"
+pwsh -File "scripts/win-file-encoding-converter.ps1" "script.cmd" "UTF-8" "GB2312" "CRLF"
 
 # Example 5: Only convert line endings to LF (keep encoding unchanged)
-powershell -File "scripts/win-file-encoding-converter.ps1" "file.txt" "UTF-8" "UTF-8" "LF"
+pwsh -File "scripts/win-file-encoding-converter.ps1" "file.txt" "UTF-8" "UTF-8" "LF"
 
 # Example 6: Dot-sourcing with line ending parameter
 $result = FileEncodingConverter -FilePath "config.ini" -SourceEncoding "GB2312" -TargetEncoding "UTF-8" -LineEnding "CRLF" -Quiet

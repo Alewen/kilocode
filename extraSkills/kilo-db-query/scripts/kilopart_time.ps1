@@ -9,7 +9,7 @@ param(
     [string]$EndTime
 )
 
-$KILO_DB = "$env:USERPROFILE\.local\share\kilo\kilo.db"
+$KILO_DB = "$HOME/.local/share/kilo/kilo.db"
 
 $now = Get-Date
 $currentYear = $now.Year
@@ -51,7 +51,7 @@ try {
     $startDt = Get-Date $startNormalized -ErrorAction Stop
     $startTs = [long][Math]::Floor($startDt.ToUniversalTime().Subtract([DateTime]::UnixEpoch).TotalSeconds)
 } catch {
-    Write-Host "´íÎó: ¿ªÊ¼Ê±¼ä¸ñÊ½ÎÞÐ§: $StartTime ¡ú $startNormalized"
+    Write-Host "é”™è¯¯: å¼€å§‹æ—¶é—´æ ¼å¼æ— æ•ˆ: $StartTime â†’ $startNormalized"
     exit 1
 }
 
@@ -59,15 +59,15 @@ try {
     $endDt = Get-Date $endNormalized -ErrorAction Stop
     $endTs = [long][Math]::Floor($endDt.ToUniversalTime().Subtract([DateTime]::UnixEpoch).TotalSeconds)
 } catch {
-    Write-Host "´íÎó: ½áÊøÊ±¼ä¸ñÊ½ÎÞÐ§: $EndTime ¡ú $endNormalized"
+    Write-Host "é”™è¯¯: ç»“æŸæ—¶é—´æ ¼å¼æ— æ•ˆ: $EndTime â†’ $endNormalized"
     exit 1
 }
 
 Write-Host "=== Kilo Session Parts: $SessionId ==="
-Write-Host "Ê±¼ä·¶Î§: $startNormalized ~ $endNormalized"
+Write-Host "æ—¶é—´èŒƒå›´: $startNormalized ~ $endNormalized"
 Write-Host ""
 
-sqlite3.exe -header -column $KILO_DB "SELECT id, message_id, datetime(time_created/1000, 'unixepoch', 'localtime') as created, substr(data, 1, 200) as preview FROM part WHERE session_id = '$SessionId' AND time_created/1000 >= $startTs AND time_created/1000 <= $endTs ORDER BY time_created ASC;"
+sqlite3 -header -column $KILO_DB "SELECT id, message_id, datetime(time_created/1000, 'unixepoch', 'localtime') as created, data as data FROM part WHERE session_id = '$SessionId' AND time_created/1000 >= $startTs AND time_created/1000 <= $endTs ORDER BY time_created ASC;"
 
 Write-Host ""
-Write-Host "²éÑ¯Íê³É"
+Write-Host "æŸ¥è¯¢å®Œæˆ"

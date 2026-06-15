@@ -1,6 +1,6 @@
 ---
 name: kilo-db-query
-description: Query Kilo database to view session history with PowerShell or shell scripts
+description: This skill should be used when querying Kilo's session history, messages, and parts using PowerShell or shell scripts
 ---
 
 # Skill: kilo-db-query
@@ -175,5 +175,5 @@ Time format: same as `kilomessage_time.sh`
 
 ## Database Path
 
-- PowerShell scripts: `$env:USERPROFILE\.local\share\kilo\kilo.db`
+- PowerShell scripts: `$HOME/.local/share/kilo/kilo.db`
 - Shell scripts: `~/.local/share/kilo/kilo.db`

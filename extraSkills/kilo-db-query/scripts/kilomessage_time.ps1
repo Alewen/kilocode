@@ -9,7 +9,7 @@ param(
     [string]$EndTime
 )
 
-$KILO_DB = "$env:USERPROFILE\.local\share\kilo\kilo.db"
+$KILO_DB = "$HOME/.local/share/kilo/kilo.db"
 
 $now = Get-Date
 $currentYear = $now.Year
@@ -28,19 +28,19 @@ function Normalize-Time {
         $dashes = ($datePart.ToCharArray() | Where-Object { $_ -eq '-' }).Count
         
         if ($dashes -eq 2) {
-            # ÍêÕû "YYYY-MM-DD HH:MM:SS"
+            # å®Œæ•´ "YYYY-MM-DD HH:MM:SS"
             return "$Raw"
         } elseif ($dashes -eq 1) {
-            # "MM-DD HH:MM:SS" ¡ú ²¹Äê·Ý
+            # "MM-DD HH:MM:SS" â†’ è¡¥å¹´ä»½
             return "${currentYear}-${Raw}"
         } else {
             return "$Raw"
         }
     } elseif ($spaces -eq 0) {
-        # "HH:MM:SS" ¡ú ²¹ÄêÔÂÈÕ
+        # "HH:MM:SS" â†’ è¡¥å¹´æœˆæ—¥
         return "${currentDate} ${Raw}"
     } else {
-        # ÆäËûÇé¿ö£ºÌáÈ¡ day ºÍ time ²¹ÄêÔÂ
+        # å…¶ä»–æƒ…å†µï¼šæå– day å’Œ time è¡¥å¹´æœˆ
         $firstSpace = $Raw.IndexOf(' ')
         $dayPart = $Raw.Substring(0, $firstSpace)
         $timePart = $Raw.Substring($firstSpace + 1)
@@ -55,7 +55,7 @@ try {
     $startDt = Get-Date $startNormalized -ErrorAction Stop
     $startTs = [long][Math]::Floor($startDt.ToUniversalTime().Subtract([DateTime]::UnixEpoch).TotalSeconds)
 } catch {
-    Write-Host "´íÎó: ¿ªÊ¼Ê±¼ä¸ñÊ½ÎÞÐ§: $StartTime ¡ú $startNormalized"
+    Write-Host "é”™è¯¯: å¼€å§‹æ—¶é—´æ ¼å¼æ— æ•ˆ: $StartTime â†’ $startNormalized"
     exit 1
 }
 
@@ -63,15 +63,15 @@ try {
     $endDt = Get-Date $endNormalized -ErrorAction Stop
     $endTs = [long][Math]::Floor($endDt.ToUniversalTime().Subtract([DateTime]::UnixEpoch).TotalSeconds)
 } catch {
-    Write-Host "´íÎó: ½áÊøÊ±¼ä¸ñÊ½ÎÞÐ§: $EndTime ¡ú $endNormalized"
+    Write-Host "é”™è¯¯: ç»“æŸæ—¶é—´æ ¼å¼æ— æ•ˆ: $EndTime â†’ $endNormalized"
     exit 1
 }
 
 Write-Host "=== Kilo Session Messages: $SessionId ==="
-Write-Host "Ê±¼ä·¶Î§: $startNormalized ~ $endNormalized"
+Write-Host "æ—¶é—´èŒƒå›´: $startNormalized ~ $endNormalized"
 Write-Host ""
 
-sqlite3.exe -header -column $KILO_DB "SELECT id, datetime(time_created/1000, 'unixepoch', 'localtime') as created, datetime(time_updated/1000, 'unixepoch', 'localtime') as updated, substr(data, 1, 200) as preview FROM message WHERE session_id = '$SessionId' AND time_updated/1000 >= $startTs AND time_updated/1000 <= $endTs ORDER BY time_updated ASC;"
+sqlite3 -header -column $KILO_DB "SELECT DISTINCT m.id, datetime(m.time_created/1000, 'unixepoch', 'localtime') as created, datetime(m.time_updated/1000, 'unixepoch', 'localtime') as updated, substr(m.data, 1, 200) as preview FROM message m JOIN part p ON p.message_id = m.id WHERE m.session_id = '$SessionId' AND p.time_created/1000 >= $startTs AND p.time_created/1000 <= $endTs ORDER BY m.time_created ASC;"
 
 Write-Host ""
-Write-Host "²éÑ¯Íê³É"
+Write-Host "æŸ¥è¯¢å®Œæˆ"

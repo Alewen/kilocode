@@ -1,50 +1,50 @@
-# É¾³ı Kilo Êı¾İ¿âÖĞÖ¸¶¨ session_id Ïà¹ØµÄÈ«²¿ĞÅÏ¢
-# ÓÃ·¨: .\kiloremove.ps1 -SessionId <session_id>
+# åˆ é™¤ Kilo æ•°æ®åº“ä¸­æŒ‡å®š session_id ç›¸å…³çš„å…¨éƒ¨ä¿¡æ¯
+# ç”¨æ³•: .\kiloremove.ps1 -SessionId <session_id>
 
 param(
     [Parameter(Mandatory=$true)]
     [string]$SessionId
 )
 
-$KILO_DB = "$env:USERPROFILE\.local\share\kilo\kilo.db"
+$KILO_DB = "$HOME/.local/share/kilo/kilo.db"
 
-# ¼ì²éÊı¾İ¿âÎÄ¼şÊÇ·ñ´æÔÚ
+# æ£€æŸ¥æ•°æ®åº“æ–‡ä»¶æ˜¯å¦å­˜åœ¨
 if (-not (Test-Path $KILO_DB)) {
-    Write-Host "´íÎó: Êı¾İ¿âÎÄ¼ş²»´æÔÚ: $KILO_DB"
+    Write-Host "é”™è¯¯: æ•°æ®åº“æ–‡ä»¶ä¸å­˜åœ¨: $KILO_DB"
     exit 1
 }
 
-# ¿ªÊ¼É¾³ı²Ù×÷
-Write-Host "ÕıÔÚÉ¾³ı session_id: $SessionId µÄÊı¾İ..."
+# å¼€å§‹åˆ é™¤æ“ä½œ
+Write-Host "æ­£åœ¨åˆ é™¤ session_id: $SessionId çš„æ•°æ®..."
 
-# ÏÈÉ¾³ı part ±í
-$PartCount = sqlite3.exe $KILO_DB "SELECT COUNT(*) FROM part WHERE session_id = '$SessionId';"
-sqlite3.exe $KILO_DB "DELETE FROM part WHERE session_id = '$SessionId';"
-Write-Host "ÒÑÉ¾³ı part ±í¼ÇÂ¼: $PartCount Ìõ"
+# å…ˆåˆ é™¤ part è¡¨
+$PartCount = sqlite3 $KILO_DB "SELECT COUNT(*) FROM part WHERE session_id = '$SessionId';"
+sqlite3 $KILO_DB "DELETE FROM part WHERE session_id = '$SessionId';"
+Write-Host "å·²åˆ é™¤ part è¡¨è®°å½•: $PartCount æ¡"
 
-# É¾³ı session_message ±í
-$SessionMessageCount = sqlite3.exe $KILO_DB "SELECT COUNT(*) FROM session_message WHERE session_id = '$SessionId';"
-sqlite3.exe $KILO_DB "DELETE FROM session_message WHERE session_id = '$SessionId';"
-Write-Host "ÒÑÉ¾³ı session_message ±í¼ÇÂ¼: $SessionMessageCount Ìõ"
+# åˆ é™¤ session_message è¡¨
+$SessionMessageCount = sqlite3 $KILO_DB "SELECT COUNT(*) FROM session_message WHERE session_id = '$SessionId';"
+sqlite3 $KILO_DB "DELETE FROM session_message WHERE session_id = '$SessionId';"
+Write-Host "å·²åˆ é™¤ session_message è¡¨è®°å½•: $SessionMessageCount æ¡"
 
-# É¾³ı session_share ±í
-$SessionShareCount = sqlite3.exe $KILO_DB "SELECT COUNT(*) FROM session_share WHERE session_id = '$SessionId';"
-sqlite3.exe $KILO_DB "DELETE FROM session_share WHERE session_id = '$SessionId';"
-Write-Host "ÒÑÉ¾³ı session_share ±í¼ÇÂ¼: $SessionShareCount Ìõ"
+# åˆ é™¤ session_share è¡¨
+$SessionShareCount = sqlite3 $KILO_DB "SELECT COUNT(*) FROM session_share WHERE session_id = '$SessionId';"
+sqlite3 $KILO_DB "DELETE FROM session_share WHERE session_id = '$SessionId';"
+Write-Host "å·²åˆ é™¤ session_share è¡¨è®°å½•: $SessionShareCount æ¡"
 
-# É¾³ı todo ±í
-$TodoCount = sqlite3.exe $KILO_DB "SELECT COUNT(*) FROM todo WHERE session_id = '$SessionId';"
-sqlite3.exe $KILO_DB "DELETE FROM todo WHERE session_id = '$SessionId';"
-Write-Host "ÒÑÉ¾³ı todo ±í¼ÇÂ¼: $TodoCount Ìõ"
+# åˆ é™¤ todo è¡¨
+$TodoCount = sqlite3 $KILO_DB "SELECT COUNT(*) FROM todo WHERE session_id = '$SessionId';"
+sqlite3 $KILO_DB "DELETE FROM todo WHERE session_id = '$SessionId';"
+Write-Host "å·²åˆ é™¤ todo è¡¨è®°å½•: $TodoCount æ¡"
 
-# ÔÙÉ¾³ı message ±í
-$MessageCount = sqlite3.exe $KILO_DB "SELECT COUNT(*) FROM message WHERE session_id = '$SessionId';"
-sqlite3.exe $KILO_DB "DELETE FROM message WHERE session_id = '$SessionId';"
-Write-Host "ÒÑÉ¾³ı message ±í¼ÇÂ¼: $MessageCount Ìõ"
+# å†åˆ é™¤ message è¡¨
+$MessageCount = sqlite3 $KILO_DB "SELECT COUNT(*) FROM message WHERE session_id = '$SessionId';"
+sqlite3 $KILO_DB "DELETE FROM message WHERE session_id = '$SessionId';"
+Write-Host "å·²åˆ é™¤ message è¡¨è®°å½•: $MessageCount æ¡"
 
-# ×îºóÉ¾³ı session ±í
-$SessionCount = sqlite3.exe $KILO_DB "SELECT COUNT(*) FROM session WHERE id = '$SessionId';"
-sqlite3.exe $KILO_DB "DELETE FROM session WHERE id = '$SessionId';"
-Write-Host "ÒÑÉ¾³ı session ±í¼ÇÂ¼: $SessionCount Ìõ"
+# æœ€ååˆ é™¤ session è¡¨
+$SessionCount = sqlite3 $KILO_DB "SELECT COUNT(*) FROM session WHERE id = '$SessionId';"
+sqlite3 $KILO_DB "DELETE FROM session WHERE id = '$SessionId';"
+Write-Host "å·²åˆ é™¤ session è¡¨è®°å½•: $SessionCount æ¡"
 
-Write-Host "É¾³ı²Ù×÷Íê³É£¡"
+Write-Host "åˆ é™¤æ“ä½œå®Œæˆï¼"
