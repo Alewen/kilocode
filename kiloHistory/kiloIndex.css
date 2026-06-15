@@ -15,7 +15,7 @@
   --red: #d73a49;
   --yellow: #b08800;
   --blue: #0366d6;
-  --font-mono: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --radius: 6px;
   --sidebar-width: 320px;
@@ -184,14 +184,23 @@ body {
   min-width: 0;
 }
 .main-header {
-  padding: 12px 20px;
+  min-height: 70px;
+  padding: 16px 20px 12px;
+  background: var(--bg-sidebar);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: flex-start; gap: 10px;
 }
 .main-header h2 {
   font-size: 15px; font-weight: 600;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.main-header .main-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+  min-width: 0;
 }
 .main-header .dir {
   font-size: 11px; color: var(--text-muted);
@@ -201,8 +210,9 @@ body {
 .main-header .sid {
   font-size: 10px; color: var(--text-muted);
   font-family: var(--font-mono);
-  margin-top: 2px;
   user-select: all;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .main-header .sid .sid-link {
   font-family: var(--font-sans);
@@ -253,7 +263,7 @@ body {
 
 /* ===== Message Turn ===== */
 .turn {
-  width: 90%;
+  width: 96%;
   min-width: 600px;
   margin: 0 auto;
   padding: 0 20px;
@@ -317,6 +327,44 @@ body {
 }
 .user-msg-bubble.expanded .user-msg-body {
   -webkit-line-clamp: unset;
+}
+.user-file-msg {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+.user-file-msg-wrapper {
+  max-width: 80%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.user-file-msg .image-part {
+  max-width: 100%;
+  align-self: flex-end;
+  margin-left: auto;
+}
+.user-file-msg .image-part + .image-part {
+  margin-top: 8px;
+}
+.user-file-msg .image-part img {
+  margin-left: auto;
+}
+.image-part {
+  max-width: 80%;
+}
+.image-part img {
+  display: block;
+  max-width: min(100%, 640px);
+  max-height: 420px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.35);
+  background: var(--bg-input);
+  object-fit: contain;
+  cursor: pointer;
+}
+.image-caption {
+  display: none;
 }
 .user-msg-toggle {
   cursor: pointer;
@@ -428,6 +476,12 @@ body {
 .reasoning-body ul, .reasoning-body ol { padding-left: 20px; margin: 4px 0; }
 .reasoning-body li { margin: 2px 0; }
 .reasoning-part.open .reasoning-body { display: block; }
+.reasoning-part > .part-meta {
+  margin-top: 0;
+  padding: 6px 12px 4px 12px;
+  border-top: 1px solid var(--border);
+  background: transparent;
+}
 /* 推理体内代码块的 header 使用 body 原有背景色 */
 .reasoning-body .code-block-header {
   background: #d8d8d8;
@@ -499,6 +553,7 @@ body {
 .tool-header .t-icon.write { background: #d4edda; color: #155724; }
 .tool-header .t-icon.edit { background: #d4edda; color: #155724; }
 .tool-header .t-icon.read { background: #d1ecf1; color: #0c5460; }
+.tool-header .t-icon.question { background: #dbeafe; color: #1d4ed8; }
 .tool-header .t-icon.other { background: #e2e3e5; color: #383d41; }
 .tool-header .t-icon.webfetch { background: #d1ecf1; color: #0c5460; }
 .tool-header .t-summary { flex: 1; min-width: 0; }
@@ -513,10 +568,15 @@ body {
   display: inline-block;
   font-size: 11px; color: var(--text-muted);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  margin-left: 6px;
   max-width: 80%;
   vertical-align: bottom;
+  margin-left: 8px;
 }
+.tool-param-num {
+  color: var(--red);
+  font-weight: 600;
+}
+
 .tool-header .t-expand {
   font-size: 12px; color: var(--text-muted);
   flex-shrink: 0;
@@ -534,7 +594,8 @@ body {
 .diff-view {
   font-family: var(--font-mono);
   font-variant-ligatures: none;
-  font-size: 12px;
+  font-feature-settings: normal;
+  font-size: 14px;
   line-height: 1.5;
   overflow-x: auto;
   max-height: 500px;
@@ -666,6 +727,14 @@ body {
   border-bottom: 0.5px solid var(--border);
   font-family: var(--font-sans);
   font-size: 11px;
+}
+.text-part .code-block-wrapper {
+  width: 94%;
+  margin-left: auto;
+  margin-right: auto;
+}
+.text-part .code-block-header {
+  background: #e0e0e0;
 }
 .code-block-header .lang-label {
   font-family: var(--font-mono);
@@ -803,7 +872,8 @@ body {
 .read-end-line {
   padding: 4px 12px;
   color: var(--text-muted);
-  font-style: italic;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
 }
 .read-entry-count {
   margin-left: 12px;
@@ -980,25 +1050,113 @@ body {
 
 /* Question tool */
 .question-body {
-  padding: 10px 14px;
-  font-size: 13px; line-height: 1.6;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.6;
 }
 .question-item {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
-.question-item .q {
-  color: var(--text);
+.question-item:last-child {
+  margin-bottom: 0;
+}
+.question-header-text {
+  color: var(--text-weak);
+  font-size: 12px;
   margin-bottom: 4px;
 }
-.question-item .a {
-  color: var(--text-weak);
-  margin-bottom: 2px;
+.question-text {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.6;
+  margin-bottom: 10px;
 }
-.question-item .a strong {
+.question-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.question-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.question-option.picked {
+  background: var(--bg-active);
+  border-color: var(--accent);
+}
+.question-option-box {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  background: var(--bg-card);
+}
+.question-option.picked .question-option-box {
+  background: var(--bg-input);
+  border-color: var(--accent);
+}
+.question-option-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.option-label {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.option-description {
+  color: var(--text-weak);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.answer-text {
   color: var(--text);
   font-weight: 600;
 }
-.question-item .a + .a { margin-top: 2px; }
+.question-output-body {
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.7;
+  border-bottom: 1px solid var(--border);
+}
+.question-output-item {
+  margin-bottom: 12px;
+}
+.question-output-item:last-child {
+  margin-bottom: 0;
+}
+.question-row {
+  display: flex;
+  gap: 4px;
+  color: var(--text);
+}
+.question-label {
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.question-value {
+  overflow-wrap: anywhere;
+}
 
 /* Todo list styles */
 .todo-part {
@@ -1056,6 +1214,7 @@ body {
 .todo-body {
   display: none;
   border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
   padding: 8px 12px;
 }
 .todo-part.open .todo-body { display: block; }
@@ -1099,4 +1258,56 @@ body {
 .todo-item.completed .todo-text {
   color: var(--text-muted);
   text-decoration: line-through;
+}
+
+/* Image lightbox modal */
+.image-modal {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.85);
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  cursor: zoom-out;
+}
+.image-modal-content {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 96vw;
+  max-height: 92vh;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  cursor: default;
+}
+.image-modal-caption {
+  margin-top: 12px;
+  color: #ccc;
+  font-size: 14px;
+  font-family: var(--font-sans);
+  text-align: center;
+  max-width: 80vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.image-modal-close {
+  position: absolute;
+  top: 20px;
+  right: 32px;
+  color: #fff;
+  font-size: 36px;
+  font-weight: bold;
+  cursor: pointer;
+  opacity: 0.7;
+  line-height: 1;
+}
+.image-modal-close:hover {
+  opacity: 1;
 }

@@ -7,7 +7,7 @@
 <script src="marked.umd.js"></script>
 <link rel="stylesheet" href="github.min.css">
 <script src="highlight.min.js"></script>
-<link rel="stylesheet" href="kiloIndex.css?v=4">
+<link rel="stylesheet" href="kiloIndex.css?v=6">
 </head>
 <body>
 
@@ -31,8 +31,10 @@
   <div class="main-header" id="main-header" style="display:none">
     <div>
       <h2 id="main-title"></h2>
-      <span class="dir" id="main-dir"></span>
-      <div class="sid" id="main-sid"></div>
+      <div class="main-meta-line">
+        <span class="sid" id="main-sid"></span>
+        <span class="dir" id="main-dir"></span>
+      </div>
       <div id="parent-link-container"></div>
     </div>
   </div>
@@ -350,18 +352,21 @@ function filterSessions() {
   if (!q) { renderSessionList(allSessions); return; }
   const filtered = allSessions.filter(s =>
     (s.title || '').toLowerCase().includes(q) ||
-    (s.directory || '').toLowerCase().includes(q)
+    (s.directory || '').toLowerCase().includes(q) ||
+    (s.id || '').toLowerCase().includes(q)
   );
   renderSessionList(filtered);
 }
 
 function escHtml(s) {
-  if (!s) return '';
+  if (s == null) return '';
+  s = String(s);
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function escAttr(s) {
-  if (!s) return '';
+  if (s == null) return '';
+  s = String(s);
   return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
@@ -463,7 +468,7 @@ function toolCss(type) {
   if (type === 'bash') return 'bash';
   if (type === 'write' || type === 'edit') return 'write';
   if (type === 'read' || type === 'glob' || type === 'grep') return 'read';
-  if (type === 'question') return 'other';
+  if (type === 'question') return 'question';
   if (type === 'task') return 'other';
   if (type === 'skill') return 'bash';
   if (type === 'webfetch') return 'webfetch';
@@ -478,11 +483,14 @@ function toolTitle(part) {
     return n === 1 ? '问题 1 已回答' : '问题 ' + n + ' 已回答';
   }
   if (t === 'write' || t === 'edit') {
-    const label = t === 'write' ? '写入 ' : '编辑 ';
+    const label = t === 'write' ? '写入文件 ' : '编辑文件 ';
     return label + (part.filePath || '');
   }
   if (t === 'bash') return '执行命令';
-  if (t === 'read') return '读取 ' + (part.filePath || '');
+  if (t === 'read') {
+    const isDirectory = (part.output || '').includes('<type>directory</type>') || (part.output || '').includes('<entries>');
+    return (isDirectory ? '列出目录 ' : '读取文件 ') + (part.filePath || '');
+  }
   if (t === 'glob') return '搜索文件';
   if (t === 'grep') return '搜索内容';
   if (t === 'list') return '列出目录';
@@ -506,6 +514,16 @@ function toolTitleHtml(part) {
   return diff;
 }
 
+function toolSubHtml(part) {
+  if (part.tool === 'read') {
+    const parts = [];
+    if (part.offset != null) parts.push('offset=<span class="tool-param-num">' + escHtml(part.offset) + '</span>');
+    if (part.limit != null) parts.push('limit=<span class="tool-param-num">' + escHtml(part.limit) + '</span>');
+    return parts.join(' ');
+  }
+  return escHtml(toolSub(part));
+}
+
 function toolSub(part) {
   if (part.tool === 'skill') {
     const parts = [];
@@ -517,8 +535,9 @@ function toolSub(part) {
     const msg = part.output || '';
     return msg.length > 80 ? msg.substring(0, 80) + '...' : msg;
   }
-  if (part.description) return part.description;
-  if (part.command) return part.command;
+  const workdirInfo = part.workdir ? ' · workdir: ' + part.workdir : '';
+  if (part.description) return part.description + workdirInfo;
+  if (part.command) return part.command + workdirInfo;
   if (part.tool === 'read') {
     const parts = [];
     if (part.offset != null) parts.push('offset=' + part.offset);
@@ -563,10 +582,28 @@ function toolBody(part) {
         for (let i = 0; i < qs.length; i++) {
             const q = qs[i];
             const ans = as[i] || [];
+            const options = q.options || [];
+            const answerSet = new Set(ans);
             html += '<div class="question-item">';
-            html += '<div class="q">' + escHtml(q.question || q.header || '') + '</div>';
-            if (ans.length > 0) {
-                html += '<div class="a"><strong>' + escHtml(ans.join(', ')) + '</strong></div>';
+            if (q.header) {
+                html += '<div class="question-header-text">' + escHtml(q.header) + '</div>';
+            }
+            html += '<div class="question-text">' + escHtml(q.question || q.header || '') + '</div>';
+            if (options.length > 0) {
+                html += '<div class="question-options">';
+                for (const opt of options) {
+                    const picked = answerSet.has(opt.label);
+                    html += `<div class="question-option${picked ? ' picked' : ''}">
+                        <span class="question-option-box">${picked ? '✓' : ''}</span>
+                        <span class="question-option-main">
+                            <span class="option-label">${escHtml(opt.label || '')}</span>
+                            ${opt.description ? `<span class="option-description">${escHtml(opt.description)}</span>` : ''}
+                        </span>
+                    </div>`;
+                }
+                html += '</div>';
+            } else if (ans.length > 0) {
+                html += '<div class="answer-text">' + escHtml(ans.join(', ')) + '</div>';
             }
             html += '</div>';
         }
@@ -581,15 +618,20 @@ function toolBody(part) {
             </span>
         </div>`;
     }
-    if (part.toolInput && !part.command) {
+    if (part.toolInput && !part.command && part.tool !== 'question') {
         html += `<div class="bash-section">
             <div class="bash-section-label">输入<span class="copy-btn" data-copy="${escAttr(part.toolInput)}" onclick="event.stopPropagation();copyText(this, this.getAttribute('data-copy'))">复制</span></div>
             <pre class="bash-out-block"><code class="language-json">${escHtml(part.toolInput)}</code></pre>
         </div>`;
     }
     if (part.command) {
-        html += `<div class="bash-section">
-            <div class="bash-section-label">命令<span class="copy-btn" data-copy="${escAttr(part.command)}" onclick="event.stopPropagation();copyText(this, this.getAttribute('data-copy'))">复制</span></div>
+        html += `<div class="bash-section">`;
+        if (part.workdir) {
+            html += `<div class="bash-section-label">工作目录</div>
+            <pre class="bash-cmd-block"><code class="language-shellscript">${escHtml(part.workdir)}</code></pre>
+            <div class="bash-separator"></div>`;
+        }
+        html += `<div class="bash-section-label">命令<span class="copy-btn" data-copy="${escAttr(part.command)}" onclick="event.stopPropagation();copyText(this, this.getAttribute('data-copy'))">复制</span></div>
             <pre class="bash-cmd-block"><code class="language-shellscript">${escHtml(part.command)}</code></pre>`;
         if (part.output != null) {
             html += `<div class="bash-separator"></div>
@@ -598,7 +640,12 @@ function toolBody(part) {
         }
         html += `</div>`;
     } else if (part.output) {
-        if (part.tool === 'read' && part.output && part.output.includes('<path>')) {
+        if (part.tool === 'question') {
+            html += `<div class="bash-section">
+                <div class="bash-section-label">输出<span class="copy-btn" data-copy="${escAttr(cleanOutput)}" onclick="event.stopPropagation();copyText(this, this.getAttribute('data-copy'))">复制</span></div>
+                ${renderQuestionOutput(part, cleanOutput)}
+            </div>`;
+        } else if (part.tool === 'read' && part.output && part.output.includes('<path>')) {
             if (part.output.includes('<content>')) {
                 html += renderReadOutput(cleanOutput);
             } else if (part.output.includes('<entries>')) {
@@ -644,6 +691,26 @@ function toolBody(part) {
     return html;
 }
 
+// 渲染 question 工具的输出
+function renderQuestionOutput(part, output) {
+    const qs = part.questions || [];
+    const as = part.answers || [];
+    if (qs.length === 0) {
+        return `<pre class="bash-out-block"><code class="language-log">${escHtml(output)}</code></pre>`;
+    }
+    let html = '<div class="question-output-body">';
+    for (let i = 0; i < qs.length; i++) {
+        const q = qs[i];
+        const ans = as[i] || [];
+        html += '<div class="question-output-item">';
+        html += '<div class="question-row"><span class="question-label">问题：</span><span class="question-value">' + escHtml(q.question || q.header || '') + '</span></div>';
+        html += '<div class="question-row"><span class="question-label">用户回答：</span><span class="question-value answer-text">' + escHtml(ans.join(', ') || '未回答') + '</span></div>';
+        html += '</div>';
+    }
+    html += '</div>';
+    return html;
+}
+
 // 渲染 read 工具的输出
 function renderReadOutput(output) {
     let html = '';
@@ -652,7 +719,7 @@ function renderReadOutput(output) {
     let filePath = '';
     let fileType = '';
     let contentLines = [];
-    let endLine = null;
+    let footerLines = [];
     
     // 先解析内容
     for (const line of lines) {
@@ -662,9 +729,11 @@ function renderReadOutput(output) {
             fileType = line.slice(6, -7);
         } else if (line === '<content>') {
             inContent = true;
-        } else if (line.startsWith('(End of file')) {
-            endLine = line;
+        } else if (line.startsWith('(End of file') || line.startsWith('(Showing lines')) {
+            footerLines.push(line);
             inContent = false;
+        } else if (line === '</content>' && footerLines.length > 0) {
+            footerLines.push(line);
         } else if (inContent) {
             contentLines.push(line);
         }
@@ -688,9 +757,6 @@ function renderReadOutput(output) {
     if (filePath) {
         html += `<span class="read-path">${escHtml(filePath)}</span>`;
     }
-    if (fileType) {
-        html += `<span class="read-type">${escHtml(fileType)}</span>`;
-    }
     html += `<span class="copy-btn" data-copy="${escAttr(pureContent)}" onclick="event.stopPropagation();copyText(this, this.getAttribute('data-copy'))">复制纯内容</span>`;
     html += `</div>`;
     html += `<div class="read-output-content">`;
@@ -712,11 +778,12 @@ function renderReadOutput(output) {
         }
     }
     
-    if (endLine) {
-        html += `<div class="read-end-line">${escHtml(endLine)}</div>`;
+    html += `</div></div>`;
+    
+    if (footerLines.length > 0) {
+        html += `<div class="read-end-line">${footerLines.map(escHtml).join('<br>')}</div>`;
     }
     
-    html += `</div></div>`;
     return html;
 }
 
@@ -879,6 +946,30 @@ function formatTokens(tokens) {
   return parts.join(' · ');
 }
 
+function renderImagePart(part) {
+  const url = part.url || '';
+  if (!url || !(part.mime || '').startsWith('image/')) return '';
+  const filename = part.filename || 'image';
+  return `<div class="image-part">
+    <img src="${escAttr(url)}" alt="${escAttr(filename)}" title="${escAttr(filename)}" loading="lazy" onclick="openImageModal(this.src, '${escAttr(filename)}')">
+    <div class="image-caption">${escHtml(filename)}</div>
+  </div>`;
+}
+
+function renderUserParts(parts) {
+  if (!parts || parts.length === 0) return { imageHtml: '', textHtml: '' };
+  let imageHtml = '';
+  let textHtml = '';
+  for (const p of parts) {
+    if (p.type === 'text') {
+      textHtml += `<div class="user-text-part">${escHtml(p.text || '')}</div>`;
+    } else if (p.type === 'file') {
+      imageHtml += renderImagePart(p);
+    }
+  }
+  return { imageHtml, textHtml };
+}
+
 function renderParts(parts) {
   if (!parts || parts.length === 0) return { html: '', tokensInfo: '' };
   let html = '<div class="assistant-parts">';
@@ -903,6 +994,9 @@ function renderParts(parts) {
           <div class="part-meta">${fmtTime(p.time_created)}</div>
         </div>`;
         break;
+      case 'file':
+        html += renderImagePart(p);
+        break;
       case 'tool':
         if (p.tool === 'todowrite') {
           html += `<div class="todo-part open">
@@ -926,7 +1020,7 @@ function renderParts(parts) {
               <span class="t-icon ${toolCss(p.tool)}">${toolIcon(p.tool)}</span>
               <span class="t-summary">
                 <div class="t-title">${escHtml(toolTitle(p))}${toolTitleHtml(p)}</div>
-                ${toolSub(p) ? '<div class="t-sub">' + escHtml(toolSub(p)) + '</div>' : ''}
+                ${toolSub(p) ? '<div class="t-sub">' + toolSubHtml(p) + '</div>' : ''}
               </span>
               <span class="t-expand">▶</span>
             </div>
@@ -989,7 +1083,7 @@ function renderMessages(msgs) {
   for (const m of msgs) {
     if (m.role === 'user') {
       const parts = m.parts || []
-      const texts = parts.filter(p => p.type === 'text').map(p => p.text).join('\n')
+      const { imageHtml, textHtml } = renderUserParts(parts)
       // 构建元信息（统一使用 · 连接格式）
       let userMetaParts = []
       if (m.agent) userMetaParts.push(m.agent)
@@ -997,18 +1091,19 @@ function renderMessages(msgs) {
       userMetaParts.push(fmtTime(m.time_created))
       userMetaParts = userMetaParts.filter(p => p)
       html += `<div class="turn">
-<div class="user-msg">
+${imageHtml ? `<div class="user-file-msg"><div class="user-file-msg-wrapper">${imageHtml}</div></div>` : ''}
+${textHtml ? `<div class="user-msg">
   <div class="user-msg-wrapper">
     <div class="user-msg-header" onclick="toggleUserMsgFromHeader(this)">
       <span>用户</span>
       <span class="user-msg-header-toggle">展开全部</span>
     </div>
     <div class="user-msg-bubble">
-      <div class="user-msg-body">${escHtml(texts)}</div>
+      <div class="user-msg-body">${textHtml}</div>
       <div class="user-msg-toggle" onclick="toggleUserMsg(this)">展开全部</div>
     </div>
   </div>
-</div>
+</div>` : ''}
         <div class="user-msg-meta" style="justify-content:flex-end">
           <span>${userMetaParts.join(' · ')}</span>
         </div>
@@ -1119,7 +1214,7 @@ async function selectSession(id) {
 
   $body.innerHTML = '<div class="loading"><div class="spinner"></div><p style="margin-top:12px">加载会话内容...</p></div>';
 
-  renderSessionList(allSessions);
+  filterSessions();
 
   try {
     const res = await fetch(API_BASE + '/api/sessions/' + encodeURIComponent(id) + '/messages');
@@ -1133,7 +1228,40 @@ async function selectSession(id) {
 }
 
 loadSessions();
+
+function openImageModal(src, filename) {
+  const modal = document.getElementById('image-modal');
+  const img = modal.querySelector('img');
+  const caption = modal.querySelector('.image-modal-caption');
+  img.src = src;
+  caption.textContent = filename;
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+document.addEventListener('click', function(e) {
+  const modal = document.getElementById('image-modal');
+  if (e.target === modal) {
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('image-modal');
+    if (modal.style.display === 'flex') {
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+  }
+});
 </script>
+
+<div id="image-modal" class="image-modal" style="display:none">
+  <span class="image-modal-close" onclick="document.getElementById('image-modal').style.display='none'; document.body.style.overflow=''">&times;</span>
+  <img class="image-modal-content" src="" alt="">
+  <div class="image-modal-caption"></div>
+</div>
 
 </body>
 </html>

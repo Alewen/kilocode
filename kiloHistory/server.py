@@ -105,6 +105,10 @@ def get_parts(message_id):
 
         if ptype == "text":
             entry["text"] = parsed.get("text", "")
+        elif ptype == "file":
+            entry["mime"] = parsed.get("mime", "")
+            entry["filename"] = parsed.get("filename", "")
+            entry["url"] = parsed.get("url", "")
         elif ptype == "reasoning":
             entry["text"] = parsed.get("text", "")
         elif ptype == "tool":
@@ -141,6 +145,8 @@ def get_parts(message_id):
                 entry["command"] = inp.get("command", "")
             if "description" in inp:
                 entry["description"] = inp.get("description", "")
+            if "workdir" in inp:
+                entry["workdir"] = inp.get("workdir", "")
             if "filePath" in inp:
                 entry["filePath"] = inp.get("filePath", "")
             if "url" in inp:

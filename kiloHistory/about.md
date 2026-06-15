@@ -5,7 +5,8 @@
 - kilo 插件会自动将用户和 ai 对话的全部信息，记录在 kilo.db 数据中
 - 这个项目的作用就是原封不动的读取 kilo.db 的历史对话
 - 这个项目是完全模拟，kilo 插件浏览 ai 对话历史记录的，只是把这个展示效果通过 web ，纯静态展示的
-- kilo 插件的源码目录在 C:\Share_Kilo\kilocode
+- Windows 下 kilo 插件的源码目录在 C:\Share_Kilo\kilocode
+- Linux 下 kilo 插件的源码目录在 ~/kilocode
 
 ## AI 对话消息类型分类
 
