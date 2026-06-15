@@ -1,6 +1,9 @@
 import * as Tool from "./tool"
 import DESCRIPTION from "./task.txt"
 import { ToolJsonSchema } from "./json-schema"
+import path from "path"
+import fs from "fs/promises"
+import os from "os"
 import { BackgroundJob } from "@/background/job"
 import { Bus } from "@/bus"
 import { Session } from "@/session/session"
@@ -21,6 +24,10 @@ import { TuiEvent } from "@/cli/cmd/tui/event"
 import { Cause, Effect, Exit, Option, Schema, Scope } from "effect"
 import { EffectBridge } from "@/effect/bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { InstanceRef } from "@/effect/instance-ref"
+import { InstanceState } from "@/effect/instance-state" // kilocode_change
+import { ProjectID } from "@/project/schema"
+import { Instance, type InstanceContext } from "@/project/instance"
 
 export interface TaskPromptOps {
   cancel(sessionID: SessionID): Effect.Effect<void>
@@ -40,6 +47,10 @@ const BaseParameters = Schema.Struct({
       "This should only be set if you mean to resume a previous task (you can pass a prior task_id and the task will continue the same subagent session as before instead of creating a fresh one)",
   }),
   command: Schema.optional(Schema.String).annotate({ description: "The command that triggered this task" }),
+  directory: Schema.optional(Schema.String).annotate({
+    description:
+      "Optional: the working directory for the subagent. All file operations inside the subagent will use this path as the workspace root. If not specified, inherits the parent session's directory.",
+  }),
 })
 
 export const Parameters = Schema.Struct({
@@ -53,6 +64,10 @@ export const Parameters = Schema.Struct({
   command: Schema.optional(Schema.String).annotate({ description: "The command that triggered this task" }),
   background: Schema.optional(Schema.Boolean).annotate({
     description: "When true, launch the subagent in the background and return immediately",
+  }),
+  directory: Schema.optional(Schema.String).annotate({
+    description:
+      "Optional: the working directory for the subagent. All file operations inside the subagent will use this path as the workspace root. If not specified, inherits the parent session's directory.",
   }),
 })
 
@@ -120,6 +135,66 @@ export const TaskTool = Tool.define(
       if (runInBackground && !flags.experimentalBackgroundSubagents) {
         return yield* Effect.fail(new Error("Background subagents require KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true"))
       }
+
+      // kilocode_change start - custom directory support: create a scoped InstanceContext
+      const instance = yield* InstanceState.context
+      const taskDir = params.directory
+        ? (() => {
+            const raw = params.directory!
+            const expanded = raw.startsWith("~/") ? path.join(os.homedir(), raw.slice(2)) : raw
+            return path.resolve(instance.directory, expanded)
+          })()
+        : undefined
+      const taskInstanceCtx: InstanceContext | undefined = taskDir
+        ? {
+            directory: taskDir,
+            worktree: taskDir,
+            project: {
+              id: ProjectID.global,
+              worktree: taskDir,
+              time: { created: Date.now(), updated: Date.now() },
+              sandboxes: [] as string[],
+            },
+          }
+        : undefined
+      if (params.directory) {
+        const dir = taskInstanceCtx!.directory
+        const exists = yield* Effect.promise(() =>
+          fs.access(dir).then(() => true, () => false),
+        )
+        if (!exists) {
+          return yield* Effect.fail(
+            new Error(
+              `Directory does not exist: ${dir}. The task tool requires an existing directory as the workspace root for the subagent.`,
+            ),
+          )
+        }
+        const home = os.homedir()
+        if (process.platform === "linux" && dir.startsWith(home)) {
+          const globalCfg = yield* config.getGlobal()
+          const rwBinds = globalCfg.bwrap?.rw_bind ?? []
+          const roBinds = globalCfg.bwrap?.ro_bind ?? []
+          const allowed = [...rwBinds, ...roBinds].some((p) => dir.startsWith(p))
+          if (!allowed) {
+            return yield* Effect.fail(
+              new Error(
+                `Directory ${dir} is under ${home} but is not in the bwrap sandbox's rw_bind or ro_bind paths. ` +
+                  `The bash tool would not be able to access this directory. ` +
+                  `Either add the path to bwrap.rw_bind or bwrap.ro_bind in your global config, or choose a directory under one of: ${[...rwBinds, ...roBinds].join(", ")}`,
+              ),
+            )
+          }
+        }
+      }
+      const wrapTaskDir = (eff: Effect.Effect<string>): Effect.Effect<string> => {
+        if (!taskInstanceCtx) return eff
+        return Effect.promise(() =>
+          Instance.restore(taskInstanceCtx, () =>
+            Effect.runPromise(eff.pipe(Effect.provideService(InstanceRef, taskInstanceCtx))),
+          ),
+        )
+      }
+      // kilocode_change end
 
       if (!ctx.extra?.bypassAgentCheck) {
         yield* ctx.ask({
@@ -337,7 +412,7 @@ export const TaskTool = Tool.define(
           run: Effect.acquireUseRelease(
             KiloCostPropagation.childCost(sessions, nextSession.id),
             () =>
-              runTask().pipe(
+              wrapTaskDir(runTask()).pipe(
                 Effect.tap((text) => inject("completed", text).pipe(Effect.ignore)),
                 Effect.catchCause((cause) =>
                   (Cause.hasInterruptsOnly(cause)
@@ -380,7 +455,7 @@ export const TaskTool = Tool.define(
         // kilocode_change end
         () =>
           Effect.gen(function* () {
-            const text = yield* runTask()
+            const text = yield* wrapTaskDir(runTask())
             return {
               title: params.description,
               metadata,
