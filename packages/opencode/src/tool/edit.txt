@@ -1,6 +1,7 @@
 Performs exact string replacements in files. 
 
 Usage:
+- Before each call to this tool, you must ensure that the file you intend to edit has an encoding format compatible with UTF-8; otherwise, you are forbidden from calling this tool.
 - You must use your `Read` tool at least once in the conversation before editing. This tool will error if you attempt an edit without reading the file. 
 - When editing text from Read tool output, ensure you preserve the exact indentation (tabs/spaces) as it appears AFTER the line number prefix. The line number prefix format is: line number + colon + space (e.g., `1: `). Everything after that space is the actual file content to match. Never include any part of the line number prefix in the oldString or newString.
 - ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.

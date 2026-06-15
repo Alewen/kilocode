@@ -20,6 +20,9 @@ import { environmentDetails, type EditorContext } from "@/kilocode/editor-contex
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
 import { InstanceState } from "@/effect/instance-state"
+import { AppFileSystem } from "@opencode-ai/core/filesystem" // kilocode_change
+import { containsPath } from "@/project/instance-context" // kilocode_change
+import { Patch } from "@/patch" // kilocode_change
 import PROMPT_PLAN from "@/session/prompt/plan.txt"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
@@ -467,4 +470,295 @@ export namespace KiloSessionPrompt {
   export function maybeStripHistoricalMedia(msgs: MessageV2.WithParts[]): MessageV2.WithParts[] {
     return hasCompletedSummary(msgs) ? stripHistoricalMedia(msgs) : msgs
   }
+
+  /**
+   * Guards tool execution by checking if file operations are within workspace.
+   */
+  export const guardToolExecution = Effect.fn("KiloSessionPrompt.guardToolExecution")(function* (input: {
+    toolName: string
+    args: any
+  }) {
+    const instance = yield* InstanceState.context
+
+    // Check write/edit tools
+    if (input.toolName === "write" || input.toolName === "edit") {
+      const targetPath = input.args.filePath
+      if (targetPath) {
+        const absoluteTarget = path.isAbsolute(targetPath)
+          ? targetPath
+          : path.join(instance.directory, targetPath)
+        const normalizedTarget = AppFileSystem.resolve(absoluteTarget)
+
+        if (!containsPath(normalizedTarget, instance)) {
+          throw new Error(
+            `The "${input.toolName}" tool does not allow operations on files outside the workspace, and workspace is "${instance.directory}"`,
+          )
+        }
+      }
+    }
+
+    // Check apply_patch tool
+    if (input.toolName === "apply_patch" && input.args.patchText) {
+      const { hunks } = Patch.parsePatch(input.args.patchText)
+      for (const hunk of hunks) {
+        const absoluteTarget = path.isAbsolute(hunk.path)
+          ? hunk.path
+          : path.join(instance.directory, hunk.path)
+        const normalizedTarget = AppFileSystem.resolve(absoluteTarget)
+
+        if (!containsPath(normalizedTarget, instance)) {
+          throw new Error(
+            `The "apply_patch" tool does not allow operations on files outside the workspace, and workspace is "${instance.directory}"`,
+          )
+        }
+        if (hunk.type === "update" && hunk.move_path) {
+          const absoluteMove = path.isAbsolute(hunk.move_path)
+            ? hunk.move_path
+            : path.join(instance.directory, hunk.move_path)
+          const normalizedMove = AppFileSystem.resolve(absoluteMove)
+
+          if (!containsPath(normalizedMove, instance)) {
+            throw new Error(
+              `The "apply_patch" tool does not allow operations on files outside the workspace, and workspace is "${instance.directory}"`,
+            )
+          }
+        }
+      }
+    }
+
+    // Check bash tool for file system operations
+    if (input.toolName === "bash" && input.args.command) {
+      const command = input.args.command
+
+      const extractPaths = (cmd: string): string[] => {
+        const paths: string[] = []
+        let i = 0
+
+        while (i < cmd.length) {
+          while (i < cmd.length && /\s/.test(cmd[i])) i++
+          if (i >= cmd.length) break
+
+          let pathStart = i
+          let pathEnd: number
+
+          if (cmd[i] === '"' || cmd[i] === "'") {
+            const quote = cmd[i]
+            pathStart = i + 1
+            i++
+            while (i < cmd.length && cmd[i] !== quote) i++
+            pathEnd = i
+            if (i < cmd.length) i++
+          } else {
+            while (i < cmd.length && !/\s/.test(cmd[i])) i++
+            pathEnd = i
+          }
+
+          if (pathEnd > pathStart) {
+            const extractedPath = cmd.slice(pathStart, pathEnd)
+            if (!/^-/.test(extractedPath)) {
+              paths.push(extractedPath)
+            }
+          }
+        }
+
+        return paths
+      }
+
+      const extractPowerShellPath = (cmd: string, paramName = "Path"): string | null => {
+        const pathRegex = new RegExp(
+          `-${paramName}\\s*(?::\\s*)?(['"])(.*?)\\1|-${paramName}\\s*(?::\\s*)?([^\\s-]+)`,
+          "i",
+        )
+        const match = cmd.match(pathRegex)
+        if (match) {
+          return match[2] || match[3]
+        }
+        return null
+      }
+
+      const extractPowerShellPositionalPaths = (cmd: string, cmdName: string): string[] => {
+        const afterCmd = cmd.replace(new RegExp(`^\\s*${cmdName}\\s+`, "i"), "")
+        return extractPaths(afterCmd)
+      }
+
+      const checkPath = (targetPath: string, cmdName: string) => {
+        const absoluteTarget = path.isAbsolute(targetPath)
+          ? targetPath
+          : path.join(instance.directory, targetPath)
+        const normalizedTarget = AppFileSystem.resolve(absoluteTarget)
+
+        if (!containsPath(normalizedTarget, instance)) {
+          throw new Error(
+            `The "bash" tool does not allow "${cmdName}" operations on paths outside the workspace. Workspace is "${instance.directory}", target path is "${targetPath}"`,
+          )
+        }
+      }
+
+      const checkNestedCommand = (cmd: string) => {
+        const powershellNestedRegex = /^\s*powershell(?:\.exe)?\s*(?:-Command|-c)\s*(['"])(.*?)\1/i
+        const psMatch = cmd.match(powershellNestedRegex)
+        if (psMatch && psMatch[2]) {
+          checkCommand(psMatch[2])
+          return true
+        }
+
+        const cmdNestedRegex = /^\s*cmd(?:\.exe)?\s*(?:\/c|\/k)\s*(['"])?(.*?)\1?$/i
+        const cmdMatch = cmd.match(cmdNestedRegex)
+        if (cmdMatch && cmdMatch[2]) {
+          checkCommand(cmdMatch[2])
+          return true
+        }
+
+        return false
+      }
+
+      const checkCommand = (cmd: string) => {
+        const cmdLower = cmd.toLowerCase().trimStart()
+
+        if (checkNestedCommand(cmd)) {
+          return
+        }
+
+        // .NET method calls
+        const dotNetMethodRegex = /\[(system\.io\.(directory|file))\]::(createdirectory|delete|create|move|copy|writealltext|writeallbytes|writealllines)\s*\(\s*(['"])(.*?)\4/i
+        const dotNetMatch = cmd.match(dotNetMethodRegex)
+        if (dotNetMatch) {
+          const className = dotNetMatch[1]
+          const methodName = dotNetMatch[3]
+          const targetPath = dotNetMatch[5]
+          checkPath(targetPath, `${className}::${methodName}`)
+          return
+        }
+
+        // PowerShell commands
+        if (/^new-item\s/i.test(cmdLower)) {
+          const targetPath =
+            extractPowerShellPath(cmd, "Path") || extractPowerShellPositionalPaths(cmd, "New-Item")[0]
+          if (targetPath) {
+            checkPath(targetPath, "New-Item")
+          }
+          return
+        } else if (/^remove-item\s/i.test(cmdLower)) {
+          const targetPath =
+            extractPowerShellPath(cmd, "Path") || extractPowerShellPositionalPaths(cmd, "Remove-Item")[0]
+          if (targetPath) {
+            checkPath(targetPath, "Remove-Item")
+          }
+          return
+        } else if (/^move-item\s/i.test(cmdLower)) {
+          const positionalPaths = extractPowerShellPositionalPaths(cmd, "Move-Item")
+          const destPath =
+            extractPowerShellPath(cmd, "Destination") ||
+            extractPowerShellPath(cmd, "Path") ||
+            positionalPaths[positionalPaths.length - 1]
+          if (destPath) {
+            checkPath(destPath, "Move-Item")
+          }
+          return
+        } else if (/^copy-item\s/i.test(cmdLower)) {
+          const positionalPaths = extractPowerShellPositionalPaths(cmd, "Copy-Item")
+          const destPath =
+            extractPowerShellPath(cmd, "Destination") ||
+            extractPowerShellPath(cmd, "Path") ||
+            positionalPaths[positionalPaths.length - 1]
+          if (destPath) {
+            checkPath(destPath, "Copy-Item")
+          }
+          return
+        }
+
+        // CMD/Bash commands
+        if (/^(mkdir|md)\s/i.test(cmdLower)) {
+          const paths = extractPaths(cmd.replace(/^(mkdir|md)\s/i, ""))
+          for (const p of paths) {
+            checkPath(p, "mkdir")
+          }
+          return
+        } else if (/^(rmdir|rd)\s/i.test(cmdLower)) {
+          const paths = extractPaths(cmd.replace(/^(rmdir|rd)\s/i, ""))
+          for (const p of paths) {
+            checkPath(p, "rmdir")
+          }
+          return
+        } else if (/^(del|erase|rm)\s/i.test(cmdLower)) {
+          const paths = extractPaths(cmd.replace(/^(del|erase|rm)\s/i, ""))
+          for (const p of paths) {
+            checkPath(p, "rm")
+          }
+          return
+        } else if (/^(move|mv)\s/i.test(cmdLower)) {
+          const paths = extractPaths(cmd.replace(/^(move|mv)\s/i, ""))
+          if (paths.length >= 2) {
+            checkPath(paths[paths.length - 1], "mv")
+          }
+          return
+        } else if (/^(copy|xcopy|cp)\s/i.test(cmdLower)) {
+          const paths = extractPaths(cmd.replace(/^(copy|xcopy|cp)\s/i, ""))
+          if (paths.length >= 2) {
+            checkPath(paths[paths.length - 1], "cp")
+          }
+          return
+        }
+
+        // sed -i (in-place edits)
+        const cmdBaseName = cmdLower.match(/^\S+/)?.[0] ?? ""
+        if (cmdBaseName === "sed") {
+          const inPlaceMatch = cmd.match(/-i\b/)
+          if (inPlaceMatch) {
+            const args = cmd.replace(/^\s*(\/[\w-]+\/[\w]+|\w+)\s*/, "").replace(/-i\b/, "").trim().split(/\s+/)
+            const filePath = args[args.length - 1]
+            if (filePath) {
+              checkPath(filePath, "sed -i")
+            }
+          }
+          return
+        }
+
+        // echo/printf redirect
+        if (cmdBaseName === "echo" || cmdBaseName === "printf") {
+          const redirectMatch = cmd.match(/>{1,2}\s*(\S+)/)
+          if (redirectMatch) {
+            checkPath(redirectMatch[1], cmdBaseName)
+            return
+          }
+        }
+        // tee
+        if (cmdBaseName === "tee") {
+          const redirectMatch = cmd.match(/>{1,2}\s*(\S+)/)
+          if (redirectMatch) {
+            checkPath(redirectMatch[1], "tee")
+            return
+          }
+          const paths = extractPaths(cmd.replace(/^\s*(\/[\w-]+\/[\w]+|\w+)\s*/, ""))
+          for (const p of paths) {
+            checkPath(p, "tee")
+          }
+          return
+        }
+        // cat redirect
+        if (cmdBaseName === "cat") {
+          const redirectMatch = cmd.match(/>{1,2}\s*(\S+)/)
+          if (redirectMatch) {
+            checkPath(redirectMatch[1], "cat")
+            return
+          }
+        }
+        // pipe tee
+        if (/\|\s*tee\b/i.test(cmd)) {
+          const pipeMatch = cmd.match(/\|\s*tee\s+(>>?)\s*(\S+)/)
+          if (pipeMatch) {
+            checkPath(pipeMatch[2], "tee")
+            return
+          }
+          const teeMatch = cmd.match(/\|\s*tee\s+(\S+)/)
+          if (teeMatch) {
+            checkPath(teeMatch[1], "tee")
+          }
+          return
+        }
+      }
+
+      checkCommand(command)
+    }
+  })
 }
