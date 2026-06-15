@@ -28,3 +28,44 @@
 ':!kilo-compile-linux-64-vsix.sh' \
 ':!kilo-compile-windows-x64-vsix.ps1' \
 ':!bwrap-example.json'
+
+# 自 8882b523e3 以来的功能变更清单
+
+| 功能 | 修改位置 |
+|------|----------|
+| 1. 限制 AI 对工作区外文件进行操作（write/edit/bash/apply_patch） | packages/opencode/src/kilocode/session/prompt.ts |
+|  | packages/opencode/src/session/prompt.ts |
+| 2. Linux 下限制危险命令（echo/printf/tee/touch） | packages/opencode/src/kilocode/session/prompt.ts |
+| 3. Bwrap 沙箱隔离 bash 执行 | packages/opencode/src/tool/shell.ts |
+|  | packages/opencode/src/config/config.ts |
+|  | packages/opencode/test/config/global-config-init.test.ts |
+|  | bwrap-example.json |
+| 4. Windows 下识别 pwsh 路径别名 | packages/opencode/src/util/which.ts |
+|  | packages/opencode/test/util/which.test.ts |
+| 5. opencode 工具加载失败不中断对话（容错） | packages/opencode/src/tool/registry.ts |
+| 6. 禁止 plan 模式自动退出 | packages/opencode/src/kilocode/plan-followup.ts |
+| 7. 禁止插件主动关闭侧栏 | packages/kilo-vscode/src/extension.ts |
+| 8. Edit 工具增加编码检测提示 | packages/opencode/src/tool/edit.txt |
+| 9. 调整编译与发布流程 | .husky/pre-push |
+|  | packages/opencode/script/build.ts |
+|  | bun.lock |
+|  | packages/kilo-vscode/.gitignore |
+|  | kilo-compile-linux-64-vsix.sh |
+|  | kilo-compile-windows-x64-vsix.ps1 |
+| 10. 大模型收藏夹排序与显示优化 | packages/kilo-vscode/webview-ui/src/components/shared/ModelSelector.tsx |
+| 11. UI 显示问题修复（自动滚屏冲突 / Windows 输出乱码 / 推理显示不完全） | packages/kilo-ui/src/hooks/create-auto-scroll.tsx |
+|  | packages/opencode/src/tool/shell.ts |
+|  | packages/opencode/src/kilocode/tool/shell-output.ts |
+|  | packages/opencode/test/kilocode/shell-output.test.ts |
+|  | packages/ui/src/context/marked.tsx |
+| 12. soul.txt / default.txt 双语化 | packages/opencode/src/kilocode/soul.txt |
+|  | packages/opencode/src/session/prompt/default.txt |
+| 13. README 补充说明 | README.md |
+| 14. kiloHistory（离线查看对话记录） | kiloHistory/ |
+| 15. extraSkills（自定义技能扩展） | extraSkills/ |
+| 16. kilocli（手工工具集，可追溯执行会话中的 edit/write） | kilocli/ |
+| 17. Git 换行符自动转换关闭（避免跨平台文件差异） | .gitattributes |
+| 18. Fork 仓库地址更新 | packages/kilo-vscode/package.json |
+|  | packages/plugin/package.json |
+|  | packages/sdk/js/package.json |
+| 19. SDK 事件类型扩展（AgentManager / Indexing 等 Kilo 特有事件） | packages/sdk/js/src/v2/gen/types.gen.ts |
