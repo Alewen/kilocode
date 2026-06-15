@@ -1439,6 +1439,15 @@ export type Config = {
     continue_loop_on_deny?: boolean
     mcp_timeout?: number
   }
+  bwrap?: {
+    ro_bind?: Array<string>
+    tmpfs?: Array<string>
+    symlink?: Array<{
+      from: string
+      to: string
+    }>
+    rw_bind?: Array<string>
+  }
 }
 
 export type Model = {
