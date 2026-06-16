@@ -412,7 +412,7 @@ function cmd(
     })
   }
 
-  const isBash = shell.includes("bash") || shell === "sh" || shell === "/bin/sh"
+  const isBash = process.platform !== "win32" && (shell.includes("bash") || shell === "sh" || shell === "/bin/sh")
   const wrappedCommand = isBash ? wrapWithBwrap(command, cwd, bwrap, projectDir) : command // kilocode_change
 
   return ChildProcess.make(wrappedCommand, [], {
