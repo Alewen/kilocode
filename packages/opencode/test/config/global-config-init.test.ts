@@ -96,15 +96,20 @@ describe("全局配置初始化功能", () => {
     
     expect(parsed.$schema).toBe("https://app.kilo.ai/config.json")
     expect(parsed.bwrap).toBeDefined()
-    expect(parsed.bwrap.tmpfs).toEqual([
-      "/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"
-    ])
-    expect(parsed.bwrap.symlink).toEqual([
-      { from: "usr/bin", to: "/bin" },
-      { from: "usr/lib", to: "/lib" },
-      { from: "usr/lib64", to: "/lib64" },
-      { from: "usr/sbin", to: "/sbin" }
-    ])
+    if (process.platform === "win32") {
+      expect(parsed.bwrap.tmpfs).toEqual([])
+      expect(parsed.bwrap.symlink).toEqual([])
+    } else {
+      expect(parsed.bwrap.tmpfs).toEqual([
+        "/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"
+      ])
+      expect(parsed.bwrap.symlink).toEqual([
+        { from: "usr/bin", to: "/bin" },
+        { from: "usr/lib", to: "/lib" },
+        { from: "usr/lib64", to: "/lib64" },
+        { from: "usr/sbin", to: "/sbin" }
+      ])
+    }
   })
 
   test("测试场景 2: 配置文件存在但没有 bwrap 节点，应该添加它", async () => {

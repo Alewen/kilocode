@@ -558,17 +558,24 @@ export const layer = Layer.effect(
       const globalConfigPath = path.join(Global.Path.config, "kilo.jsonc")
       log.info("initializeGlobalConfig: global config path", { path: globalConfigPath })
 
-      const defaultBwrap = {
-        tmpfs: ["/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"],
-        symlink: [
-          { from: "usr/bin", to: "/bin" },
-          { from: "usr/lib", to: "/lib" },
-          { from: "usr/lib64", to: "/lib64" },
-          { from: "usr/sbin", to: "/sbin" }
-        ],
-        ro_bind: ["/usr", "/etc", path.join(homeDir, ".local", "share", "kilo")],
-        rw_bind: [path.join(homeDir, ".kilo")]
-      }
+      const defaultBwrap = process.platform === "win32"
+        ? {
+            tmpfs: [],
+            symlink: [],
+            ro_bind: [path.join(homeDir, ".local", "share", "kilo")],
+            rw_bind: [path.join(homeDir, ".kilo")]
+          }
+        : {
+            tmpfs: ["/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"],
+            symlink: [
+              { from: "usr/bin", to: "/bin" },
+              { from: "usr/lib", to: "/lib" },
+              { from: "usr/lib64", to: "/lib64" },
+              { from: "usr/sbin", to: "/sbin" }
+            ],
+            ro_bind: ["/usr", "/etc", path.join(homeDir, ".local", "share", "kilo")],
+            rw_bind: [path.join(homeDir, ".kilo")]
+          }
 
       // Check if config file exists
       const configExists = yield* fs.existsSafe(globalConfigPath)
