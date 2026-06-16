@@ -778,9 +778,9 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                                       refs.set(row.key, el)
                                       onCleanup(() => refs.delete(row.key))
                                     }}
-                                    class={`model-selector-item${(hovered() && !pointer()) || preActive() ? " keyboard-focused" : ""}${hovered() || preActive() ? " selected" : ""}${chosen(row) ? " active" : ""}`}
+                                    class={`model-selector-item${(hovered() && !pointer()) || preActive() ? " keyboard-focused" : ""}${hovered() || preActive() ? " selected" : ""}${isActive(model) && row.kind === "model" ? " active" : ""}`}
                                     role="option"
-                                    aria-selected={chosen(row)}
+                                    aria-selected={isActive(model) && row.kind === "model"}
                                     onClick={() => {
                                       if (!expanded()) {
                                         selectRow(row)
