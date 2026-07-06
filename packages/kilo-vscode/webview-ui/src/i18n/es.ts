@@ -1656,7 +1656,6 @@ export const dict = {
   "settings.context.memory.index.title": "Índice de memoria",
   "settings.context.memory.status.notLoaded": "No cargada",
   "settings.context.memory.status.disabled": "Desactivada",
-  "settings.context.memory.status.enabled": "Activada",
   "settings.context.memory.status.enabledTokensOps":
     "Activada - ~{{session}} tokens de contexto inicial en esta sesión - ~{{tokens}} tokens del índice almacenado - última op. {{ops}}",
   "settings.context.memory.index.path": "{{path}}/index.kmem",

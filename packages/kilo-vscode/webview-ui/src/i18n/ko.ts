@@ -1610,7 +1610,6 @@ export const dict = {
   "settings.context.memory.index.title": "메모리 인덱스",
   "settings.context.memory.status.notLoaded": "로드되지 않음",
   "settings.context.memory.status.disabled": "비활성화됨",
-  "settings.context.memory.status.enabled": "활성화됨",
   "settings.context.memory.status.enabledTokensOps":
     "활성화됨 - 이 세션의 시작 컨텍스트 ~{{session}} 토큰 - 저장된 인덱스 ~{{tokens}} 토큰 - 마지막 작업 {{ops}}",
   "settings.context.memory.index.path": "{{path}}/index.kmem",

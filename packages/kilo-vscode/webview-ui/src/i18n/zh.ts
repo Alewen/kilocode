@@ -1565,7 +1565,6 @@ export const dict = {
   "settings.context.memory.index.title": "记忆索引",
   "settings.context.memory.status.notLoaded": "未加载",
   "settings.context.memory.status.disabled": "已禁用",
-  "settings.context.memory.status.enabled": "已启用",
   "settings.context.memory.status.enabledTokensOps":
     "已启用 - 本会话启动上下文约 {{session}} 个 token - 已存储索引约 {{tokens}} 个 token - 上次操作 {{ops}}",
   "settings.context.memory.index.path": "{{path}}/index.kmem",

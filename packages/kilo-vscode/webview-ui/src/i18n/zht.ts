@@ -1532,7 +1532,6 @@ export const dict = {
   "settings.context.memory.index.title": "記憶索引",
   "settings.context.memory.status.notLoaded": "未載入",
   "settings.context.memory.status.disabled": "已停用",
-  "settings.context.memory.status.enabled": "已啟用",
   "settings.context.memory.status.enabledTokensOps":
     "已啟用 - 此工作階段啟動內容約 {{session}} 個 token - 已儲存索引約 {{tokens}} 個 token - 上次操作 {{ops}}",
   "settings.context.memory.index.path": "{{path}}/index.kmem",

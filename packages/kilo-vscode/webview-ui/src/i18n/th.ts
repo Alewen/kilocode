@@ -1608,7 +1608,6 @@ export const dict = {
   "settings.context.memory.index.title": "ดัชนีความจำ",
   "settings.context.memory.status.notLoaded": "ยังไม่ได้โหลด",
   "settings.context.memory.status.disabled": "ปิดใช้งาน",
-  "settings.context.memory.status.enabled": "เปิดใช้งาน",
   "settings.context.memory.status.enabledTokensOps":
     "เปิดใช้งาน - ~{{session}} โทเค็นบริบทเริ่มต้นในเซสชันนี้ - ~{{tokens}} โทเค็นในดัชนีที่บันทึกไว้ - การทำงานล่าสุด {{ops}}",
   "settings.context.memory.index.path": "{{path}}/index.kmem",

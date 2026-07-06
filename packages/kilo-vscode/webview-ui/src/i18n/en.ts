@@ -1612,7 +1612,6 @@ export const dict = {
   "settings.context.memory.index.title": "Memory index",
   "settings.context.memory.status.notLoaded": "Not loaded",
   "settings.context.memory.status.disabled": "Disabled",
-  "settings.context.memory.status.enabled": "Enabled",
   "settings.context.memory.status.enabledTokensOps":
     "Enabled - ~{{session}} startup tokens this session - ~{{tokens}} stored index tokens - last op {{ops}}",
   "settings.context.memory.index.path": "{{path}}/index.kmem",

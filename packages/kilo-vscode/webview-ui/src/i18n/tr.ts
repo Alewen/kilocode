@@ -1595,7 +1595,6 @@ export const dict = {
   "settings.context.memory.index.title": "Bellek indeksi",
   "settings.context.memory.status.notLoaded": "Yüklenmedi",
   "settings.context.memory.status.disabled": "Devre dışı",
-  "settings.context.memory.status.enabled": "Etkin",
   "settings.context.memory.status.enabledTokensOps":
     "Etkin - bu oturumda ~{{session}} başlangıç bağlamı tokenı - depolanan indekste ~{{tokens}} token - son işlem {{ops}}",
   "settings.context.memory.index.path": "{{path}}/index.kmem",

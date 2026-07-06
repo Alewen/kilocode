@@ -1641,7 +1641,6 @@ export const dict = {
   "settings.context.memory.index.title": "Indeks memorije",
   "settings.context.memory.status.notLoaded": "Nije učitana",
   "settings.context.memory.status.disabled": "Onemogućena",
-  "settings.context.memory.status.enabled": "Omogućena",
   "settings.context.memory.status.enabledTokensOps":
     "Omogućena - ~{{session}} tokena početnog konteksta u ovoj sesiji - ~{{tokens}} tokena spremljenog indeksa - zadnja op. {{ops}}",
   "settings.context.memory.index.path": "{{path}}/index.kmem",

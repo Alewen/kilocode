@@ -1630,7 +1630,6 @@ export const dict = {
   "settings.context.memory.index.title": "Minneindeks",
   "settings.context.memory.status.notLoaded": "Ikke lastet",
   "settings.context.memory.status.disabled": "Deaktivert",
-  "settings.context.memory.status.enabled": "Aktivert",
   "settings.context.memory.status.enabledTokensOps":
     "Aktivert - ~{{session}} oppstartstokener i denne økten - ~{{tokens}} tokener i lagret indeks - siste operasjon {{ops}}",
   "settings.context.memory.index.path": "{{path}}/index.kmem",

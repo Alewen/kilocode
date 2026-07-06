@@ -1627,7 +1627,6 @@ export const dict = {
   "settings.context.memory.index.title": "メモリインデックス",
   "settings.context.memory.status.notLoaded": "未読み込み",
   "settings.context.memory.status.disabled": "無効",
-  "settings.context.memory.status.enabled": "有効",
   "settings.context.memory.status.enabledTokensOps":
     "有効 - このセッションの起動コンテキスト ~{{session}} トークン - 保存済みインデックス ~{{tokens}} トークン - 最後の操作 {{ops}}",
   "settings.context.memory.index.path": "{{path}}/index.kmem",

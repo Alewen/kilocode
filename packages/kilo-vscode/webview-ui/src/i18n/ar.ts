@@ -1600,7 +1600,6 @@ export const dict = {
   "settings.context.memory.index.title": "فهرس الذاكرة",
   "settings.context.memory.status.notLoaded": "غير محمّلة",
   "settings.context.memory.status.disabled": "معطّلة",
-  "settings.context.memory.status.enabled": "مفعّلة",
   "settings.context.memory.status.enabledTokensOps":
     "مفعّلة - ~{{session}} رموز سياق بدء التشغيل في هذه الجلسة - ~{{tokens}} رموز في الفهرس المخزّن - آخر عملية {{ops}}",
   "settings.context.memory.index.path": "{{path}}/index.kmem",

@@ -249,7 +249,7 @@ export class KiloProviderMemory {
         `Root: ${show.root}`,
         `Enabled: ${show.state.enabled ? "yes" : "no"}`,
         `Auto-save: ${show.state.autoConsolidate ? "on" : "off"}`,
-        "Startup context: on",
+        `Startup context: ${show.state.autoInject ? "on" : "off"}`,
         `Stored index tokens: ${status.index.estimatedTokens}`,
         `Startup context tokens for this session: ${startup}`,
         `Last auto-save model usage: ${status.state.stats.lastConsolidationTokens} tokens`,

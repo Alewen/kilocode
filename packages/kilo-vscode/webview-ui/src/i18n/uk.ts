@@ -1592,7 +1592,6 @@ export const dict = {
   "settings.context.memory.index.title": "Індекс пам’яті",
   "settings.context.memory.status.notLoaded": "Не завантажено",
   "settings.context.memory.status.disabled": "Вимкнено",
-  "settings.context.memory.status.enabled": "Увімкнено",
   "settings.context.memory.status.enabledTokensOps":
     "Увімкнено - ~{{session}} токенів стартового контексту в цій сесії - ~{{tokens}} токенів у збереженому індексі - остання операція {{ops}}",
   "settings.context.memory.index.path": "{{path}}/index.kmem",
