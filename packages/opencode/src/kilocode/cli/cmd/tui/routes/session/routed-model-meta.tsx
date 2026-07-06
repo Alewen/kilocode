@@ -21,6 +21,8 @@ export namespace RoutedModelMeta {
 
   export const Context = createContext<() => Info>(() => empty)
 
+  export const isAuto = KiloRoutedModel.isAuto
+
   function eligible(part: Part, details: boolean) {
     if (part.type === "reasoning") return true
     if (part.type !== "tool") return false
@@ -42,7 +44,7 @@ export namespace RoutedModelMeta {
   function routed(model: StepFinishPart["model"], message: Message) {
     if (!model) return undefined
     if (message.providerID !== "kilo") return undefined
-    if (!message.modelID.startsWith("kilo-auto/")) return undefined
+    if (!KiloRoutedModel.isAuto(message.modelID)) return undefined
     if (model.providerID === message.providerID && model.modelID === message.modelID) return undefined
     return model
   }

@@ -1734,7 +1734,7 @@ function StepFinishPart(props: { last: boolean; part: StepFinishPart; message: A
   const info = useContext(RoutedModelMeta.Context)
   const routed = createMemo(() => {
     if (props.message.providerID !== "kilo") return undefined
-    if (!props.message.modelID.startsWith("kilo-auto/")) return undefined
+    if (!RoutedModelMeta.isAuto(props.message.modelID)) return undefined
     const model = props.part.model
     if (!model) return undefined
     if (model.providerID === props.message.providerID && model.modelID === props.message.modelID) return undefined

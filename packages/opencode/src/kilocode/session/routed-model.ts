@@ -31,6 +31,10 @@ export namespace KiloRoutedModel {
       .replace(/\s+/g, " ")
   }
 
+  export function isAuto(modelID: string) {
+    return modelID.startsWith("kilo-auto/") || modelID.includes("fable")
+  }
+
   export function read(meta: ProviderMetadata | undefined, providerID: ProviderID) {
     const value = meta?.[ns]?.[key]
     if (typeof value !== "string") return undefined
@@ -47,7 +51,7 @@ export namespace KiloRoutedModel {
     input: { providerID: ProviderID; modelID: string; selected?: string },
   ) {
     if (input.providerID !== ProviderID.kilo) return undefined
-    if (!input.modelID.startsWith("kilo-auto/") && !input.modelID.includes("fable")) return undefined
+    if (!isAuto(input.modelID)) return undefined
     const model = read(meta, input.providerID)
     if (!model) return undefined
     if (model.modelID === input.modelID || model.modelID === input.selected) return undefined
