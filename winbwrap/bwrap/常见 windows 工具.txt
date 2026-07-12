@@ -1,0 +1,11 @@
+schtasks.exe	创建/管理计划任务
+wmic.exe		WMI 命令行管理工具
+bitsadmin.exe	后台智能传输（下载/上传文件）
+cscript.exe	控制台脚本宿主（执行 VBS/JS）
+wscript.exe	窗口脚本宿主（cscript 的 GUI 版）
+mshta.exe	HTML 应用程序宿主
+certutil.exe	证书管理 + 文件下载
+rundll32.exe	加载并执行 DLL
+msiexec.exe	Windows Installer（执行 .msi 安装包）
+regsvr32.exe	注册/反注册 COM DLL
+

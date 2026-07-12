@@ -1,0 +1,58 @@
+
+	C:\Users\shaoke\.config\kilo\kilo.jsonc
+
+	{
+		"shell": "xxxx"
+	}
+
+	有效的取值范围有
+
+	"pwsh"	true	pwsh.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand <双层Base64>
+	"powershell"	true	powershell.exe + 同上参数
+	"bash"	false	Node.js spawn 包裹 bash.exe -c "命令"
+	"cmd"	false	Node.js spawn 包裹 cmd.exe /d /s /c "命令"
+
+（1）ai 希望执行命令
+
+		AiCommand1 param1 param2 param3; AiCommand2 param4 param5
+
+	pwsh 等效执行
+
+		pwsh.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand <UTF16LE-Base64>
+
+	在这里 -EncodedCommand <UTF16LE-Base64> 是将命令转为了编码，避免一下问题
+
+		$env:PATH	PowerShell 的 $ 变量引用
+		"双引号"		与 -Command 参数的外层引号冲突
+		` 反引号		PowerShell 转义符
+		'单引号'		也需要正确匹配
+		&, `		, ;`
+		嵌套引号		多层转义让人崩溃
+
+	它不会将上述命令直接变为一下方式执行
+
+		pwsh.exe -NoLogo -NoProfile -Command "AiCommand1 param1 param2 param3; AiCommand2 param4 param5"
+
+
+	由于在 powershell 中，where 是别的用途，所有有两种方式替换
+
+	where.exe pwsh
+	C:\Program Files\PowerShell\7\pwsh.exe
+	(Get-Command pwsh).Source
+	C:\Program Files\PowerShell\7\pwsh.exe
+
+	会弹出申请管理员的窗口
+
+	Start-Process powershell -Verb RunAs -ArgumentList '-NoExit', '-File', ".\deploy.ps1" -Wait
+
+	ai 知道没有 pwsh 环境，只有 cmd 之后，会转而执行
+
+	powershell.exe -Command "Start-Process powershell -Verb RunAs -ArgumentList '-NoExit','-File','.\deploy.ps1' -Wait"
+
+	cmd.exe /d /s /c "powershell.exe -Command "Start-Process powershell -Verb RunAs -ArgumentList '-NoExit','-File','.\deploy.ps1' -Wait""
+
+
+PS C:\tmp\bwrap\KiloGuard> C:\tmp\bwrap\bwrap\x64\Release\bwrap.exe --ro-bind "C:\Program Files\PowerShell\7" --ro-bind . -- "C:\Program Files\PowerShell\7\pwsh.exe" -NoLogo -NoProfile -Command "Start-Process powershell -Verb RunAs -ArgumentList '-NoExit', '-File', "deploy.ps1" -Wait"
+C:\tmp\bwrap\bwrap\x64\Release\bwrap.exe --ro-bind "C:\Program Files\PowerShell\7" -- "C:\Program Files\PowerShell\7\pwsh.exe" -NoLogo -NoProfile -Command "Start-Process pwsh -Verb RunAs -Wait -ArgumentList '-Command "Write-Host Elevated; ''test'' | Out-File C:\Windows\uac_test.txt -Encoding ascii"'"
+
+

@@ -1,0 +1,21 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build driver",
+			"type": "shell",
+			"command": "${workspaceFolder}\\build.ps1",
+			"options": {
+				"shell": {
+					"executable": "powershell",
+					"args": ["-ExecutionPolicy", "Bypass", "-File"]
+				}
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		}
+	]
+}
