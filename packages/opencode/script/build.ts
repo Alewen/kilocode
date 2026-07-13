@@ -449,7 +449,8 @@ if (Script.release) {
       // kilocode_change end
     }
   }
-  await $`gh release upload v${Script.version} ${archives} --clobber` // kilocode_change
+  // kilocode_change - skip gh release upload for local builds
+  // await $`gh release upload v${Script.version} ${archives} --clobber`
 }
 
 export { binaries }
