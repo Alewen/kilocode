@@ -11,12 +11,13 @@ import type { InstanceContext } from "@/project/instance-context"
 import type { SessionID } from "@/session/schema"
 import { Changed } from "./event"
 import * as Network from "./network"
-import { SandboxPreference } from "./preference"
-import * as SandboxState from "./state"
 import { SandboxConfig } from "./config"
-import { SandboxStore } from "./store"
 
-export type Snapshot = SandboxStore.Snapshot
+export type Snapshot = {
+  enabled: boolean
+  mode: Extract<Profile["network"]["mode"], "allow" | "deny">
+  version: number
+}
 
 const snapshots = new Map<string, Snapshot>()
 const locks = new Map<SessionID, { semaphore: Semaphore.Semaphore; refs: number }>()
@@ -25,24 +26,6 @@ function key(directory: string, sessionID: SessionID) {
   return directory + "\0" + sessionID
 }
 
-function initial(
-  chosen: boolean | undefined,
-  pref: boolean | undefined,
-  cfgDefault: boolean,
-  mode: Snapshot["mode"],
-): Snapshot {
-  if (chosen !== undefined) return { enabled: chosen, mode, version: 0 }
-  if (pref !== undefined) return { enabled: pref, mode, version: 0 }
-  return { enabled: cfgDefault, mode, version: 0 }
-}
-
-const resolveInitial = Effect.fn("SandboxPolicy.resolveInitial")(function* (directory: string, sessionID: SessionID) {
-  const cfg = yield* (yield* Config.Service).get()
-  const chosen = yield* SandboxState.read(sessionID)
-  const pref = yield* Effect.promise(() => SandboxPreference.read(directory))
-  const fallback = SandboxConfig.resolve(cfg)
-  return initial(chosen?.enabled, pref, fallback.enabled, fallback.mode)
-})
 function locked<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) {
   return Effect.acquireUseRelease(
     Effect.sync(() => {
@@ -119,7 +102,7 @@ export function profile(
   return {
     filesystem: {
       allowWrite: writable,
-      denyWrite: [root(SandboxStore.root), root(SandboxPreference.root)],
+      denyWrite: [],
       denyNames: [".git"],
       temporaryDirectory: Global.Path.tmp,
     },
@@ -139,34 +122,20 @@ export function profile(
 }
 
 const read = Effect.fn("SandboxPolicy.read")(function* (directory: string, sessionID: SessionID) {
-  const id = key(directory, sessionID)
-  const current = snapshots.get(id)
-  if (current) return current
-  const stored = yield* Effect.promise(() => SandboxStore.read(directory, sessionID))
-  if (stored) snapshots.set(id, stored)
-  return stored
+  return snapshots.get(key(directory, sessionID))
 })
 
 const snapshot = Effect.fn("SandboxPolicy.snapshot")(function* (sessionID: SessionID) {
   const directory = yield* InstanceState.directory
-  const current = yield* read(directory, sessionID)
+  const id = key(directory, sessionID)
+  const current = snapshots.get(id)
   if (current) return { directory, state: current }
 
-  return yield* locked(
-    sessionID,
-    Effect.gen(function* () {
-      const existing = yield* read(directory, sessionID)
-      if (existing) return { directory, state: existing }
-      // A session's create-time kilocode.sandbox toggle takes precedence over the config default, so a
-      // session moved or created with an explicit choice keeps that choice instead of resetting. The
-      // persisted per-directory preference (last toggled state) is the next precedence, so new sessions
-      // inherit the last /sandbox choice. The config default applies when neither is present.
-      const next = yield* resolveInitial(directory, sessionID)
-      yield* Effect.promise(() => SandboxStore.write(directory, sessionID, next))
-      snapshots.set(key(directory, sessionID), next)
-      return { directory, state: next }
-    }),
-  )
+  const cfg = yield* (yield* Config.Service).get()
+  const resolved = SandboxConfig.resolve(cfg)
+  const next: Snapshot = { enabled: resolved.enabled, mode: resolved.mode, version: 0 }
+  snapshots.set(id, next)
+  return { directory, state: next }
 })
 
 export const configuredSupport = Effect.fn("SandboxPolicy.configuredSupport")(function* () {
@@ -197,26 +166,18 @@ function change<E, R>(sessionID: SessionID, guard: Effect.Effect<unknown, E, R>)
       sessionID,
       Effect.gen(function* () {
         yield* guard
-        const stored = yield* read(directory, sessionID)
-        const current = stored ?? (yield* resolveInitial(directory, sessionID))
-        const support = backendSupport({ mode: current.mode, allowedHosts: [] })
+        const current = yield* snapshot(sessionID)
+        const support = backendSupport({ mode: current.state.mode, allowedHosts: [] })
         const status = {
           directory,
-          enabled: current.enabled && support.available,
+          enabled: current.state.enabled && support.available,
           available: support.available,
           reason: support.reason,
-          version: current.version,
+          version: current.state.version,
         }
         if (!status.enabled && !status.available) return status
-        const next: Snapshot = { ...current, enabled: !status.enabled, version: status.version + 1 }
-        yield* Effect.promise(() => SandboxStore.write(directory, sessionID, next))
+        const next: Snapshot = { ...current.state, enabled: !status.enabled, version: status.version + 1 }
         snapshots.set(key(directory, sessionID), next)
-        // The per-session SandboxStore is the authoritative state; the per-directory
-        // preference only seeds future sessions. A preference write failure must not
-        // fail the toggle or desync the in-memory cache from the persisted snapshot.
-        yield* Effect.promise(() => SandboxPreference.write(directory, next.enabled)).pipe(
-          Effect.catch(() => Effect.void),
-        )
         const value = { ...status, enabled: next.enabled, version: next.version }
         yield* (yield* Bus.Service).publish(Changed, { sessionID, ...value })
         return value
@@ -244,9 +205,6 @@ export const inherit = Effect.fn("SandboxPolicy.inherit")(function* (
       const stored = yield* read(directory, parentID)
       const parent: Snapshot | undefined = stored ?? (fallback && { ...fallback, version: 0 })
       if (!parent) return
-      // Only persist the parent snapshot when it actually belongs to this directory. A fallback
-      // carries confinement from another directory (e.g. forking into a worktree) and must not be
-      // written back under the parent's key here, or it leaks a phantom parent record.
       yield* locked(
         sessionID,
         Effect.gen(function* () {
@@ -259,7 +217,6 @@ export const inherit = Effect.fn("SandboxPolicy.inherit")(function* (
               }
             : { ...parent, version: 0 }
           if (child && child.enabled === next.enabled && child.mode === next.mode) return
-          yield* Effect.promise(() => SandboxStore.write(directory, sessionID, next))
           snapshots.set(key(directory, sessionID), next)
         }),
       )
@@ -280,7 +237,6 @@ export function retire<A, E, R>(
     sessionID,
     Effect.gen(function* () {
       const result = yield* effect
-      yield* Effect.promise(() => SandboxStore.remove(directory, sessionID))
       snapshots.delete(key(directory, sessionID))
       return result
     }),
@@ -292,7 +248,6 @@ export function dispose<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, 
     sessionID,
     Effect.gen(function* () {
       const result = yield* effect
-      yield* Effect.promise(() => SandboxStore.dispose(sessionID))
       const suffix = "\0" + sessionID
       for (const id of snapshots.keys()) {
         if (id.endsWith(suffix)) snapshots.delete(id)
