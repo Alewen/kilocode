@@ -20,7 +20,6 @@ const generated = await import("./generate.ts")
 import { Script } from "@opencode-ai/script"
 import pkg from "../package.json"
 // kilocode_change start
-import { stageBubblewrap } from "./kilocode/bubblewrap"
 import { LanceDBRuntime } from "../src/kilocode/lancedb"
 import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
 // kilocode_change end
@@ -271,12 +270,6 @@ for (const item of targets) {
 
   console.log(`building ${name}`)
   await $`mkdir -p dist/${name}/bin`
-  // kilocode_change start
-  const bwrap =
-    item.os === "linux" && process.env.KILO_SKIP_BUNDLED_BWRAP !== "1"
-      ? await stageBubblewrap(item.arch, path.resolve(dir, `dist/${name}/bin`))
-      : undefined
-  // kilocode_change end
 
   const localPath = path.resolve(dir, "node_modules/@opentui/core/parser.worker.js")
   const rootPath = path.resolve(dir, "../../node_modules/@opentui/core/parser.worker.js")
@@ -340,7 +333,7 @@ for (const item of targets) {
       KILO_CHANNEL: `'${Script.channel}'`,
       KILO_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",
       // kilocode_change start
-      KILO_BWRAP_SHA256: bwrap ? `'${bwrap}'` : "undefined",
+      KILO_BWRAP_SHA256: "undefined",
       KILO_BUILD_KIND: Script.release ? `'release'` : `'source'`,
       // kilocode_change end
     },

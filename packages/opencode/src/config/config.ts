@@ -619,6 +619,7 @@ export const layer = Layer.effect(
     const loadGlobal = Effect.fnUntraced(function* (env?: Record<string, string>) {
       // kilocode_change start
       yield* Effect.promise(() => KilocodeConfig.migrateBashPermission())
+      yield* Effect.promise(() => KilocodeConfig.migrateSandboxDefaultPaths())
       globalStamp = yield* KilocodeGlobalConfigStamp.read(fs, Global.Path.config)
       // kilocode_change end
       let result: Info = {}

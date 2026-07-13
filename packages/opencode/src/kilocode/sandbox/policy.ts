@@ -17,6 +17,10 @@ export type Snapshot = {
   enabled: boolean
   mode: Extract<Profile["network"]["mode"], "allow" | "deny">
   version: number
+  readonlyPaths: readonly string[]
+  denyPaths: readonly string[]
+  symlinkPaths: readonly { from: string; to: string }[]
+  writablePaths: readonly string[]
 }
 
 const snapshots = new Map<string, Snapshot>()
@@ -81,6 +85,9 @@ export function profile(
   ctx: InstanceContext,
   mode: Profile["network"]["mode"] = "deny",
   extraWritable?: readonly string[],
+  readonlyPaths?: readonly string[],
+  denyPaths?: readonly string[],
+  symlinkPaths?: readonly { from: string; to: string }[],
 ): Profile {
   const project = isolated(ctx)
     ? [ctx.directory]
@@ -105,6 +112,14 @@ export function profile(
       denyWrite: [],
       denyNames: [".git"],
       temporaryDirectory: Global.Path.tmp,
+      readonlyPaths: readonlyPaths ?? ["/usr", "/etc"],
+      denyPaths: denyPaths ?? ["/home", "/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"],
+      symlinkPaths: symlinkPaths ?? [
+        { from: "usr/bin", to: "/bin" },
+        { from: "usr/lib", to: "/lib" },
+        { from: "usr/lib64", to: "/lib64" },
+        { from: "usr/sbin", to: "/sbin" },
+      ],
     },
     network: {
       mode,
@@ -133,7 +148,15 @@ const snapshot = Effect.fn("SandboxPolicy.snapshot")(function* (sessionID: Sessi
 
   const cfg = yield* (yield* Config.Service).get()
   const resolved = SandboxConfig.resolve(cfg)
-  const next: Snapshot = { enabled: resolved.enabled, mode: resolved.mode, version: 0 }
+  const next: Snapshot = {
+    enabled: resolved.enabled,
+    mode: resolved.mode,
+    version: 0,
+    readonlyPaths: resolved.readonlyPaths,
+    denyPaths: resolved.denyPaths,
+    symlinkPaths: resolved.symlinkPaths,
+    writablePaths: resolved.writablePaths,
+  }
   snapshots.set(id, next)
   return { directory, state: next }
 })
@@ -209,11 +232,16 @@ export const inherit = Effect.fn("SandboxPolicy.inherit")(function* (
         sessionID,
         Effect.gen(function* () {
           const child = yield* read(directory, sessionID)
+          const source = child ?? parent
           const next: Snapshot = child
             ? {
                 enabled: parent.enabled || child.enabled,
                 mode: parent.mode === "deny" || child.mode === "deny" ? "deny" : "allow",
                 version: child.version + 1,
+                readonlyPaths: source.readonlyPaths,
+                denyPaths: source.denyPaths,
+                symlinkPaths: source.symlinkPaths,
+                writablePaths: source.writablePaths,
               }
             : { ...parent, version: 0 }
           if (child && child.enabled === next.enabled && child.mode === next.mode) return
@@ -262,10 +290,20 @@ function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) 
     const current = yield* snapshot(sessionID)
     const support = backendSupport({ mode: current.state.mode, allowedHosts: [] })
     if (!current.state.enabled || !support.available) return yield* unrestricted(effect)
-    const cfg = yield* (yield* Config.Service).get()
-    const raw = cfg.sandbox?.writable_paths
-    const extraWritable = raw?.map((p) => (p.startsWith("~") ? path.join(os.homedir(), p.slice(1)) : p))
-    return yield* runSandbox(profile(yield* InstanceState.context, current.state.mode, extraWritable), effect)
+    const extraWritable = current.state.writablePaths.map((p) =>
+      p.startsWith("~") ? path.join(os.homedir(), p.slice(1)) : p,
+    )
+    return yield* runSandbox(
+      profile(
+        yield* InstanceState.context,
+        current.state.mode,
+        extraWritable,
+        current.state.readonlyPaths,
+        current.state.denyPaths,
+        current.state.symlinkPaths,
+      ),
+      effect,
+    )
   })
 }
 

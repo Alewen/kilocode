@@ -1,12 +1,9 @@
 import { spawnSync } from "node:child_process"
-import { createHash } from "node:crypto"
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs"
 import path from "node:path"
 import { Effect, PlatformError } from "effect"
 import type { Backend, Launch, Support } from "./backend"
 import type { PathRule, Profile } from "./profile"
-
-declare const KILO_BWRAP_SHA256: string | undefined
 
 const system = "/usr/bin/bwrap"
 
@@ -118,18 +115,17 @@ export function generate(
   validate(allow, executable, mounts)
   const args = [
     "--unshare-user",
-    "--disable-userns",
     "--unshare-pid",
     ...(profile.network.mode === "deny" ? ["--unshare-net"] : []),
     "--die-with-parent",
     "--new-session",
-    "--ro-bind",
-    "/",
-    "/",
     "--dev",
     "/dev",
   ]
 
+  for (const p of profile.filesystem.denyPaths ?? []) args.push("--tmpfs", p)
+  for (const s of profile.filesystem.symlinkPaths ?? []) args.push("--symlink", s.from, s.to)
+  for (const p of profile.filesystem.readonlyPaths ?? []) args.push("--ro-bind", p, p)
   for (const rule of allow) args.push("--bind", rule.path, rule.path)
   for (const target of protectedPaths(profile, allow)) args.push("--ro-bind", target, target)
   args.push("--proc", "/proc")
@@ -143,21 +139,12 @@ export function generate(
   }
 }
 
-function bundled() {
-  return path.join(path.dirname(process.execPath), "bwrap")
-}
-
-function digest() {
-  return typeof KILO_BWRAP_SHA256 === "undefined" ? undefined : KILO_BWRAP_SHA256
-}
-
-function resolve(executable: string, expected?: string) {
+function resolve(executable: string) {
   try {
     if (!path.isAbsolute(executable)) return
     const target = realpathSync.native(executable)
     const entry = statSync(target)
-    if (!entry.isFile() || (entry.mode & 0o6000) !== 0) return
-    if (expected && createHash("sha256").update(readFileSync(target)).digest("hex") !== expected) return
+    if (!entry.isFile()) return
     return target
   } catch {
     return
@@ -169,7 +156,6 @@ function probe(executable: string, network = false) {
     executable,
     [
       "--unshare-user",
-      "--disable-userns",
       "--unshare-pid",
       ...(network ? ["--unshare-net"] : []),
       "--die-with-parent",
@@ -203,11 +189,11 @@ function select(): Selection {
   const override = process.env.KILO_BWRAP_PATH
   const candidates = override
     ? [{ executable: override }]
-    : [{ executable: system }, { executable: bundled(), expected: digest() }]
+    : [{ executable: system }]
   const failures: Array<string> = []
 
   for (const candidate of candidates) {
-    const executable = resolve(candidate.executable, candidate.expected)
+    const executable = resolve(candidate.executable)
     if (!executable) continue
     const failure = probe(executable)
     if (!failure) return { executable, support: { available: true } satisfies Support, network: undefined }

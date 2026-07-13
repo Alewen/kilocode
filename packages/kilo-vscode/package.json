@@ -1143,7 +1143,7 @@
   },
   "scripts": {
     "prepare:cli-binary": "bun script/local-bin.ts",
-    "compile": "bun run prepare:cli-binary -- --force && bun run rebuild-sdk && bun run typecheck && bun run lint && node esbuild.js",
+    "compile": "bun run prepare:cli-binary && bun run rebuild-sdk && bun run typecheck && bun run lint && node esbuild.js",
     "watch": "bun run rebuild-sdk && bun run --parallel watch:esbuild watch:tsc",
     "watch:esbuild": "bun run prepare:cli-binary && node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",

@@ -10,6 +10,9 @@ export interface FilesystemProfile {
   readonly denyWrite: ReadonlyArray<PathRule>
   readonly denyNames: ReadonlyArray<string>
   readonly temporaryDirectory?: string | undefined
+  readonly readonlyPaths?: ReadonlyArray<string>
+  readonly denyPaths?: ReadonlyArray<string>
+  readonly symlinkPaths?: ReadonlyArray<{ from: string; to: string }>
 }
 
 export interface NetworkProfile {

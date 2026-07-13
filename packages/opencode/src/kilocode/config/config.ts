@@ -384,6 +384,74 @@ export namespace KilocodeConfig {
     log.info("migrated bash permission to allow for existing user", { path: target })
   }
 
+  // ── Sandbox default paths migration ────────────────────────────────────
+
+  const SBOX_READONLY_DEFAULT = ["/usr", "/etc"]
+  const SBOX_DENY_DEFAULT = ["/home", "/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"]
+  const SBOX_SYMLINK_DEFAULT = [
+    { from: "usr/bin", to: "/bin" },
+    { from: "usr/lib", to: "/lib" },
+    { from: "usr/lib64", to: "/lib64" },
+    { from: "usr/sbin", to: "/sbin" },
+  ]
+
+  /**
+   * Ensure the global config has sandbox.readonly_paths, sandbox.deny_paths
+   * and sandbox.symlink_paths with sensible defaults. Skips if all keys already exist.
+   */
+  export async function migrateSandboxDefaultPaths() {
+    const files = GLOBAL_CONFIG_FILES.map((f) => path.join(Global.Path.config, f))
+    const existing = files.filter((f) => existsSync(f))
+
+    if (existing.length === 0) return
+
+    const target = existing[existing.length - 1]
+    const text = await Bun.file(target)
+      .text()
+      .catch(() => "{}")
+
+    const data = parseJsonc(text) ?? {}
+    const sbox = isRecord(data.sandbox) ? (data.sandbox as Record<string, unknown>) : null
+    const hasReadonly = sbox && Array.isArray(sbox.readonly_paths)
+    const hasDeny = sbox && Array.isArray(sbox.deny_paths)
+    const hasSymlink = sbox && Array.isArray(sbox.symlink_paths)
+
+    if (hasReadonly && hasDeny && hasSymlink) return
+
+    if (!target.endsWith(".jsonc")) {
+      const merged = {
+        ...data,
+        sandbox: {
+          ...(sbox ?? {}),
+          ...(hasReadonly ? {} : { readonly_paths: SBOX_READONLY_DEFAULT }),
+          ...(hasDeny ? {} : { deny_paths: SBOX_DENY_DEFAULT }),
+          ...(hasSymlink ? {} : { symlink_paths: SBOX_SYMLINK_DEFAULT }),
+        },
+      }
+      await Bun.write(target, JSON.stringify(merged, null, 2))
+      log.info("migrated sandbox default paths", { path: target })
+      return
+    }
+
+    let updated = text
+    if (!sbox) {
+      updated = applyEdits(updated, modify(updated, ["sandbox"], {}, { formattingOptions: { insertSpaces: true, tabSize: 2 } }))
+    }
+    if (!hasReadonly) {
+      updated = applyEdits(updated, modify(updated, ["sandbox", "readonly_paths"], SBOX_READONLY_DEFAULT, { formattingOptions: { insertSpaces: true, tabSize: 2 } }))
+    }
+    if (!hasDeny) {
+      updated = applyEdits(updated, modify(updated, ["sandbox", "deny_paths"], SBOX_DENY_DEFAULT, { formattingOptions: { insertSpaces: true, tabSize: 2 } }))
+    }
+    if (!hasSymlink) {
+      updated = applyEdits(updated, modify(updated, ["sandbox", "symlink_paths"], SBOX_SYMLINK_DEFAULT, { formattingOptions: { insertSpaces: true, tabSize: 2 } }))
+    }
+    if (updated !== text) {
+      await Bun.write(target, updated)
+      log.info("migrated sandbox default paths", { path: target })
+    }
+  }
+
   // ── Config merge utilities ───────────────────────────────────────────
 
   /** Recursively remove null values and drop objects left empty after removal. */
