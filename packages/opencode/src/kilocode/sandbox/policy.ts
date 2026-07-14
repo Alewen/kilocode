@@ -96,6 +96,7 @@ export function profile(
       : [ctx.worktree, ctx.directory]
   const writable = [
     ...project,
+    path.join(Global.Path.data, "tool-output"),
     Global.Path.state,
     Global.Path.tmp,
     ...(extraWritable ?? []),
@@ -291,7 +292,7 @@ function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) 
   return Effect.gen(function* () {
     const current = yield* snapshot(sessionID)
     const cfg = yield* (yield* Config.Service).get()
-    const enabled = cfg.sandbox?.enabled ?? false
+    const enabled = current.state.enabled
     const mode = cfg.sandbox?.network ?? "deny"
     const support = backendSupport({ mode, allowedHosts: [] })
     if (!enabled || !support.available) return yield* unrestricted(effect)
