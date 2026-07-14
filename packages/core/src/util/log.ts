@@ -67,6 +67,11 @@ const stderr = (msg: any) => {
 let write = stderr
 let stream: ReturnType<typeof createStream> | undefined // kilocode_change
 
+function localTS(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`
+}
+
 export async function init(options: Options) {
   if (options.level) level = options.level
   void cleanup(Global.Path.log)
@@ -82,7 +87,7 @@ export async function init(options: Options) {
   }
   logpath = path.join(
     Global.Path.log,
-    options.dev ? "dev.log" : new Date().toISOString().split(".")[0].replace(/:/g, "") + ".log",
+    options.dev ? "dev.log" : localTS(new Date()) + ".log",
   )
   const run = process.env[KILO_RUN_ID]
   if (!options.dev || !run || process.env[initializedRunID] !== run) {
