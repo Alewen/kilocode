@@ -364,11 +364,12 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | ChildPro
                 )
                 const code = yield* raceAbort(handle.exitCode, input.signal)
                 yield* Fiber.join(stdout)
-                if (code === 0 || code === 1) {
+                const err = yield* Fiber.join(stderr)
+                if (code === 0 || (code === 1 && !err.trim())) {
                   Queue.endUnsafe(queue)
                   return
                 }
-                fail(queue, error(yield* Fiber.join(stderr), code))
+                fail(queue, error(err, code))
               }).pipe(
                 Effect.catch((err) =>
                   Effect.sync(() => {
@@ -405,6 +406,10 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | ChildPro
             )
 
             if (code !== 0 && code !== 1 && code !== 2) {
+              return yield* Effect.fail(error(stderr, code))
+            }
+
+            if (code !== 0 && !items.length && stderr.trim()) {
               return yield* Effect.fail(error(stderr, code))
             }
 

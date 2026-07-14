@@ -257,7 +257,7 @@ if (!skipInstall) {
   await $`bun install --os="*" --cpu="*" @parcel/watcher@${pkg.dependencies["@parcel/watcher"]}`
 }
 for (const item of targets) {
-  const bwrap = item.os === "linux" // kilocode_change
+  const bwrap = item.os === "linux" && false // kilocode_change — using system bwrap, no bundled licenses
   const name = [
     pkg.name,
     // changing to win32 flags npm for some reason
