@@ -1,6 +1,6 @@
 import { Effect, Fiber, Stream } from "effect" // kilocode_change - Fiber
 import os from "os"
-import { createWriteStream } from "node:fs"
+import { createWriteStream, appendFileSync, mkdirSync } from "node:fs"
 import * as Tool from "./tool"
 import path from "path"
 import * as Log from "@opencode-ai/core/util/log"
@@ -10,6 +10,7 @@ import { lazy } from "@/util/lazy"
 import { Language, type Node } from "web-tree-sitter"
 
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { Global } from "@opencode-ai/core/global"
 import { fileURLToPath } from "url"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -20,6 +21,7 @@ import * as Truncate from "./truncate"
 import { Plugin } from "@/plugin"
 import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
+import { setCmdHistoryLogPath } from "@opencode-ai/core/cross-spawn-spawner" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
@@ -418,6 +420,24 @@ export const ShellPermission = Effect.gen(function* () {
 })
 // kilocode_change end
 
+// kilocode_change start - local timezone timestamp for cmdHistory
+function localTS(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0")
+  const y = date.getFullYear()
+  const M = pad(date.getMonth() + 1)
+  const d = pad(date.getDate())
+  const h = pad(date.getHours())
+  const m = pad(date.getMinutes())
+  const s = pad(date.getSeconds())
+  const ms = String(date.getMilliseconds()).padStart(3, "0")
+  const offset = -date.getTimezoneOffset()
+  const sign = offset >= 0 ? "+" : "-"
+  const oh = pad(Math.floor(Math.abs(offset) / 60))
+  const om = pad(Math.abs(offset) % 60)
+  return `${y}-${M}-${d}T${h}:${m}:${s}.${ms}${sign}${oh}:${om}`
+}
+// kilocode_change end
+
 function cmd(shell: string, command: string, cwd: string, env: NodeJS.ProcessEnv) {
   if (process.platform === "win32" && Shell.ps(shell)) {
     // kilocode_change start - PowerShell args
@@ -546,7 +566,22 @@ export const ShellTool = Tool.define(
       const code: number | null = yield* Effect.scoped(
         Effect.gen(function* () {
           yield* Effect.addFinalizer(closeSink)
-          const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env))
+
+          // kilocode_change start - log command to cmdHistory
+          const logDir = path.join(Global.Path.data, "cmdHistory")
+          mkdirSync(logDir, { recursive: true })
+          const logFile = path.join(logDir, `${ctx.sessionID}.log`)
+          try {
+            const ts = localTS(new Date())
+            appendFileSync(logFile, `[${ts}] [${input.cwd}] [${input.shell}] ${input.command}\n`)
+          } catch (err) {
+            Log.error("Failed to log command to cmdHistory", { err })
+          }
+          // kilocode_change end
+
+          const cmdObj = cmd(input.shell, input.command, input.cwd, input.env)
+          setCmdHistoryLogPath(logFile)
+          const handle = yield* spawner.spawn(cmdObj)
 
           const reader = yield* Effect.forkScoped( // kilocode_change - keep the fiber so trailing output can be drained
             Stream.runForEach(Stream.decodeText(handle.all), (chunk) => {

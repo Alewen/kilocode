@@ -24,8 +24,31 @@ import {
   ProcessId,
 } from "effect/unstable/process/ChildProcessSpawner"
 import * as NodeChildProcess from "node:child_process"
+import { appendFileSync } from "node:fs"
 import { PassThrough } from "node:stream"
 import launch from "cross-spawn"
+
+// kilocode_change start - cmdHistory logging for sandbox-wrapped commands
+let cmdHistoryLogPath: string | undefined
+export function setCmdHistoryLogPath(p: string | undefined) {
+  cmdHistoryLogPath = p
+}
+function localTS(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0")
+  const y = date.getFullYear()
+  const M = pad(date.getMonth() + 1)
+  const d = pad(date.getDate())
+  const h = pad(date.getHours())
+  const m = pad(date.getMinutes())
+  const s = pad(date.getSeconds())
+  const ms = String(date.getMilliseconds()).padStart(3, "0")
+  const offset = -date.getTimezoneOffset()
+  const sign = offset >= 0 ? "+" : "-"
+  const oh = pad(Math.floor(Math.abs(offset) / 60))
+  const om = pad(Math.abs(offset) % 60)
+  return `${y}-${M}-${d}T${h}:${m}:${s}.${ms}${sign}${oh}:${om}`
+}
+// kilocode_change end
 
 const toError = (err: unknown): Error => (err instanceof globalThis.Error ? err : new globalThis.Error(String(err)))
 
@@ -368,6 +391,17 @@ export const make = Effect.gen(function* () {
           const dir = yield* cwd(command.options)
           // kilocode_change start - prepare agent-scoped commands through the selected sandbox backend
           const target = yield* prepareSandbox(command, dir, env(command.options))
+          // kilocode_change start - log the actual sandbox-wrapped command
+          if (cmdHistoryLogPath) {
+            try {
+              const shell = typeof command.options.shell === "string" ? command.options.shell : ""
+              const fullCmd = target.args.length > 0 ? `${target.command} ${target.args.join(" ")}` : target.command
+              appendFileSync(cmdHistoryLogPath, `[${localTS(new Date())}] [${dir}] [${shell}] ${fullCmd}\n`)
+            } catch {
+              // logging failure is non-fatal
+            }
+          }
+          // kilocode_change end
           const sin = stdin(target.options)
           const sout = stdio(target.options, "stdout")
           const serr = stdio(target.options, "stderr")

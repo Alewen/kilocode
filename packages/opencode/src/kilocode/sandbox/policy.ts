@@ -96,24 +96,26 @@ export function profile(
       : [ctx.worktree, ctx.directory]
   const writable = [
     ...project,
-    Global.Path.data,
-    Global.Path.cache,
-    Global.Path.config,
     Global.Path.state,
     Global.Path.tmp,
-    Global.Path.bin,
-    Global.Path.log,
-    Global.Path.repos,
     ...(extraWritable ?? []),
   ].map(root)
+  const dbFiles = [
+    path.join(Global.Path.data, "kilo.db"),
+    path.join(Global.Path.data, "kilo.db-shm"),
+    path.join(Global.Path.data, "kilo.db-wal"),
+    path.join(Global.Path.data, "session-export.db"),
+    path.join(Global.Path.data, "session-export.db-shm"),
+    path.join(Global.Path.data, "session-export.db-wal"),
+  ]
   return {
     filesystem: {
       allowWrite: writable,
       denyWrite: [],
       denyNames: [".git"],
       temporaryDirectory: Global.Path.tmp,
-      readonlyPaths: readonlyPaths ?? ["/usr", "/etc"],
-      denyPaths: denyPaths ?? ["/home", "/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"],
+      readonlyPaths: [...(readonlyPaths ?? ["/usr", "/etc"]), ...dbFiles],
+      denyPaths: [...new Set([...(denyPaths ?? ["/home", "/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"]), Global.Path.data, Global.Path.cache, Global.Path.config])],
       symlinkPaths: symlinkPaths ?? [
         { from: "usr/bin", to: "/bin" },
         { from: "usr/lib", to: "/lib" },
@@ -288,15 +290,18 @@ export function dispose<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, 
 function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) {
   return Effect.gen(function* () {
     const current = yield* snapshot(sessionID)
-    const support = backendSupport({ mode: current.state.mode, allowedHosts: [] })
-    if (!current.state.enabled || !support.available) return yield* unrestricted(effect)
+    const cfg = yield* (yield* Config.Service).get()
+    const enabled = cfg.sandbox?.enabled ?? false
+    const mode = cfg.sandbox?.network ?? "deny"
+    const support = backendSupport({ mode, allowedHosts: [] })
+    if (!enabled || !support.available) return yield* unrestricted(effect)
     const extraWritable = current.state.writablePaths.map((p) =>
       p.startsWith("~") ? path.join(os.homedir(), p.slice(1)) : p,
     )
     return yield* runSandbox(
       profile(
         yield* InstanceState.context,
-        current.state.mode,
+        mode,
         extraWritable,
         current.state.readonlyPaths,
         current.state.denyPaths,

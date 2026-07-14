@@ -60,16 +60,21 @@ function mountpoints() {
   return parseMountinfo(readFileSync("/proc/self/mountinfo", "utf8"))
 }
 
-function validate(allow: ReadonlyArray<PathRule>, executable: string, mounts: ReadonlyArray<string>) {
+function validate(allow: ReadonlyArray<PathRule>, executable: string, mounts: ReadonlyArray<string>): ReadonlyArray<string> {
   if (allow.some((rule) => beneath(rule.path, executable))) {
     throw new Error(`Bubblewrap executable is writable by the sandbox profile: ${executable}`)
   }
 
+  const protected_: string[] = []
   for (const rule of allow) {
     if (rule.kind !== "subtree") continue
-    const nested = mounts.find((mount) => mount !== rule.path && beneath(rule.path, mount))
-    if (nested) throw new Error(`Writable root contains a nested mount point: ${nested}`)
+    for (const mount of mounts) {
+      if (mount !== rule.path && beneath(rule.path, mount) && !protected_.includes(mount)) {
+        protected_.push(mount)
+      }
+    }
   }
+  return protected_
 }
 
 function scan(root: string, names: ReadonlySet<string>, found: Set<string>) {
@@ -77,13 +82,23 @@ function scan(root: string, names: ReadonlySet<string>, found: Set<string>) {
     found.add(root)
     return
   }
-  if (!statSync(root).isDirectory()) return
+  try {
+    if (!statSync(root).isDirectory()) return
+  } catch {
+    return
+  }
 
   const pending = [root]
   while (pending.length > 0) {
     const dir = pending.pop()
     if (!dir) continue
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    let entries
+    try {
+      entries = readdirSync(dir, { withFileTypes: true })
+    } catch {
+      continue
+    }
+    for (const entry of entries) {
       const target = path.join(dir, entry.name)
       if (names.has(entry.name)) {
         found.add(target)
@@ -112,7 +127,7 @@ export function generate(
   mounts = process.platform === "linux" ? mountpoints() : [],
 ): Launch {
   const allow = writable(profile)
-  validate(allow, executable, mounts)
+  const nested = validate(allow, executable, mounts)
   const args = [
     "--unshare-user",
     "--unshare-pid",
@@ -123,11 +138,33 @@ export function generate(
     "/dev",
   ]
 
-  for (const p of profile.filesystem.denyPaths ?? []) args.push("--tmpfs", p)
-  for (const s of profile.filesystem.symlinkPaths ?? []) args.push("--symlink", s.from, s.to)
-  for (const p of profile.filesystem.readonlyPaths ?? []) args.push("--ro-bind", p, p)
-  for (const rule of allow) args.push("--bind", rule.path, rule.path)
-  for (const target of protectedPaths(profile, allow)) args.push("--ro-bind", target, target)
+  type Entry = { depth: number; args: string[] }
+  const entries: Entry[] = []
+
+  for (const p of profile.filesystem.denyPaths ?? []) {
+    entries.push({ depth: p.split("/").length - 1, args: ["--tmpfs", p] })
+  }
+  for (const s of profile.filesystem.symlinkPaths ?? []) {
+    entries.push({ depth: s.to.split("/").length - 1, args: ["--symlink", s.from, s.to] })
+  }
+  for (const p of profile.filesystem.readonlyPaths ?? []) {
+    entries.push({ depth: p.split("/").length - 1, args: ["--ro-bind", p, p] })
+  }
+  for (const rule of allow) {
+    entries.push({ depth: rule.path.split("/").length - 1, args: ["--bind", rule.path, rule.path] })
+  }
+  for (const target of protectedPaths(profile, allow)) {
+    entries.push({ depth: target.split("/").length - 1, args: ["--ro-bind", target, target] })
+  }
+  for (const mount of nested) {
+    entries.push({ depth: mount.split("/").length - 1, args: ["--ro-bind", mount, mount] })
+  }
+
+  entries.sort((a, b) => a.depth - b.depth)
+  for (const entry of entries) {
+    args.push(...entry.args)
+  }
+
   args.push("--proc", "/proc")
   if (launch.cwd) args.push("--chdir", launch.cwd)
   args.push("--", ...command(launch))
