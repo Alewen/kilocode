@@ -77,7 +77,7 @@ function validate(allow: ReadonlyArray<PathRule>, executable: string, mounts: Re
   return protected_
 }
 
-function scan(root: string, names: ReadonlySet<string>, found: Set<string>) {
+function scan(root: string, names: ReadonlySet<string>, found: Set<string>, signal?: { aborted: boolean }) {
   if (names.has(path.basename(root))) {
     found.add(root)
     return
@@ -90,6 +90,7 @@ function scan(root: string, names: ReadonlySet<string>, found: Set<string>) {
 
   const pending = [root]
   while (pending.length > 0) {
+    if (signal?.aborted) return
     const dir = pending.pop()
     if (!dir) continue
     let entries
@@ -109,15 +110,20 @@ function scan(root: string, names: ReadonlySet<string>, found: Set<string>) {
   }
 }
 
-function protectedPaths(profile: Profile, allow: ReadonlyArray<PathRule>) {
+export function protectedPaths(profile: Profile, allow: ReadonlyArray<PathRule>, signal?: { aborted: boolean }) {
   const found = new Set(profile.filesystem.denyWrite.filter((rule) => existsSync(rule.path)).map((rule) => rule.path))
   if (profile.filesystem.denyNames.length === 0) return [...found]
 
   const names = new Set(profile.filesystem.denyNames)
   for (const rule of allow) {
-    if (rule.kind === "subtree") scan(rule.path, names, found)
+    if (signal?.aborted) break
+    if (rule.kind === "subtree") scan(rule.path, names, found, signal)
   }
   return [...found].sort((a, b) => a.length - b.length)
+}
+
+export function computeProtectedPaths(profile: Profile, allow: ReadonlyArray<PathRule>) {
+  return profile.filesystem.protectedPaths ?? protectedPaths(profile, allow)
 }
 
 export function generate(
@@ -153,7 +159,7 @@ export function generate(
   for (const rule of allow) {
     entries.push({ depth: rule.path.split("/").length - 1, args: ["--bind", rule.path, rule.path] })
   }
-  for (const target of protectedPaths(profile, allow)) {
+  for (const target of computeProtectedPaths(profile, allow)) {
     entries.push({ depth: target.split("/").length - 1, args: ["--ro-bind", target, target] })
   }
   for (const mount of nested) {

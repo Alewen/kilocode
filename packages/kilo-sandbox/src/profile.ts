@@ -13,6 +13,7 @@ export interface FilesystemProfile {
   readonly readonlyPaths?: ReadonlyArray<string>
   readonly denyPaths?: ReadonlyArray<string>
   readonly symlinkPaths?: ReadonlyArray<{ from: string; to: string }>
+  readonly protectedPaths?: ReadonlyArray<string>
 }
 
 export interface NetworkProfile {

@@ -3,7 +3,8 @@ import os from "node:os"
 import path from "node:path"
 import { Effect, Semaphore } from "effect"
 import { Global } from "@opencode-ai/core/global"
-import { backendSupport, run as runSandbox, unrestricted, type Profile } from "@kilocode/sandbox"
+import * as Log from "@opencode-ai/core/util/log"
+import { backendSupport, run as runSandbox, unrestricted, protectedPaths, type Profile } from "@kilocode/sandbox"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
@@ -81,6 +82,91 @@ function isolated(ctx: InstanceContext) {
   return linked(path.resolve(ctx.directory), path.resolve(ctx.worktree))
 }
 
+type ScanEntry = {
+  result: string[] | null
+  promise: Promise<string[]> | null
+}
+const scans = new Map<string, ScanEntry>()
+let epoch = 0
+let activeKey = ""
+let activeSignal: { aborted: boolean } = { aborted: false }
+const scanLog = Log.create({ service: "sandbox.scan" })
+
+function scanTargets(writable: string[], readonlyPaths?: string[], denyPaths?: string[]): string[] {
+  const blocked = [...(readonlyPaths ?? []), ...(denyPaths ?? [])]
+  return writable.filter((p) => !blocked.includes(p))
+}
+
+function scanKey(targets: string[]): string {
+  return [...new Set(targets)].sort().join("\x00")
+}
+
+export function scheduleProtectedPathScan(
+  writablePaths: string[],
+  readonlyPaths?: string[],
+  denyPaths?: string[],
+): string {
+  const targets = scanTargets(writablePaths, readonlyPaths, denyPaths)
+  if (targets.length === 0) return ""
+  const key = scanKey(targets)
+  if (key === activeKey && scans.has(key)) return key
+
+  if (key !== activeKey) {
+    if (activeKey) scanLog.info("aborting previous scan", { key: activeKey })
+    activeSignal.aborted = true
+    epoch++
+    scans.clear()
+    activeKey = key
+    activeSignal = { aborted: false }
+    scanLog.info("starting protected path scan", { key, targets: targets.length })
+  }
+
+  const current = epoch
+  const signal = activeSignal
+  const rules = targets.map((p) => ({ path: p, kind: "subtree" as const }))
+  const profileLike = { filesystem: { denyWrite: [], denyNames: [".git"] } }
+
+  const promise = new Promise<string[]>((resolve) => {
+    setTimeout(() => {
+      const result = protectedPaths(profileLike as Profile, rules, signal)
+      resolve(result)
+    }, 0)
+  }).then((result) => {
+    if (signal.aborted || epoch !== current) {
+      scanLog.info("scan aborted", { key })
+      return []
+    }
+    scanLog.info("scan completed", { key, found: result.length, paths: result })
+    scans.set(key, { promise: null, result })
+    return result
+  })
+
+  scans.set(key, { promise, result: null })
+  return key
+}
+
+export async function ensureProtectedScan(key: string): Promise<string[]> {
+  const entry = scans.get(key)
+  if (!entry) return []
+  if (entry.result !== null) return entry.result
+  return entry.promise ?? []
+}
+
+export function computeWritable(ctx: InstanceContext, extra?: readonly string[]) {
+  const project = isolated(ctx)
+    ? [ctx.directory]
+    : ctx.directory === ctx.worktree
+      ? [ctx.directory]
+      : [ctx.worktree, ctx.directory]
+  return [
+    ...project,
+    path.join(Global.Path.data, "tool-output"),
+    Global.Path.state,
+    Global.Path.tmp,
+    ...(extra ?? []),
+  ]
+}
+
 export function profile(
   ctx: InstanceContext,
   mode: Profile["network"]["mode"] = "deny",
@@ -89,18 +175,11 @@ export function profile(
   denyPaths?: readonly string[],
   symlinkPaths?: readonly { from: string; to: string }[],
 ): Profile {
-  const project = isolated(ctx)
-    ? [ctx.directory]
-    : ctx.directory === ctx.worktree
-      ? [ctx.directory]
-      : [ctx.worktree, ctx.directory]
-  const writable = [
-    ...project,
-    path.join(Global.Path.data, "tool-output"),
-    Global.Path.state,
-    Global.Path.tmp,
-    ...(extraWritable ?? []),
-  ].map(root)
+  const raw = computeWritable(ctx, extraWritable)
+  const key = scanKey(scanTargets(raw, readonlyPaths as string[] | undefined, denyPaths as string[] | undefined))
+  const entry = key ? scans.get(key) : undefined
+  const preScanned = entry?.result ?? undefined
+  const writable = raw.map(root)
   const dbFiles = [
     path.join(Global.Path.data, "kilo.db"),
     path.join(Global.Path.data, "kilo.db-shm"),
@@ -123,6 +202,7 @@ export function profile(
         { from: "usr/lib64", to: "/lib64" },
         { from: "usr/sbin", to: "/sbin" },
       ],
+      protectedPaths: preScanned,
     },
     network: {
       mode,
@@ -295,13 +375,26 @@ function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) 
     const enabled = current.state.enabled
     const mode = cfg.sandbox?.network ?? "deny"
     const support = backendSupport({ mode, allowedHosts: [] })
-    if (!enabled || !support.available) return yield* unrestricted(effect)
     const extraWritable = current.state.writablePaths.map((p) =>
       p.startsWith("~") ? path.join(os.homedir(), p.slice(1)) : p,
     )
+
+    if (!enabled || !support.available) return yield* unrestricted(effect)
+
+    const ctx = yield* InstanceState.context
+    const raw = computeWritable(ctx, extraWritable)
+    const key = scanKey(scanTargets(
+      raw,
+      current.state.readonlyPaths as string[] | undefined,
+      current.state.denyPaths as string[] | undefined,
+    ))
+    if (key) {
+      yield* Effect.promise(() => ensureProtectedScan(key))
+    }
+
     return yield* runSandbox(
       profile(
-        yield* InstanceState.context,
+        ctx,
         mode,
         extraWritable,
         current.state.readonlyPaths,

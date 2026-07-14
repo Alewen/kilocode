@@ -1157,11 +1157,27 @@ export const layer = Layer.effect(
 
     const get = Effect.fn("Config.get")(function* () {
       // kilocode_change start - reload instance config when global config changed elsewhere
-      if (yield* refreshGlobal()) {
+      const changed = yield* refreshGlobal()
+      if (changed) {
         yield* InstanceState.invalidate(state).pipe(Effect.catchCause(() => Effect.void))
       }
+      const result = yield* InstanceState.use(state, (s) => s.config)
+      // kilocode_change start - trigger protected path scan on config change
+      {
+        const ctx = yield* InstanceState.context
+        const expand = (p: string) => (p.startsWith("~") ? path.join(os.homedir(), p.slice(1)) : p)
+        const extra = (result.sandbox?.writable_paths ?? []).map(expand)
+        const ro = result.sandbox?.readonly_paths?.map(expand)
+        const deny = result.sandbox?.deny_paths?.map(expand)
+        yield* Effect.promise(() =>
+          import("@/kilocode/sandbox/policy").then((p) => {
+            const raw = p.computeWritable(ctx, extra)
+            p.scheduleProtectedPathScan(raw, ro, deny)
+          }),
+        )
+      }
       // kilocode_change end
-      return yield* InstanceState.use(state, (s) => s.config)
+      return result
     })
 
     const directories = Effect.fn("Config.directories")(function* () {
