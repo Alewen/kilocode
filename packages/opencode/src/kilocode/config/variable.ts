@@ -1,8 +1,12 @@
 import fs from "node:fs/promises"
 import { realpathSync, statSync } from "node:fs"
 import path from "node:path"
+import { denied } from "../sandbox/environment"
 
 export namespace ConfigVariableGuard {
+  const secret = new Set<string>()
+  for (const key of denied) secret.add(key)
+
   export type FileScope = {
     root: string
     source: string
@@ -17,11 +21,6 @@ export namespace ConfigVariableGuard {
   export function isBlocked(err: unknown): err is BlockedError {
     return err instanceof BlockedError || (typeof err === "object" && err !== null && (err as any).blocked === true)
   }
-
-  import { denied } from "../sandbox/environment"
-
-const secret = new Set<string>()
-for (const key of denied) secret.add(key)
 
   export function env(name: string) {
     return !secret.has(name.toUpperCase())

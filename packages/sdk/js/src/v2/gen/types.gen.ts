@@ -12429,6 +12429,82 @@ export type KilocodeSessionImportPartResponses = {
 export type KilocodeSessionImportPartResponse =
   KilocodeSessionImportPartResponses[keyof KilocodeSessionImportPartResponses]
 
+export type TaskStatusData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/task"
+}
+
+export type TaskStatusErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type TaskStatusError = TaskStatusErrors[keyof TaskStatusErrors]
+
+export type TaskStatusResponses = {
+  /**
+   * Session task status
+   */
+  200: {
+    directory: string
+    enabled: boolean
+    version: number
+  }
+}
+
+export type TaskStatusResponse = TaskStatusResponses[keyof TaskStatusResponses]
+
+export type TaskToggleData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/task/toggle"
+}
+
+export type TaskToggleErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type TaskToggleError = TaskToggleErrors[keyof TaskToggleErrors]
+
+export type TaskToggleResponses = {
+  /**
+   * Updated session task status
+   */
+  200: {
+    directory: string
+    enabled: boolean
+    version: number
+  }
+}
+
+export type TaskToggleResponse = TaskToggleResponses[keyof TaskToggleResponses]
+
 export type SuggestionListData = {
   body?: never
   path?: never
@@ -13277,79 +13353,3 @@ export type PtyConnectResponses = {
 }
 
 export type PtyConnectResponse = PtyConnectResponses[keyof PtyConnectResponses]
-
-export type TaskStatusData = {
-  body?: never
-  path: {
-    sessionID: string
-  }
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/session/{sessionID}/task"
-}
-
-export type TaskStatusErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * NotFoundError
-   */
-  404: NotFoundError
-}
-
-export type TaskStatusError = TaskStatusErrors[keyof TaskStatusErrors]
-
-export type TaskStatusResponses = {
-  /**
-   * Session task status
-   */
-  200: {
-    directory: string
-    enabled: boolean
-    version: number
-  }
-}
-
-export type TaskStatusResponse = TaskStatusResponses[keyof TaskStatusResponses]
-
-export type TaskToggleData = {
-  body?: never
-  path: {
-    sessionID: string
-  }
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/session/{sessionID}/task/toggle"
-}
-
-export type TaskToggleErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * NotFoundError
-   */
-  404: NotFoundError
-}
-
-export type TaskToggleError = TaskToggleErrors[keyof TaskToggleErrors]
-
-export type TaskToggleResponses = {
-  /**
-   * Updated session task status
-   */
-  200: {
-    directory: string
-    enabled: boolean
-    version: number
-  }
-}
-
-export type TaskToggleResponse = TaskToggleResponses[keyof TaskToggleResponses]
