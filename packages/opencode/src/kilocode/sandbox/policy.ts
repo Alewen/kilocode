@@ -14,13 +14,19 @@ import { Changed } from "./event"
 import * as Network from "./network"
 import { SandboxConfig } from "./config"
 
+const SYMLINK_PATHS = [
+  { from: "usr/bin", to: "/bin" },
+  { from: "usr/lib", to: "/lib" },
+  { from: "usr/lib64", to: "/lib64" },
+  { from: "usr/sbin", to: "/sbin" },
+]
+
 export type Snapshot = {
   enabled: boolean
   mode: Extract<Profile["network"]["mode"], "allow" | "deny">
   version: number
   readonlyPaths: readonly string[]
   denyPaths: readonly string[]
-  symlinkPaths: readonly { from: string; to: string }[]
   writablePaths: readonly string[]
 }
 
@@ -173,7 +179,6 @@ export function profile(
   extraWritable?: readonly string[],
   readonlyPaths?: readonly string[],
   denyPaths?: readonly string[],
-  symlinkPaths?: readonly { from: string; to: string }[],
 ): Profile {
   const raw = computeWritable(ctx, extraWritable)
   const key = scanKey(scanTargets(raw, readonlyPaths as string[] | undefined, denyPaths as string[] | undefined))
@@ -188,20 +193,16 @@ export function profile(
     path.join(Global.Path.data, "session-export.db-shm"),
     path.join(Global.Path.data, "session-export.db-wal"),
   ]
+  const kiloBinDir = path.dirname(process.execPath)
   return {
     filesystem: {
       allowWrite: writable,
       denyWrite: [],
       denyNames: [".git"],
       temporaryDirectory: Global.Path.tmp,
-      readonlyPaths: [...(readonlyPaths ?? ["/usr", "/etc"]), ...dbFiles],
+      readonlyPaths: [...(readonlyPaths ?? ["/usr", "/etc"]), kiloBinDir, ...dbFiles],
       denyPaths: [...new Set([...(denyPaths ?? ["/home", "/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"]), Global.Path.data, Global.Path.cache, Global.Path.config])],
-      symlinkPaths: symlinkPaths ?? [
-        { from: "usr/bin", to: "/bin" },
-        { from: "usr/lib", to: "/lib" },
-        { from: "usr/lib64", to: "/lib64" },
-        { from: "usr/sbin", to: "/sbin" },
-      ],
+      symlinkPaths: SYMLINK_PATHS,
       protectedPaths: preScanned,
     },
     network: {
@@ -237,7 +238,6 @@ const snapshot = Effect.fn("SandboxPolicy.snapshot")(function* (sessionID: Sessi
     version: 0,
     readonlyPaths: resolved.readonlyPaths,
     denyPaths: resolved.denyPaths,
-    symlinkPaths: resolved.symlinkPaths,
     writablePaths: resolved.writablePaths,
   }
   snapshots.set(id, next)
@@ -323,7 +323,6 @@ export const inherit = Effect.fn("SandboxPolicy.inherit")(function* (
                 version: child.version + 1,
                 readonlyPaths: source.readonlyPaths,
                 denyPaths: source.denyPaths,
-                symlinkPaths: source.symlinkPaths,
                 writablePaths: source.writablePaths,
               }
             : { ...parent, version: 0 }
@@ -399,7 +398,6 @@ function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) 
         extraWritable,
         current.state.readonlyPaths,
         current.state.denyPaths,
-        current.state.symlinkPaths,
       ),
       effect,
     )

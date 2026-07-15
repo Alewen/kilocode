@@ -388,16 +388,10 @@ export namespace KilocodeConfig {
 
   const SBOX_READONLY_DEFAULT = ["/usr", "/etc"]
   const SBOX_DENY_DEFAULT = ["/home", "/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"]
-  const SBOX_SYMLINK_DEFAULT = [
-    { from: "usr/bin", to: "/bin" },
-    { from: "usr/lib", to: "/lib" },
-    { from: "usr/lib64", to: "/lib64" },
-    { from: "usr/sbin", to: "/sbin" },
-  ]
 
   /**
-   * Ensure the global config has sandbox.readonly_paths, sandbox.deny_paths
-   * and sandbox.symlink_paths with sensible defaults. Skips if all keys already exist.
+   * Ensure the global config has sandbox.readonly_paths and sandbox.deny_paths
+   * with sensible defaults. Skips if both keys already exist.
    */
   export async function migrateSandboxDefaultPaths() {
     const files = GLOBAL_CONFIG_FILES.map((f) => path.join(Global.Path.config, f))
@@ -414,9 +408,8 @@ export namespace KilocodeConfig {
     const sbox = isRecord(data.sandbox) ? (data.sandbox as Record<string, unknown>) : null
     const hasReadonly = sbox && Array.isArray(sbox.readonly_paths)
     const hasDeny = sbox && Array.isArray(sbox.deny_paths)
-    const hasSymlink = sbox && Array.isArray(sbox.symlink_paths)
 
-    if (hasReadonly && hasDeny && hasSymlink) return
+    if (hasReadonly && hasDeny) return
 
     if (!target.endsWith(".jsonc")) {
       const merged = {
@@ -425,7 +418,6 @@ export namespace KilocodeConfig {
           ...(sbox ?? {}),
           ...(hasReadonly ? {} : { readonly_paths: SBOX_READONLY_DEFAULT }),
           ...(hasDeny ? {} : { deny_paths: SBOX_DENY_DEFAULT }),
-          ...(hasSymlink ? {} : { symlink_paths: SBOX_SYMLINK_DEFAULT }),
         },
       }
       await Bun.write(target, JSON.stringify(merged, null, 2))
@@ -442,9 +434,6 @@ export namespace KilocodeConfig {
     }
     if (!hasDeny) {
       updated = applyEdits(updated, modify(updated, ["sandbox", "deny_paths"], SBOX_DENY_DEFAULT, { formattingOptions: { insertSpaces: true, tabSize: 2 } }))
-    }
-    if (!hasSymlink) {
-      updated = applyEdits(updated, modify(updated, ["sandbox", "symlink_paths"], SBOX_SYMLINK_DEFAULT, { formattingOptions: { insertSpaces: true, tabSize: 2 } }))
     }
     if (updated !== text) {
       await Bun.write(target, updated)

@@ -265,6 +265,14 @@ async function main() {
   await copyTreeSitterResources(sourceBinPath, targetBinPath)
   await copySandboxResources(sourceBinPath, targetBinPath)
   await copyKiloSandboxWorker(sourceBinPath, targetBinPath)
+
+  // Copy bundled ripgrep alongside the CLI binary
+  const sourceRg = join(dirname(sourceBinPath), "rg")
+  if (existsSync(sourceRg)) {
+    await $`cp ${sourceRg} ${join(targetBinDir, "rg")}`
+    chmodSync(join(targetBinDir, "rg"), 0o755)
+    log(`Copied ripgrep from ${relative(kiloVscodeDir, sourceRg)}`)
+  }
   chmodSync(targetBinPath, 0o755)
   await ensureLocalHelpers()
 

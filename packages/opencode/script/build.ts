@@ -22,6 +22,7 @@ import pkg from "../package.json"
 // kilocode_change start
 import { LanceDBRuntime } from "../src/kilocode/lancedb"
 import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
+import { downloadRipgrep } from "./kilocode/build-rg"
 // kilocode_change end
 
 // Load migrations from migration directories
@@ -344,6 +345,10 @@ for (const item of targets) {
   await copyTreeSitterWasms(path.resolve(dir, `dist/${name}/bin`))
   await copyKiloConsole(kiloConsoleDist, path.resolve(dir, `dist/${name}/bin`))
   await KiloSandboxWorker.copy(kiloSandboxWorker, path.resolve(dir, `dist/${name}/bin`))
+
+  // Download ripgrep alongside the kilo binary
+  const rgTarget = `${item.os}-${item.arch}`
+  await downloadRipgrep(rgTarget, path.resolve(dir, `dist/${name}/bin`))
 
   if (item.os === "linux") {
     const interpreters: Record<string, string> = {

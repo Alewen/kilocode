@@ -6,8 +6,8 @@
  * Used during development so the VS Code extension always has an up-to-date
  * CLI backend without manual rebuild steps.
  */
-import { watch, chmodSync } from "node:fs"
-import { join, relative } from "node:path"
+import { watch, chmodSync, existsSync } from "node:fs"
+import { join, relative, dirname } from "node:path"
 import { $ } from "bun"
 import { copySandboxResources, copyTreeSitterResources } from "../src/services/cli-backend/cli-resources"
 
@@ -61,6 +61,15 @@ async function rebuild() {
     await copyTreeSitterResources(source, targetBinPath)
     await copySandboxResources(source, targetBinPath)
     chmodSync(targetBinPath, 0o755)
+
+    // Copy bundled ripgrep alongside the CLI binary
+    const sourceRg = join(dirname(source), "rg")
+    if (existsSync(sourceRg)) {
+      const targetRg = join(targetBinDir, "rg")
+      await $`cp ${sourceRg} ${targetRg}`
+      chmodSync(targetRg, 0o755)
+      log(`Ripgrep updated: ${relative(packagesDir, sourceRg)} -> bin/rg`)
+    }
 
     const elapsed = ((performance.now() - start) / 1000).toFixed(1)
     log(`Binary updated (${elapsed}s): ${relative(packagesDir, source)} -> bin/kilo`)

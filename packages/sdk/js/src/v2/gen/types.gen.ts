@@ -1601,19 +1601,6 @@ export type Config = {
      * Paths to exclude from the sandbox (mounted as empty tmpfs)
      */
     deny_paths?: Array<string>
-    /**
-     * Symlinks to create inside the sandbox
-     */
-    symlink_paths?: Array<{
-      /**
-       * Symlink target (relative to sandbox root)
-       */
-      from: string
-      /**
-       * Symlink location inside sandbox
-       */
-      to: string
-    }>
   }
   model?: string
   small_model?: string

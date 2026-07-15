@@ -84,6 +84,15 @@ for (const config of targets) {
   await copySandboxResources(sourceBinary, targetBinary)
   await copyKiloSandboxWorker(sourceBinary, targetBinary)
 
+  // Copy bundled ripgrep alongside the CLI binary
+  const sourceRg = join(cliDistDir, config.cliDir, "bin", "rg")
+  if (existsSync(sourceRg)) {
+    const targetRg = join(binDir, "rg")
+    await $`cp ${sourceRg} ${targetRg}`
+    chmodSync(targetRg, 0o755)
+    console.log(`  📥 Copied ripgrep from ${config.cliDir}/bin/rg`)
+  }
+
   if (config.binary !== "kilo.exe") {
     chmodSync(targetBinary, 0o755)
   }

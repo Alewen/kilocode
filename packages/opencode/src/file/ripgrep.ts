@@ -290,6 +290,11 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | ChildPro
 
       const filepath = yield* Effect.cached(
         Effect.gen(function* () {
+          // kilocode_change start - check for bundled rg alongside the kilo binary first
+          const bundled = path.join(path.dirname(process.execPath), `rg${process.platform === "win32" ? ".exe" : ""}`)
+          if (yield* fs.isFile(bundled).pipe(Effect.orDie)) return bundled
+          // kilocode_change end
+
           // kilocode_change start - Git for Windows can expose an MSYS rg.exe that fails when spawned natively
           const system = yield* Effect.sync(() => (process.platform === "win32" ? undefined : which("rg")))
           if (system && (yield* fs.isFile(system).pipe(Effect.orDie))) return system
