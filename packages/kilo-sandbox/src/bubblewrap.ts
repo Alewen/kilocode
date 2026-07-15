@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process"
-import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs"
 import path from "node:path"
 import { Effect, PlatformError } from "effect"
 import type { Backend, Launch, Support } from "./backend"
@@ -151,7 +151,10 @@ export function generate(
     entries.push({ depth: p.split("/").length - 1, args: ["--tmpfs", p] })
   }
   for (const s of profile.filesystem.symlinkPaths ?? []) {
-    entries.push({ depth: s.to.split("/").length - 1, args: ["--symlink", s.from, s.to] })
+    entries.push({
+      depth: s.to.split("/").length - 1,
+      args: [path.isAbsolute(s.from) ? "--bind" : "--symlink", s.from, s.to],
+    })
   }
   for (const p of profile.filesystem.readonlyPaths ?? []) {
     entries.push({ depth: p.split("/").length - 1, args: ["--ro-bind", p, p] })
@@ -293,6 +296,9 @@ export const bubblewrap: Backend = {
   prepare: (profile, launch) =>
     Effect.try({
       try: () => {
+        // kilocode_change - ensure the temporary directory exists on the host before bwrap uses it
+        const tmp = profile.filesystem.temporaryDirectory
+        if (tmp) mkdirSync(tmp, { recursive: true })
         const selected = selection()
         return selected.executable ? generate(profile, launch, selected.executable) : launch
       },
