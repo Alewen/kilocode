@@ -11,6 +11,7 @@ import { InstanceState } from "@/effect/instance-state"
 import type { InstanceContext } from "@/project/instance-context"
 import type { SessionID } from "@/session/schema"
 import { Changed } from "./event"
+import * as Environment from "./environment"
 import * as Network from "./network"
 import { SandboxConfig } from "./config"
 
@@ -211,7 +212,7 @@ export function profile(
       allowedHosts: [],
     },
     environment: {
-      deny: ["KILO_SERVER_PASSWORD", "KILO_SERVER_USERNAME"],
+      deny: [...Environment.denied],
       set: {
         TMPDIR: Global.Path.tmp,
         TMP: Global.Path.tmp,

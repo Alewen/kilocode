@@ -10,6 +10,7 @@ import { assertExternalDirectoryEffect } from "./external-directory"
 import { trimDiff } from "./edit"
 import { LSP } from "@/lsp/lsp"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { current as sandboxProfile } from "@kilocode/sandbox" // kilocode_change
 import DESCRIPTION from "./apply_patch.txt"
 import { File } from "../file"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
@@ -76,6 +77,19 @@ export const ApplyPatchTool = Tool.define(
       for (const hunk of hunks) {
         const filePath = path.resolve(instance.directory, hunk.path)
         yield* assertExternalDirectoryEffect(ctx, filePath)
+
+        // kilocode_change start - sandbox read restriction
+        const profile = yield* sandboxProfile
+        if (profile) {
+          const readPaths = [
+            ...profile.filesystem.allowWrite.map((r) => r.path),
+            ...(profile.filesystem.readonlyPaths ?? []),
+          ]
+          if (!readPaths.some((p) => filePath === p || filePath.startsWith(p + "/"))) {
+            throw new Error(`Sandbox: file access denied — ${filePath} is not within the sandbox readable or writable paths.`)
+          }
+        }
+        // kilocode_change end
 
         switch (hunk.type) {
           case "add": {

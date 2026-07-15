@@ -5,6 +5,7 @@ import { Readable } from "stream" // kilocode_change
 import { createInterface } from "readline"
 import * as Tool from "./tool"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { current as sandboxProfile } from "@kilocode/sandbox" // kilocode_change
 import { LSP } from "@/lsp/lsp"
 import DESCRIPTION from "./read.txt"
 import { InstanceState } from "@/effect/instance-state"
@@ -245,6 +246,23 @@ export const ReadTool = Tool.define(
       if (process.platform === "win32") {
         filepath = AppFileSystem.normalizePath(filepath)
       }
+
+      // kilocode_change start - sandbox read restriction: only allow reading paths within writable or readonly mounts
+      const profile = yield* sandboxProfile
+      if (profile) {
+        const readPaths = [
+          ...profile.filesystem.allowWrite.map((r) => r.path),
+          ...(profile.filesystem.readonlyPaths ?? []),
+        ]
+        const allowed = readPaths.some((p) => filepath === p || filepath.startsWith(p + "/"))
+        if (!allowed) {
+          return yield* Effect.fail(
+            new Error(`Sandbox: file read denied — ${filepath} is not within the sandbox's readable or writable paths.`),
+          )
+        }
+      }
+      // kilocode_change end
+
       yield* reference.ensure(filepath)
       const title = path.relative(instance.worktree, filepath)
 

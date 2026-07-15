@@ -27,6 +27,7 @@ import { Context, Effect, Layer, Schema, Types } from "effect"
 import net from "net"
 import path from "path"
 import z from "zod"
+import { strip as stripSecrets } from "../sandbox/environment"
 import * as Ports from "./ports"
 
 export namespace BackgroundProcess {
@@ -580,9 +581,8 @@ export namespace BackgroundProcess {
       ...(id ? { KILO_BACKGROUND_PROCESS_ID: id } : {}),
       ...(token ? { KILO_BACKGROUND_PROCESS_TOKEN: token } : {}),
     }
-    delete result.KILO_SERVER_PASSWORD
-    delete result.KILO_SERVER_USERNAME
     delete result.KILO_BACKGROUND_PROCESS_PORTS
+    stripSecrets(result)
     return result
   }
 

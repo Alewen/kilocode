@@ -18,7 +18,10 @@ export namespace ConfigVariableGuard {
     return err instanceof BlockedError || (typeof err === "object" && err !== null && (err as any).blocked === true)
   }
 
-  const secret = new Set(["KILO_SERVER_PASSWORD", "KILO_SERVER_USERNAME"])
+  import { denied } from "../sandbox/environment"
+
+const secret = new Set<string>()
+for (const key of denied) secret.add(key)
 
   export function env(name: string) {
     return !secret.has(name.toUpperCase())

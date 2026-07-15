@@ -14,6 +14,7 @@ import type { Disp, Proc } from "#pty"
 import { Context, Effect, Layer, Schema, Types } from "effect"
 import path from "path"
 import stripAnsi from "strip-ansi"
+import { strip as stripSecrets } from "../sandbox/environment"
 import z from "zod"
 
 export namespace InteractiveTerminal {
@@ -226,8 +227,7 @@ export namespace InteractiveTerminal {
     env.TERM = "xterm-256color"
     env.KILO_TERMINAL = "1"
     env.KILO_INTERACTIVE_TERMINAL = "1"
-    delete env.KILO_SERVER_PASSWORD
-    delete env.KILO_SERVER_USERNAME
+    stripSecrets(env)
     if (process.platform === "win32") {
       env.LC_ALL = "C.UTF-8"
       env.LC_CTYPE = "C.UTF-8"

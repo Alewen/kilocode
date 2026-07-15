@@ -7,6 +7,7 @@ import { lazy } from "@opencode-ai/core/util/lazy"
 import { Plugin } from "@/plugin"
 import { Shell } from "@/shell/shell"
 import { KiloPtySelfCommand } from "@/kilocode/pty/self-command" // kilocode_change
+import { strip as stripSecrets } from "@/kilocode/sandbox/environment" // kilocode_change
 import type { Proc } from "#pty"
 import * as Log from "@opencode-ai/core/util/log"
 import { PtyID } from "./schema"
@@ -212,14 +213,10 @@ export const layer = Layer.effect(
         KILO_PTY_ID: id, // kilocode_change
       } as Record<string, string>
       // kilocode_change start
-      // Don't leak the kilo server's auth credential into user shells.
-      // Anything the shell forks (npm post-install scripts, `curl | bash`,
-      // supply-chain-compromised tools) would otherwise see the password
-      // with zero effort. Users who genuinely need `kilo run`/`kilo tui
-      // attach` to auto-connect from inside a kilo-spawned terminal can
-      // pass `--password` explicitly or re-export the env themselves.
-      delete env.KILO_SERVER_PASSWORD
-      delete env.KILO_SERVER_USERNAME
+      // Don't leak secrets into user shells — Kilo auth credentials and
+      // third-party API keys would otherwise be exposed to anything the
+      // shell forks with zero effort.
+      stripSecrets(env)
       // kilocode_change end
 
       if (process.platform === "win32") {

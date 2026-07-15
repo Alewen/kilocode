@@ -10,6 +10,7 @@ import { File } from "../file"
 import { FileWatcher } from "../file/watcher"
 import { Format } from "../format"
 import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { current as sandboxProfile } from "@kilocode/sandbox" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
 import { trimDiff, buildFileDiff } from "./edit" // kilocode_change
 import { assertExternalDirectoryEffect } from "./external-directory"
@@ -45,6 +46,19 @@ export const WriteTool = Tool.define(
             ? params.filePath
             : path.join(instance.directory, params.filePath)
           yield* assertExternalDirectoryEffect(ctx, filepath)
+
+          // kilocode_change start - sandbox read restriction
+          const profile = yield* sandboxProfile
+          if (profile) {
+            const readPaths = [
+              ...profile.filesystem.allowWrite.map((r) => r.path),
+              ...(profile.filesystem.readonlyPaths ?? []),
+            ]
+            if (!readPaths.some((p) => filepath === p || filepath.startsWith(p + "/"))) {
+              throw new Error(`Sandbox: file access denied — ${filepath} is not within the sandbox readable or writable paths.`)
+            }
+          }
+          // kilocode_change end
 
           const exists = yield* fs.existsSafe(filepath)
           // kilocode_change start - encoding-aware read; Encoding.read strips UTF-8 BOMs so
