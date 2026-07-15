@@ -386,12 +386,12 @@ export namespace KilocodeConfig {
 
   // ── Sandbox default paths migration ────────────────────────────────────
 
-  const SBOX_READONLY_DEFAULT = ["/usr", "/etc"]
-  const SBOX_DENY_DEFAULT = ["/home", "/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"]
+  const SBOX_DENY_DEFAULT = ["/home", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"]
 
   /**
-   * Ensure the global config has sandbox.readonly_paths and sandbox.deny_paths
-   * with sensible defaults. Skips if both keys already exist.
+   * Ensure the global config has sandbox.readonly_paths, writable_paths, and deny_paths
+   * with sensible defaults. Each key is checked independently — an existing key is left
+   * untouched; a missing key gets its default value.
    */
   export async function migrateSandboxDefaultPaths() {
     const files = GLOBAL_CONFIG_FILES.map((f) => path.join(Global.Path.config, f))
@@ -407,16 +407,18 @@ export namespace KilocodeConfig {
     const data = parseJsonc(text) ?? {}
     const sbox = isRecord(data.sandbox) ? (data.sandbox as Record<string, unknown>) : null
     const hasReadonly = sbox && Array.isArray(sbox.readonly_paths)
+    const hasWritable = sbox && Array.isArray(sbox.writable_paths)
     const hasDeny = sbox && Array.isArray(sbox.deny_paths)
 
-    if (hasReadonly && hasDeny) return
+    if (hasReadonly && hasWritable && hasDeny) return
 
     if (!target.endsWith(".jsonc")) {
       const merged = {
         ...data,
         sandbox: {
           ...(sbox ?? {}),
-          ...(hasReadonly ? {} : { readonly_paths: SBOX_READONLY_DEFAULT }),
+          ...(hasReadonly ? {} : { readonly_paths: [] }),
+          ...(hasWritable ? {} : { writable_paths: [] }),
           ...(hasDeny ? {} : { deny_paths: SBOX_DENY_DEFAULT }),
         },
       }
@@ -430,7 +432,10 @@ export namespace KilocodeConfig {
       updated = applyEdits(updated, modify(updated, ["sandbox"], {}, { formattingOptions: { insertSpaces: true, tabSize: 2 } }))
     }
     if (!hasReadonly) {
-      updated = applyEdits(updated, modify(updated, ["sandbox", "readonly_paths"], SBOX_READONLY_DEFAULT, { formattingOptions: { insertSpaces: true, tabSize: 2 } }))
+      updated = applyEdits(updated, modify(updated, ["sandbox", "readonly_paths"], [], { formattingOptions: { insertSpaces: true, tabSize: 2 } }))
+    }
+    if (!hasWritable) {
+      updated = applyEdits(updated, modify(updated, ["sandbox", "writable_paths"], [], { formattingOptions: { insertSpaces: true, tabSize: 2 } }))
     }
     if (!hasDeny) {
       updated = applyEdits(updated, modify(updated, ["sandbox", "deny_paths"], SBOX_DENY_DEFAULT, { formattingOptions: { insertSpaces: true, tabSize: 2 } }))

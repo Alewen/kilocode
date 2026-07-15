@@ -19,6 +19,7 @@ const SYMLINK_PATHS = [
   { from: "usr/lib", to: "/lib" },
   { from: "usr/lib64", to: "/lib64" },
   { from: "usr/sbin", to: "/sbin" },
+  { from: "/tmp/kilo", to: "/tmp" },
 ]
 
 export type Snapshot = {
@@ -200,8 +201,8 @@ export function profile(
       denyWrite: [],
       denyNames: [".git"],
       temporaryDirectory: Global.Path.tmp,
-      readonlyPaths: [...(readonlyPaths ?? ["/usr", "/etc"]), kiloBinDir, ...dbFiles],
-      denyPaths: [...new Set([...(denyPaths ?? ["/home", "/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"]), Global.Path.data, Global.Path.cache, Global.Path.config])],
+      readonlyPaths: ["/usr", "/etc", kiloBinDir, ...(readonlyPaths ?? []), ...dbFiles],
+      denyPaths: [...new Set([...(denyPaths ?? ["/home", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"]), Global.Path.data, Global.Path.cache, Global.Path.config])].filter((p) => p !== "/tmp"),
       symlinkPaths: SYMLINK_PATHS,
       protectedPaths: preScanned,
     },

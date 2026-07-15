@@ -29,14 +29,13 @@ export namespace SandboxConfig {
     }).annotate({ description: "Sandbox configuration for agent tools" })
   export type Info = Schema.Schema.Type<typeof Info>
 
-  const DEFAULT_READONLY = ["/usr", "/etc"]
   const DEFAULT_DENY = ["/home", "/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"]
 
   export function resolve(config: { sandbox?: Info }) {
     return {
       enabled: config.sandbox?.enabled ?? false,
       mode: config.sandbox?.network ?? "deny",
-      readonlyPaths: config.sandbox?.readonly_paths ?? DEFAULT_READONLY,
+      readonlyPaths: config.sandbox?.readonly_paths ?? [],
       denyPaths: config.sandbox?.deny_paths ?? DEFAULT_DENY,
       writablePaths: config.sandbox?.writable_paths ?? [],
     }
