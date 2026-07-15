@@ -1200,6 +1200,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "sessionCostAlertResponse":
           await this.handleCostAlertResponse(message.sessionID, message.limit, message.response)
           break
+        case "requestTaskEnabledState":
+          await this.handleRequestTaskStatus(message.sessionID)
+          break
+        case "toggleTaskEnabled":
+          await this.handleToggleTask(message.sessionID)
+          break
         case "requestSandboxStatus":
           await this.fetchAndSendSandboxStatus(message.sessionID)
           break
@@ -2694,6 +2700,33 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         revision,
         requestID,
       })
+    }
+  }
+
+  private async handleRequestTaskStatus(sessionID: string): Promise<void> {
+    const client = this.client
+    const task = client?.task
+    if (!task?.status || this.connectionState !== "connected") {
+      this.postMessage({ type: "taskEnabledState", enabled: true })
+      return
+    }
+    try {
+      const { data } = await task.status({ sessionID }, { throwOnError: true })
+      this.postMessage({ type: "taskEnabledState", enabled: data.enabled })
+    } catch {
+      this.postMessage({ type: "taskEnabledState", enabled: true })
+    }
+  }
+
+  private async handleToggleTask(sessionID: string): Promise<void> {
+    const client = this.client
+    const task = client?.task
+    if (!task?.toggle || this.connectionState !== "connected") return
+    try {
+      const { data } = await task.toggle({ sessionID }, { throwOnError: true })
+      this.postMessage({ type: "taskEnabledState", enabled: data.enabled })
+    } catch {
+      // ignore
     }
   }
 

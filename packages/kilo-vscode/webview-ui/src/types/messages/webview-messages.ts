@@ -969,6 +969,16 @@ export interface AgentManagerOpenSessionsMessage {
   sessionIDs: string[]
 }
 
+export interface RequestTaskEnabledStateMessage {
+  type: "requestTaskEnabledState"
+  sessionID: string
+}
+
+export interface ToggleTaskEnabledMessage {
+  type: "toggleTaskEnabled"
+  sessionID: string
+}
+
 export interface RequestAutoApproveStateMessage {
   type: "requestAutoApproveState"
 }
@@ -1353,6 +1363,8 @@ export type WebviewMessage =
   | SaveImageRequest
   | SetDefaultBaseBranchRequest
   | AgentManagerOpenSessionsMessage
+  | RequestTaskEnabledStateMessage
+  | ToggleTaskEnabledMessage
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
   | RequestSandboxStatusMessage

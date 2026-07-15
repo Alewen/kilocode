@@ -164,6 +164,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const [text, setText] = createSignal("")
   const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
   const [enhancing, setEnhancing] = createSignal(false)
+  const [taskEnabled, setTaskEnabled] = createSignal(true)
   const [autoApprove, setAutoApprove] = createSignal(false)
   const [sandboxes, setSandboxes] = createSignal<Record<string, SandboxState>>({})
   const [sandboxDefault, setSandboxDefault] = createSignal<SandboxDefaultState>()
@@ -464,6 +465,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const unsubAutoApprove = vscode.onMessage((message) => {
+    if (message.type === "taskEnabledState") {
+      console.log("[Task] state update", { enabled: message.enabled })
+      setTaskEnabled(message.enabled)
+    }
     if (message.type === "autoApproveState") {
       setAutoApprove(message.active)
     }
@@ -699,6 +704,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       }
     }
   })
+  const currentSid = sid()
+  if (currentSid) vscode.postMessage({ type: "requestTaskEnabledState", sessionID: currentSid })
   vscode.postMessage({ type: "requestAutoApproveState" })
 
   onCleanup(() => {
@@ -1370,6 +1377,31 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               class={`prompt-status-button ${autoApprove() ? "prompt-status-button--active" : ""}`}
             >
               <Icon name="shield" size="small" />
+            </Button>
+          </Tooltip>
+          <Tooltip
+            value={
+              taskEnabled()
+                ? "Task 已开启"
+                : "Task 已禁用"
+            }
+            placement="top"
+          >
+            <Button
+              variant="ghost"
+              size="small"
+              onClick={() => {
+                const s = sid()
+                if (s) {
+                  console.log("[Task] toggle click", { sessionID: s, from: taskEnabled() })
+                  vscode.postMessage({ type: "toggleTaskEnabled", sessionID: s })
+                }
+              }}
+              aria-label={taskEnabled() ? "Disable task" : "Enable task"}
+              aria-pressed={taskEnabled()}
+              class={`prompt-status-button ${taskEnabled() ? "prompt-status-button--active" : ""}`}
+            >
+              <Icon name="task" size="small" />
             </Button>
           </Tooltip>
           <Show when={sandboxVisible()}>

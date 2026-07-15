@@ -320,6 +320,10 @@ import type {
   SandboxSupportResponses,
   SandboxToggleErrors,
   SandboxToggleResponses,
+  TaskStatusErrors,
+  TaskStatusResponses,
+  TaskToggleErrors,
+  TaskToggleResponses,
   SessionAbortErrors,
   SessionAbortResponses,
   SessionChildrenErrors,
@@ -8393,6 +8397,72 @@ export class Sandbox extends HeyApiClient {
   }
 }
 
+export class Task extends HeyApiClient {
+  /**
+   * Get session task status
+   *
+   * Get the task enabled state for one session.
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<TaskStatusResponses, TaskStatusErrors, ThrowOnError>({
+      url: "/session/{sessionID}/task",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Toggle session task
+   *
+   * Toggle the task enabled state for one session.
+   */
+  public toggle<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<TaskToggleResponses, TaskToggleErrors, ThrowOnError>({
+      url: "/session/{sessionID}/task/toggle",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Suggestion extends HeyApiClient {
   /**
    * List pending suggestions
@@ -9135,6 +9205,11 @@ export class KiloClient extends HeyApiClient {
   private _sandbox?: Sandbox
   get sandbox(): Sandbox {
     return (this._sandbox ??= new Sandbox({ client: this.client }))
+  }
+
+  private _task?: Task
+  get task(): Task {
+    return (this._task ??= new Task({ client: this.client }))
   }
 
   private _suggestion?: Suggestion

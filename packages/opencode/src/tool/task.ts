@@ -20,6 +20,7 @@ import { Cause, Effect, Exit, Schema, Scope } from "effect"
 import { EffectBridge } from "@/effect/bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
+import * as TaskState from "@/kilocode/task/state" // kilocode_change
 
 export interface TaskPromptOps {
   cancel(sessionID: SessionID): Effect.Effect<void>
@@ -137,6 +138,15 @@ export const TaskTool = Tool.define(
       if (runInBackground && !flags.experimentalBackgroundSubagents) {
         return yield* Effect.fail(new Error("Background subagents require KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true"))
       }
+
+      // kilocode_change start - check task enabled state before proceeding
+      const taskState = yield* TaskState.status()
+      if (!taskState.enabled) {
+        return yield* Effect.fail(
+          new Error("Task execution is disabled in this workspace."),
+        )
+      }
+      // kilocode_change end
 
       if (!ctx.extra?.bypassAgentCheck) {
         yield* ctx.ask({

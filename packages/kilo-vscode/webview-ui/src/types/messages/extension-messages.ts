@@ -693,6 +693,11 @@ export interface AutoApproveStateMessage {
   active: boolean
 }
 
+export interface TaskEnabledStateMessage {
+  type: "taskEnabledState"
+  enabled: boolean
+}
+
 export interface SandboxStatusMessage {
   type: "sandboxStatus"
   sessionID: string
@@ -1150,6 +1155,7 @@ export type ExtensionMessage =
   | AgentManagerRunStatusMessage
   | AgentManagerKeybindingsMessage
   | AutoApproveStateMessage
+  | TaskEnabledStateMessage
   | SandboxStatusMessage
   | SandboxDefaultStatusMessage
   | SandboxStatusErrorMessage
