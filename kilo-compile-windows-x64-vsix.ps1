@@ -114,16 +114,25 @@ $env:KILO_VERSION = $Version
 $env:KILO_CHANNEL = "latest"
 bun run script/build.ts --single
 
-# 步骤 3: 编译 VS Code 扩展
-Write-Host "[3/5] 编译扩展代码..."
+# 步骤 3: 复制 CLI 二进制到扩展目录
+Write-Host "[3/5] 复制 CLI 二进制..."
+$CLI_BIN = Join-Path $ScriptDir "packages\opencode\dist\@kilocode\cli-windows-x64\bin"
+$EXT_BIN = Join-Path $ScriptDir "packages\kilo-vscode\bin"
+Write-Host "  源: $CLI_BIN"
+Write-Host "  目标: $EXT_BIN"
+New-Item -ItemType Directory -Force -Path $EXT_BIN | Out-Null
+Copy-Item -Path (Join-Path $CLI_BIN "*") -Destination $EXT_BIN -Recurse -Force
+Write-Host "  复制完成"
+
+# 步骤 4: 编译扩展代码
+Write-Host "[4/5] 编译扩展代码..."
 Set-Location -Path (Join-Path -Path $ScriptDir -ChildPath "packages\kilo-vscode")
 Write-Host "  当前目录: $(Get-Location)"
 Write-Host ""
-bun run compile
-
-# 步骤 4: 确保 CLI 二进制权限正确（Windows 不需要 chmod）
-Write-Host "[4/5] 检查 CLI 二进制..."
-Write-Host "  跳过权限设置（Windows 平台无需 chmod）"
+bun run rebuild-sdk
+bun run typecheck
+bun run lint
+bun esbuild.js --production
 
 # 步骤 5: 打包 VSIX
 Write-Host "[5/5] 打包 VSIX..."
