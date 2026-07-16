@@ -5,7 +5,7 @@ import { BusEvent } from "@/bus/bus-event"
 import { EffectBridge } from "@/effect/bridge"
 import { Session } from "@/session/session"
 import { MessageID, SessionID } from "@/session/schema"
-import { Database, eq, and, gte, isNull, desc, like, inArray, lt, or } from "@/storage/db"
+import { Database, eq, and, gte, isNull, desc, like, inArray, lt, or, sql } from "@/storage/db"
 import type { SQL } from "@/storage/db"
 import { ProjectTable } from "@/project/project.sql"
 import { ProjectID } from "@/project/schema"
@@ -144,9 +144,13 @@ export namespace KiloSession {
   export function filters(input: { projectID: ProjectID; directory?: string }): SQL[] {
     const dir = input.directory ? Filesystem.resolve(input.directory) : undefined
     if (!dir) return [eq(SessionTable.project_id, input.projectID)]
+    const dirMatch = process.platform === "win32"
+      ? sql`REPLACE(${SessionTable.directory}, '\\', '/')`
+      : SessionTable.directory
+    const key = process.platform === "win32" ? dir.replace(/\\/g, "/") : dir
     return [
-      or(eq(SessionTable.project_id, input.projectID), eq(SessionTable.directory, dir)),
-      eq(SessionTable.directory, dir),
+      or(eq(SessionTable.project_id, input.projectID), eq(dirMatch, key)),
+      eq(dirMatch, key),
     ].filter((item): item is SQL => item !== undefined)
   }
 
