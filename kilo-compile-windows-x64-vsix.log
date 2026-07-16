@@ -1,0 +1,283 @@
+PS C:\tmp\v7.3.16> .\kilo-compile-windows-x64-vsix.ps1
+==========================================
+ 源码目录: C:\tmp\v7.3.16 打包 Kilo VS Code 扩展 (Windows-x64)
+==========================================
+[1/5] 检查根目录依赖...
+  当前目录: C:\tmp\v7.3.16
+
+  正在安装依赖...
+bun install v1.3.14 (0d9b296a)
+  ⚙️  tree-sitter-bash [5]
+
+gyp info it worked if it ends with ok
+gyp info using node-gyp@12.2.0
+gyp info using node@24.16.0 | win32 | x64
+gyp info find Python using Python version 3.12.10 found at "C:\Users\shaoke\AppData\Local\Programs\Python\Python312\python.exe"
+gyp ERR! find VS
+gyp ERR! find VS --msvs_version was not set on the command line
+gyp ERR! find VS VCINSTALLDIR not set, not running in VS Command Prompt
+gyp ERR! find VS could not use PowerShell to find Visual Studio 2017 or newer, try re-running with '--loglevel silly' for more details.
+gyp ERR! find VS
+gyp ERR! find VS Failure details: undefined
+gyp ERR! find VS checking VS2022 (17.14.37411.7) found at:
+gyp ERR! find VS "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+gyp ERR! find VS - found "Visual Studio C++ core features"
+gyp ERR! find VS - found VC++ toolset: v143
+gyp ERR! find VS - missing any Windows SDK
+gyp ERR! find VS could not find a version of Visual Studio 2017 or newer to use
+gyp ERR! find VS not looking for VS2017 as it is only supported up to Node.js 21
+gyp ERR! find VS not looking for VS2017 as it is only supported up to Node.js 21
+gyp ERR! find VS not looking for VS2017 as it is only supported up to Node.js 21
+gyp ERR! find VS not looking for VS2015 as it is only supported up to Node.js 18
+gyp ERR! find VS not looking for VS2013 as it is only supported up to Node.js 8
+gyp ERR! find VS
+gyp ERR! find VS **************************************************************
+gyp ERR! find VS You need to install the latest version of Visual Studio
+gyp ERR! find VS including the "Desktop development with C++" workload.
+gyp ERR! find VS For more information consult the documentation at:
+gyp ERR! find VS https://github.com/nodejs/node-gyp#on-windows
+gyp ERR! find VS **************************************************************
+gyp ERR! find VS
+gyp ERR! configure error
+gyp ERR! stack Error: Could not find any Visual Studio installation to use
+gyp ERR! stack at VisualStudioFinder.fail (C:\tmp\v7.3.16\node_modules\.bun\node-gyp@12.2.0\node_modules\node-gyp\lib\find-visualstudio.js:118:11)
+gyp ERR! stack at VisualStudioFinder.findVisualStudio (C:\tmp\v7.3.16\node_modules\.bun\node-gyp@12.2.0\node_modules\node-gyp\lib\find-visualstudio.js:74:17)
+gyp ERR! stack at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+gyp ERR! stack at async createBuildDir (C:\tmp\v7.3.16\node_modules\.bun\node-gyp@12.2.0\node_modules\node-gyp\lib\configure.js:112:18)
+gyp ERR! stack at async run (C:\tmp\v7.3.16\node_modules\.bun\node-gyp@12.2.0\node_modules\node-gyp\bin\node-gyp.js:81:18)
+gyp ERR! System Windows_NT 10.0.19045
+gyp ERR! command "C:\\Program Files\\nodejs\\node.exe" "C:\\tmp\\v7.3.16\\node_modules\\.bun\\node-gyp@12.2.0\\node_modules\\node-gyp\\bin\\node-gyp.js" "rebuild"
+gyp ERR! cwd C:\tmp\v7.3.16\node_modules\.bun\tree-sitter-powershell@0.25.10\node_modules\tree-sitter-powershell
+gyp ERR! node -v v24.16.0
+gyp ERR! node-gyp -v v12.2.0
+gyp ERR! $npm_package_name @kilocode/kilo
+gyp ERR! $npm_package_version 7.3.16
+gyp ERR! not ok
+
+error: install script from "tree-sitter-powershell" exited with 1
+[2/5] 编译 CLI 二进制...
+  当前目录: C:\tmp\v7.3.16\packages\opencode
+
+kilo script {
+  "channel": "latest",
+  "version": "7.3.16",
+  "preview": false,
+  "release": true,
+  "team": [
+    "actions-user",
+    "kilo-maintainer[bot]",
+    "kiloconnect[bot]",
+    "kiloconnect-lite[bot]",
+    "alexkgold",
+    "arimesser",
+    "arkadiykondrashov",
+    "bturcotte520",
+    "catrielmuller",
+    "chrarnoldus",
+    "codingelves",
+    "darkogj",
+    "dependabot[bot]",
+    "dosire",
+    "DScdng",
+    "emilieschario",
+    "eshurakov",
+    "Helix-Kilo",
+    "iscekic",
+    "jeanduplessis",
+    "jobrietbergen",
+    "jrf0110",
+    "johnnyeric",
+    "alex-alecu",
+    "imanolmzd-svg",
+    "kilocode-bot",
+    "kilo-code-bot",
+    "kilo-code-bot[bot]",
+    "kirillk",
+    "lambertjosh",
+    "LigiaZ",
+    "marius-kilocode",
+    "markijbema",
+    "olearycrew",
+    "pandemicsyn",
+    "pedroheyerdahl",
+    "RSO",
+    "sbreitenother",
+    "suhailkc2025",
+    "Sureshkumars"
+  ]
+}
+Generated models-snapshot.js
+Loaded 17 migrations
+bun add v1.3.14 (0d9b296a)
+Resolving dependencies
+Resolved, downloaded and extracted [3]
+Saved lockfile
+
+$ bun run --cwd packages/opencode fix-node-pty && bun run script/setup-git.ts
+$ bun run script/fix-node-pty.ts
+$ husky
+
++ @parcel/watcher-darwin-arm64@2.5.1
++ @parcel/watcher-darwin-x64@2.5.1
++ @parcel/watcher-linux-arm64-glibc@2.5.1
++ @parcel/watcher-linux-arm64-musl@2.5.1
++ @parcel/watcher-linux-x64-glibc@2.5.1
++ @parcel/watcher-linux-x64-musl@2.5.1
++ @parcel/watcher-win32-arm64@2.5.1
+
+installed @opentui/core@0.2.2
+
+428 packages installed [2.87s]
+bun add v1.3.14 (0d9b296a)
+Resolving dependencies
+Resolved, downloaded and extracted [3]
+Saved lockfile
+
+$ bun run --cwd packages/opencode fix-node-pty && bun run script/setup-git.ts
+$ bun run script/fix-node-pty.ts
+$ husky
+
+installed @parcel/watcher@2.5.1
+
+[2.14s] done
+building @kilocode/cli-windows-x64
+copied 37 tree-sitter wasm files to C:\tmp\v7.3.16\packages\opencode\dist\@kilocode\cli-windows-x64\bin\tree-sitter
+Running smoke test: dist/@kilocode/cli-windows-x64/bin/kilo --version
+Smoke test passed: 7.3.16
+  adding: kilo.exe (172 bytes security) (deflated 64%)
+  adding: tree-sitter/ (192 bytes security) (stored 0%)
+  adding: tree-sitter/tree-sitter-bash.wasm (172 bytes security) (deflated 86%)
+  adding: tree-sitter/tree-sitter-c.wasm (172 bytes security) (deflated 88%)
+  adding: tree-sitter/tree-sitter-cpp.wasm (172 bytes security) (deflated 92%)
+  adding: tree-sitter/tree-sitter-css.wasm (172 bytes security) (deflated 83%)
+  adding: tree-sitter/tree-sitter-c_sharp.wasm (172 bytes security) (deflated 93%)
+  adding: tree-sitter/tree-sitter-dart.wasm (172 bytes security) (deflated 90%)
+  adding: tree-sitter/tree-sitter-elisp.wasm (172 bytes security) (deflated 84%)
+  adding: tree-sitter/tree-sitter-elixir.wasm (172 bytes security) (deflated 88%)
+  adding: tree-sitter/tree-sitter-elm.wasm (172 bytes security) (deflated 77%)
+  adding: tree-sitter/tree-sitter-embedded_template.wasm (172 bytes security) (deflated 63%)
+  adding: tree-sitter/tree-sitter-go.wasm (172 bytes security) (deflated 78%)
+  adding: tree-sitter/tree-sitter-html.wasm (172 bytes security) (deflated 65%)
+  adding: tree-sitter/tree-sitter-java.wasm (172 bytes security) (deflated 87%)
+  adding: tree-sitter/tree-sitter-javascript.wasm (172 bytes security) (deflated 88%)
+  adding: tree-sitter/tree-sitter-json.wasm (172 bytes security) (deflated 61%)
+  adding: tree-sitter/tree-sitter-kotlin.wasm (172 bytes security) (deflated 92%)
+  adding: tree-sitter/tree-sitter-lua.wasm (172 bytes security) (deflated 76%)
+  adding: tree-sitter/tree-sitter-objc.wasm (172 bytes security) (deflated 94%)
+  adding: tree-sitter/tree-sitter-ocaml.wasm (172 bytes security) (deflated 90%)
+  adding: tree-sitter/tree-sitter-php.wasm (172 bytes security) (deflated 89%)
+  adding: tree-sitter/tree-sitter-python.wasm (172 bytes security) (deflated 85%)
+  adding: tree-sitter/tree-sitter-ql.wasm (172 bytes security) (deflated 93%)
+  adding: tree-sitter/tree-sitter-rescript.wasm (172 bytes security) (deflated 88%)
+  adding: tree-sitter/tree-sitter-ruby.wasm (172 bytes security) (deflated 92%)
+  adding: tree-sitter/tree-sitter-rust.wasm (172 bytes security) (deflated 88%)
+  adding: tree-sitter/tree-sitter-scala.wasm (172 bytes security) (deflated 80%)
+  adding: tree-sitter/tree-sitter-solidity.wasm (172 bytes security) (deflated 90%)
+  adding: tree-sitter/tree-sitter-swift.wasm (172 bytes security) (deflated 90%)
+  adding: tree-sitter/tree-sitter-systemrdl.wasm (172 bytes security) (deflated 81%)
+  adding: tree-sitter/tree-sitter-tlaplus.wasm (172 bytes security) (deflated 95%)
+  adding: tree-sitter/tree-sitter-toml.wasm (172 bytes security) (deflated 70%)
+  adding: tree-sitter/tree-sitter-tsx.wasm (172 bytes security) (deflated 91%)
+  adding: tree-sitter/tree-sitter-typescript.wasm (172 bytes security) (deflated 91%)
+  adding: tree-sitter/tree-sitter-vue.wasm (172 bytes security) (deflated 65%)
+  adding: tree-sitter/tree-sitter-yaml.wasm (172 bytes security) (deflated 81%)
+  adding: tree-sitter/tree-sitter-zig.wasm (172 bytes security) (deflated 92%)
+  adding: tree-sitter/tree-sitter.wasm (172 bytes security) (deflated 60%)
+[3/5] 编译扩展代码...
+  当前目录: C:\tmp\v7.3.16\packages\kilo-vscode
+
+$ bun run prepare:cli-binary -- --force && bun run rebuild-sdk && bun run typecheck && bun run lint && node esbuild.js
+$ bun script/local-bin.ts --force
+[local-bin] Copied CLI binary from opencode\dist\@kilocode\cli-windows-x64\bin\kilo.exe -> bin\kilo.exe
+$ bun run --cwd ../sdk/js build
+$ bun ./script/build.ts
+$ bun run --conditions=browser ./src/index.ts generate
+[@hey-api/sdk] `instance` is deprecated. Use `operations: { strategy: "single", containerName: "KiloClient", methods: "instance" }` instead.
+@hey-api/openapi-ts v0.90.10
+
+[Job 1] ⏳ Generating from 1 input:
+[Job 1]   [1] ./openapi.json
+[Job 1] ✅ Done! Your output is in C:\tmp\v7.3.16\packages\sdk\js\src\v2\gen
+src/gen/client.gen.ts 67ms (unchanged)
+src/gen/client/client.gen.ts 67ms (unchanged)
+src/gen/client/index.ts 4ms (unchanged)
+src/gen/client/types.gen.ts 27ms (unchanged)
+src/gen/client/utils.gen.ts 59ms (unchanged)
+src/gen/core/auth.gen.ts 5ms (unchanged)
+src/gen/core/bodySerializer.gen.ts 17ms (unchanged)
+src/gen/core/params.gen.ts 19ms (unchanged)
+src/gen/core/pathSerializer.gen.ts 21ms (unchanged)
+src/gen/core/queryKeySerializer.gen.ts 11ms (unchanged)
+src/gen/core/serverSentEvents.gen.ts 31ms (unchanged)
+src/gen/core/types.gen.ts 12ms (unchanged)
+src/gen/core/utils.gen.ts 13ms (unchanged)
+src/gen/sdk.gen.ts 116ms (unchanged)
+src/gen/types.gen.ts 141ms (unchanged)
+src/v2/client.ts 111ms (unchanged)
+src/v2/data.ts 17ms (unchanged)
+src/v2/gen/client.gen.ts 9ms
+src/v2/gen/client/client.gen.ts 50ms
+src/v2/gen/client/index.ts 4ms
+src/v2/gen/client/types.gen.ts 32ms
+src/v2/gen/client/utils.gen.ts 51ms
+src/v2/gen/core/auth.gen.ts 5ms
+src/v2/gen/core/bodySerializer.gen.ts 22ms
+src/v2/gen/core/params.gen.ts 16ms
+src/v2/gen/core/pathSerializer.gen.ts 18ms
+src/v2/gen/core/queryKeySerializer.gen.ts 11ms
+src/v2/gen/core/serverSentEvents.gen.ts 31ms
+src/v2/gen/core/types.gen.ts 12ms
+src/v2/gen/core/utils.gen.ts 12ms
+src/v2/gen/sdk.gen.ts 404ms
+src/v2/gen/types.gen.ts 316ms
+src/v2/index.ts 3ms (unchanged)
+src/v2/server.ts 22ms (unchanged)
+$ bun run check-types:extension && bun run check-types:webview
+$ bun script/typecheck.ts
+$ bun script/typecheck.ts --project webview-ui/tsconfig.json
+$ eslint src webview-ui
+[watch] build started
+[watch] build started
+[watch] build started
+[watch] build started
+[watch] build started
+[watch] build started
+[watch] build finished
+[watch] build finished
+[watch] build finished
+[watch] build finished
+[watch] build finished
+[watch] build finished
+[4/5] 检查 CLI 二进制...
+  跳过权限设置（Windows 平台无需 chmod）
+[5/5] 打包 VSIX...
+  当前目录: C:\tmp\v7.3.16\packages\kilo-vscode
+
+ INFO  Files included in the VSIX:
+kilo-code-win32-x64-7.3.16.vsix
+├─ [Content_Types].xml
+├─ extension.vsixmanifest
+└─ extension/
+   ├─ LICENSE.txt [1.07 KB]
+   ├─ bunfig.toml [0.05 KB]
+   ├─ changelog.md [423.01 KB]
+   ├─ knip.json [0.6 KB]
+   ├─ package.json [34.9 KB]
+   ├─ readme.md [6.67 KB]
+   ├─ .storybook/ (1 file) [2.67 KB]
+   ├─ assets/ (6 files) [8.04 KB]
+   ├─ bin/ (40 files) [229.51 MB]
+   ├─ dist/ (82 files) [157.58 MB]
+   ├─ docs/ (72 files) [98.8 KB]
+   └─ tests/ (2 files) [3.94 KB]
+
+=> Run vsce ls --tree to see all included files.
+
+ DONE  Packaged: C:\tmp\v7.3.16\packages\kilo-vscode\kilo-code-win32-x64-7.3.16.vsix (211 files, 100.87 MB)
+ WARNING  The latest version of @vscode/vsce is 3.9.2 and you have 3.9.1.
+Update it now: npm install -g @vscode/vsce
+==========================================
+ ? 打包完成！
+ ? 文件位置: C:\tmp\v7.3.16\packages\kilo-vscode\kilo-code-win32-x64-7.3.16.vsix
+==========================================
+PS C:\tmp\v7.3.16\packages\kilo-vscode>
