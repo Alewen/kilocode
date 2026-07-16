@@ -196,15 +196,16 @@ export function profile(
     path.join(Global.Path.data, "session-export.db-wal"),
   ]
   const kiloBinDir = path.dirname(process.execPath)
+  const isWin = process.platform === "win32"
   return {
     filesystem: {
       allowWrite: writable,
       denyWrite: [],
-      denyNames: [".git"],
+      denyNames: [".git", ".svn"],
       temporaryDirectory: Global.Path.tmp,
-      readonlyPaths: ["/usr", "/etc", kiloBinDir, ...(readonlyPaths ?? []), ...dbFiles],
-      denyPaths: [...new Set([...(denyPaths ?? ["/home", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"]), Global.Path.data, Global.Path.cache, Global.Path.config])].filter((p) => p !== "/tmp"),
-      symlinkPaths: SYMLINK_PATHS,
+      readonlyPaths: [...(isWin ? [] : ["/usr", "/etc"]), kiloBinDir, ...(readonlyPaths ?? []), ...dbFiles],
+      denyPaths: [...new Set([...(denyPaths ?? (isWin ? [] : ["/home", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"])), Global.Path.data, Global.Path.cache, Global.Path.config])].filter((p) => p !== "/tmp"),
+      symlinkPaths: isWin ? [] : SYMLINK_PATHS,
       protectedPaths: preScanned,
     },
     network: {

@@ -5,6 +5,7 @@ import { current } from "./context"
 import { assertProcessNetwork, networkEnvironment } from "./network"
 import type { Profile } from "./profile"
 import { seatbelt } from "./seatbelt"
+import { winbwrap } from "./winbwrap"
 
 export interface Launch {
   readonly command: string
@@ -41,7 +42,7 @@ function select(): Backend {
     case "linux":
       return bubblewrap
     case "win32":
-      return unavailable("The Windows sandbox backend is not available")
+      return winbwrap
     default:
       return unavailable("No sandbox backend is available for this operating system")
   }

@@ -115,7 +115,7 @@ export const EditTool = Tool.define(
               ...profile.filesystem.allowWrite.map((r) => r.path),
               ...(profile.filesystem.readonlyPaths ?? []),
             ]
-            if (!readPaths.some((p) => filePath === p || filePath.startsWith(p + "/"))) {
+            if (!readPaths.some((p) => filePath === p || filePath.startsWith(p + path.sep))) {
               throw new Error(`Sandbox: file access denied — ${filePath} is not within the sandbox readable or writable paths.`)
             }
           }

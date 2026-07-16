@@ -254,7 +254,7 @@ export const ReadTool = Tool.define(
           ...profile.filesystem.allowWrite.map((r) => r.path),
           ...(profile.filesystem.readonlyPaths ?? []),
         ]
-        const allowed = readPaths.some((p) => filepath === p || filepath.startsWith(p + "/"))
+        const allowed = readPaths.some((p) => filepath === p || filepath.startsWith(p + path.sep))
         if (!allowed) {
           return yield* Effect.fail(
             new Error(`Sandbox: file read denied — ${filepath} is not within the sandbox's readable or writable paths.`),

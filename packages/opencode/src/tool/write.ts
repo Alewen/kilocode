@@ -54,7 +54,7 @@ export const WriteTool = Tool.define(
               ...profile.filesystem.allowWrite.map((r) => r.path),
               ...(profile.filesystem.readonlyPaths ?? []),
             ]
-            if (!readPaths.some((p) => filepath === p || filepath.startsWith(p + "/"))) {
+            if (!readPaths.some((p) => filepath === p || filepath.startsWith(p + path.sep))) {
               throw new Error(`Sandbox: file access denied — ${filepath} is not within the sandbox readable or writable paths.`)
             }
           }

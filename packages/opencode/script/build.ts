@@ -350,6 +350,19 @@ for (const item of targets) {
   const rgTarget = `${item.os}-${item.arch}`
   await downloadRipgrep(rgTarget, path.resolve(dir, `dist/${name}/bin`))
 
+  // kilocode_change start - copy pre-compiled Windows bwrap binaries
+  if (item.os === "win32") {
+    const winbwrapDir = path.resolve(dir, "bin", "winbwrap")
+    for (const file of ["bwrap.exe", "KiloHook.dll"]) {
+      const src = path.join(winbwrapDir, file)
+      if (fs.existsSync(src)) {
+        await fs.promises.copyFile(src, path.resolve(dir, `dist/${name}/bin/${file}`))
+        console.log(`copied ${file} to dist/${name}/bin/`)
+      }
+    }
+  }
+  // kilocode_change end
+
   if (item.os === "linux") {
     const interpreters: Record<string, string> = {
       x64: "/lib64/ld-linux-x86-64.so.2",
