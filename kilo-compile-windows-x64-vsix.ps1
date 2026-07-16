@@ -1,4 +1,3 @@
-
 # 该脚本支持编译的 kilo 源码来自 gitclone https://github.com/Kilo-Org/kilocode.git v7.3.1
 # 整个编译 vsix 的耗时大约 260 秒，前提是 bun install 已经在本地有缓存
 # 用法: .\kilo-compile-windows-x64-vsix.ps1 [version]

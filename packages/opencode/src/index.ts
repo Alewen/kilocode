@@ -147,28 +147,30 @@ let cli = yargs(args) // kilocode_change
       run_id: processMetadata.runID,
     })
 
-    // kilocode_change start - Initialize telemetry
-    const globalCfg = await AppRuntime.runPromise(Config.Service.use((cfg) => cfg.getGlobal()))
-    await Telemetry.init({
-      dataPath: Global.Path.data,
-      version: InstallationVersion,
-      enabled: globalCfg.experimental?.openTelemetry !== false,
-    })
+    // kilocode_change start - Initialize telemetry (skip for build-time commands)
+    if (opts._[0] !== "generate") {
+      const globalCfg = await AppRuntime.runPromise(Config.Service.use((cfg) => cfg.getGlobal()))
+      await Telemetry.init({
+        dataPath: Global.Path.data,
+        version: InstallationVersion,
+        enabled: globalCfg.experimental?.openTelemetry !== false,
+      })
 
-    // Migrate legacy Kilo CLI auth if needed
-    await migrateLegacyKiloAuth(
-      async () => (await AppRuntime.runPromise(Auth.Service.use((svc) => svc.get("kilo")))) !== undefined,
-      async (auth) => AppRuntime.runPromise(Auth.Service.use((svc) => svc.set("kilo", auth))),
-    )
+      // Migrate legacy Kilo CLI auth if needed
+      await migrateLegacyKiloAuth(
+        async () => (await AppRuntime.runPromise(Auth.Service.use((svc) => svc.get("kilo")))) !== undefined,
+        async (auth) => AppRuntime.runPromise(Auth.Service.use((svc) => svc.set("kilo", auth))),
+      )
 
-    const kiloAuth = await AppRuntime.runPromise(Auth.Service.use((svc) => svc.get("kilo")))
-    if (kiloAuth) {
-      const token = kiloAuth.type === "oauth" ? kiloAuth.access : kiloAuth.key
-      const accountId = kiloAuth.type === "oauth" ? kiloAuth.accountId : undefined
-      await Telemetry.updateIdentity(token, accountId)
+      const kiloAuth = await AppRuntime.runPromise(Auth.Service.use((svc) => svc.get("kilo")))
+      if (kiloAuth) {
+        const token = kiloAuth.type === "oauth" ? kiloAuth.access : kiloAuth.key
+        const accountId = kiloAuth.type === "oauth" ? kiloAuth.accountId : undefined
+        await Telemetry.updateIdentity(token, accountId)
+      }
+
+      Telemetry.trackCliStart()
     }
-
-    Telemetry.trackCliStart()
     // kilocode_change end
 
     const marker = path.join(Global.Path.data, "kilo.db")
