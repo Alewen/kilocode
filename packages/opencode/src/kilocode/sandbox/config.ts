@@ -29,7 +29,7 @@ export namespace SandboxConfig {
     }).annotate({ description: "Sandbox configuration for agent tools" })
   export type Info = Schema.Schema.Type<typeof Info>
 
-  const DEFAULT_DENY = ["/home", "/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"]
+  const DEFAULT_DENY = process.platform === "win32" ? [] : ["/home", "/tmp", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"]
 
   export function resolve(config: { sandbox?: Info }) {
     return {

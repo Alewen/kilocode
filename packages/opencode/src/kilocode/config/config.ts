@@ -386,7 +386,7 @@ export namespace KilocodeConfig {
 
   // ── Sandbox default paths migration ────────────────────────────────────
 
-  const SBOX_DENY_DEFAULT = ["/home", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"]
+  const SBOX_DENY_DEFAULT = process.platform === "win32" ? [] : ["/home", "/root", "/var", "/opt", "/mnt", "/media", "/run", "/srv", "/boot"]
 
   /**
    * Ensure the global config has sandbox.readonly_paths, writable_paths, and deny_paths

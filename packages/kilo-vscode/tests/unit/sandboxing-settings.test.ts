@@ -25,16 +25,14 @@ describe("Sandboxing settings visibility", () => {
     expect(src).not.toContain("const { config, updateConfig } = useConfig()")
   })
 
-  test("shows sandbox controls outside Windows", () => {
+  test("shows sandbox controls on all platforms", () => {
     setPlatform("darwin")
     expect(configFeatures().sandboxControls).toBe(true)
 
     setPlatform("linux")
     expect(configFeatures().sandboxControls).toBe(true)
-  })
 
-  test("hides sandbox controls on Windows", () => {
     setPlatform("win32")
-    expect(configFeatures().sandboxControls).toBe(false)
+    expect(configFeatures().sandboxControls).toBe(true)
   })
 })
