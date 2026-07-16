@@ -1,0 +1,1023 @@
+**********************************************************************
+** Visual Studio 2022 Developer PowerShell v17.14.35
+** Copyright (c) 2025 Microsoft Corporation
+**********************************************************************
+==========================================
+ 源码目录: C:\tmp\kilocode 打包 Kilo VS Code 扩展 (Windows-x64)
+==========================================
+[1/5] 检查根目录依赖...
+  当前目录: C:\tmp\kilocode
+
+  正在安装依赖...
+bun install v1.3.14 (0d9b296a)
+
+$ bun run --cwd packages/opencode fix-node-pty && bun run script/setup-git.ts
+$ bun run script/fix-node-pty.ts
+$ husky
+
++ @changesets/changelog-github@0.5.2
++ @changesets/cli@2.31.0
++ @tsconfig/bun@1.0.9
++ @types/bun@1.3.14
++ @types/mime-types@3.0.1
++ @typescript/native-preview@7.0.0-dev.20260316.1
++ glob@13.0.5
++ husky@9.1.7
++ oxlint@1.60.0
++ oxlint-tsgolint@0.21.0
++ prettier@3.6.2
++ semver@7.8.4 (v7.8.5 available)
++ turbo@2.9.14
++ typescript@5.8.2 (v7.0.2 available)
+
+3615 packages installed [69.88s]
+[2/5] 编译 CLI 二进制...
+  当前目录: C:\tmp\kilocode\packages\opencode
+
+kilo script {
+  "channel": "latest",
+  "version": "7.4.5",
+  "preview": false,
+  "release": true,
+  "team": [
+    "actions-user",
+    "kilo-maintainer[bot]",
+    "kiloconnect[bot]",
+    "kiloconnect-lite[bot]",
+    "alexkgold",
+    "arimesser",
+    "arkadiykondrashov",
+    "bturcotte520",
+    "catrielmuller",
+    "chrarnoldus",
+    "codingelves",
+    "darkogj",
+    "dependabot[bot]",
+    "dosire",
+    "DScdng",
+    "emilieschario",
+    "eshurakov",
+    "Helix-Kilo",
+    "iscekic",
+    "jeanduplessis",
+    "jobrietbergen",
+    "jrf0110",
+    "johnnyeric",
+    "alex-alecu",
+    "imanolmzd-svg",
+    "kilocode-bot",
+    "kilo-code-bot",
+    "kilo-code-bot[bot]",
+    "kirillk",
+    "lambertjosh",
+    "LigiaZ",
+    "marius-kilocode",
+    "markijbema",
+    "olearycrew",
+    "pandemicsyn",
+    "pedroheyerdahl",
+    "RSO",
+    "sbreitenother",
+    "suhailkc2025",
+    "Sureshkumars"
+  ]
+}
+Loaded models.dev snapshot
+Loaded 21 migrations
+building Kilo Console
+$ vite build
+vite v7.3.5 building client environment for production...
+✓ 1096 modules transformed.
+dist/index.html                                               0.56 kB │ gzip:   0.31 kB
+dist/assets/KaTeX_Size3-Regular-CTq5MqoE.woff                 4.42 kB
+dist/assets/KaTeX_Size4-Regular-Dl5lxZxV.woff2                4.93 kB
+dist/assets/KaTeX_Size2-Regular-Dy4dx90m.woff2                5.21 kB
+dist/assets/KaTeX_Size1-Regular-mCD8mA8B.woff2                5.47 kB
+dist/assets/KaTeX_Size4-Regular-BF-4gkZK.woff                 5.98 kB
+dist/assets/KaTeX_Size2-Regular-oD1tc_U0.woff                 6.19 kB
+dist/assets/KaTeX_Size1-Regular-C195tn64.woff                 6.50 kB
+dist/assets/KaTeX_Caligraphic-Regular-Di6jR-x-.woff2          6.91 kB
+dist/assets/KaTeX_Caligraphic-Bold-Dq_IR9rO.woff2             6.91 kB
+dist/assets/KaTeX_Size3-Regular-DgpXs0kz.ttf                  7.59 kB
+dist/assets/KaTeX_Caligraphic-Regular-CTRA-rTL.woff           7.66 kB
+dist/assets/KaTeX_Caligraphic-Bold-BEiXGLvX.woff              7.72 kB
+dist/assets/KaTeX_Script-Regular-D3wIWfF6.woff2               9.64 kB
+dist/assets/KaTeX_SansSerif-Regular-DDBCnlJ7.woff2           10.34 kB
+dist/assets/KaTeX_Size4-Regular-DWFBv043.ttf                 10.36 kB
+dist/assets/KaTeX_Script-Regular-D5yQViql.woff               10.59 kB
+dist/assets/KaTeX_Fraktur-Regular-CTYiF6lA.woff2             11.32 kB
+dist/assets/KaTeX_Fraktur-Bold-CL6g_b3V.woff2                11.35 kB
+dist/assets/KaTeX_Size2-Regular-B7gKUWhC.ttf                 11.51 kB
+dist/assets/KaTeX_SansSerif-Italic-C3H0VqGB.woff2            12.03 kB
+dist/assets/KaTeX_SansSerif-Bold-D1sUS0GD.woff2              12.22 kB
+dist/assets/KaTeX_Size1-Regular-Dbsnue_I.ttf                 12.23 kB
+dist/assets/KaTeX_SansSerif-Regular-CS6fqUqJ.woff            12.32 kB
+dist/assets/KaTeX_Caligraphic-Regular-wX97UBjC.ttf           12.34 kB
+dist/assets/KaTeX_Caligraphic-Bold-ATXxdsX0.ttf              12.37 kB
+dist/assets/KaTeX_Fraktur-Regular-Dxdc4cR9.woff              13.21 kB
+dist/assets/KaTeX_Fraktur-Bold-BsDP51OF.woff                 13.30 kB
+dist/assets/KaTeX_Typewriter-Regular-CO6r4hn1.woff2          13.57 kB
+dist/assets/KaTeX_SansSerif-Italic-DN2j7dab.woff             14.11 kB
+dist/assets/KaTeX_SansSerif-Bold-DbIhKOiC.woff               14.41 kB
+dist/assets/KaTeX_Typewriter-Regular-C0xS9mPB.woff           16.03 kB
+dist/assets/KaTeX_Math-BoldItalic-CZnvNsCZ.woff2             16.40 kB
+dist/assets/KaTeX_Math-Italic-t53AETM-.woff2                 16.44 kB
+dist/assets/KaTeX_Script-Regular-C5JkGWo-.ttf                16.65 kB
+dist/assets/KaTeX_Main-BoldItalic-DxDJ3AOS.woff2             16.78 kB
+dist/assets/KaTeX_Main-Italic-NWA7e6Wa.woff2                 16.99 kB
+dist/assets/KaTeX_Math-BoldItalic-iY-2wyZ7.woff              18.67 kB
+dist/assets/KaTeX_Math-Italic-DA0__PXp.woff                  18.75 kB
+dist/assets/KaTeX_Main-BoldItalic-SpSLRI95.woff              19.41 kB
+dist/assets/KaTeX_SansSerif-Regular-BNo7hRIc.ttf             19.44 kB
+dist/assets/KaTeX_Fraktur-Regular-CB_wures.ttf               19.57 kB
+dist/assets/KaTeX_Fraktur-Bold-BdnERNNW.ttf                  19.58 kB
+dist/assets/KaTeX_Main-Italic-BMLOBm91.woff                  19.68 kB
+dist/assets/KaTeX_SansSerif-Italic-YYjJ1zSn.ttf              22.36 kB
+dist/assets/KaTeX_SansSerif-Bold-CFMepnvq.ttf                24.50 kB
+dist/assets/KaTeX_Main-Bold-Cx986IdX.woff2                   25.32 kB
+dist/assets/KaTeX_Main-Regular-B22Nviop.woff2                26.27 kB
+dist/assets/KaTeX_Typewriter-Regular-D3Ib7_Hf.ttf            27.56 kB
+dist/assets/KaTeX_AMS-Regular-BQhdFMY1.woff2                 28.08 kB
+dist/assets/KaTeX_Main-Bold-Jm3AIy58.woff                    29.91 kB
+dist/assets/KaTeX_Main-Regular-Dr94JaBh.woff                 30.77 kB
+dist/assets/KaTeX_Math-BoldItalic-B3XSjfu4.ttf               31.20 kB
+dist/assets/KaTeX_Math-Italic-flOr_0UB.ttf                   31.31 kB
+dist/assets/KaTeX_Main-BoldItalic-DzxPMmG6.ttf               32.97 kB
+dist/assets/KaTeX_AMS-Regular-DMm9YOAa.woff                  33.52 kB
+dist/assets/KaTeX_Main-Italic-3WenGoN9.ttf                   33.58 kB
+dist/assets/KaTeX_Main-Bold-waoOVXN0.ttf                     51.34 kB
+dist/assets/KaTeX_Main-Regular-ypZvNtVU.ttf                  53.58 kB
+dist/assets/KaTeX_AMS-Regular-DRggAlZN.ttf                   63.63 kB
+dist/assets/JetBrainsMono-Variable-BzuZpUCI.woff2            71.57 kB
+dist/assets/RobotoMono-Variable-D-uY7J2_.woff2              105.00 kB
+dist/assets/worker-CRPzXMd6.js                              200.78 kB
+dist/assets/Inter-Variable-CWi-zmRD.woff2                   345.59 kB
+dist/assets/sprite-iclrYEAD.svg                             367.12 kB │ gzip: 149.24 kB
+dist/assets/Inter-Variable-Italic-d6KXgdvN.woff2            380.90 kB
+dist/assets/sprite-Fb-TFjRY.svg                             943.96 kB │ gzip: 243.53 kB
+dist/assets/index-DEDaeHO5.css                              387.28 kB │ gzip:  63.90 kB
+dist/assets/__vite-browser-external-2447137e-BIHI7g3E.js      0.03 kB │ gzip:   0.05 kB
+dist/assets/codeowners-Bp6g37R7.js                            0.55 kB │ gzip:   0.32 kB
+dist/assets/shellsession-BADoaaVG.js                          0.71 kB │ gzip:   0.43 kB
+dist/assets/tsv-B_m7g4N7.js                                   0.74 kB │ gzip:   0.34 kB
+dist/assets/html-derivative-BFtXZ54Q.js                       0.90 kB │ gzip:   0.50 kB
+dist/assets/git-rebase-r7XF79zn.js                            0.98 kB │ gzip:   0.44 kB
+dist/assets/qmldir-C8lEn-DE.js                                1.00 kB │ gzip:   0.45 kB
+dist/assets/fortran-fixed-form-BZjJHVRy.js                    1.10 kB │ gzip:   0.54 kB
+dist/assets/csv-fuZLfV_i.js                                   1.14 kB │ gzip:   0.37 kB
+dist/assets/git-commit-F4YmCXRG.js                            1.23 kB │ gzip:   0.53 kB
+dist/assets/xsl-CtQFsRM5.js                                   1.39 kB │ gzip:   0.52 kB
+dist/assets/dotenv-Da5cRb03.js                                1.42 kB │ gzip:   0.53 kB
+dist/assets/sparql-rVzFXLq3.js                                1.48 kB │ gzip:   0.82 kB
+dist/assets/ini-BEwlwnbL.js                                   1.53 kB │ gzip:   0.50 kB
+dist/assets/docker-BcOcwvcX.js                                1.74 kB │ gzip:   0.60 kB
+dist/assets/hxml-Bvhsp5Yf.js                                  1.74 kB │ gzip:   0.88 kB
+dist/assets/desktop-BmXAJ9_W.js                               1.83 kB │ gzip:   0.76 kB
+dist/assets/wenyan-BV7otONQ.js                                2.16 kB │ gzip:   1.09 kB
+dist/assets/jssm-C2t-YnRu.js                                  2.24 kB │ gzip:   0.62 kB
+dist/assets/reg-C-SQnVFl.js                                   2.35 kB │ gzip:   0.70 kB
+dist/assets/edge-BkV0erSs.js                                  2.36 kB │ gzip:   0.70 kB
+dist/assets/diff-D97Zzqfu.js                                  2.57 kB │ gzip:   0.70 kB
+dist/assets/gleam-BspZqrRM.js                                 2.58 kB │ gzip:   0.82 kB
+dist/assets/erb-BOJIQeun.js                                   2.61 kB │ gzip:   0.84 kB
+dist/assets/hy-DFXneXwc.js                                    2.65 kB │ gzip:   1.18 kB
+dist/assets/json-Cp-IABpG.js                                  2.82 kB │ gzip:   0.78 kB
+dist/assets/openscad-C4EeE6gA.js                              2.82 kB │ gzip:   1.01 kB
+dist/assets/log-2UxHyX5q.js                                   2.85 kB │ gzip:   0.90 kB
+dist/assets/cairo-KRGpt6FW.js                                 2.94 kB │ gzip:   0.81 kB
+dist/assets/berry-uYugtg8r.js                                 3.01 kB │ gzip:   0.81 kB
+dist/assets/jsonl-DcaNXYhu.js                                 3.01 kB │ gzip:   0.79 kB
+dist/assets/jsonc-Des-eS-w.js                                 3.11 kB │ gzip:   0.80 kB
+dist/assets/logo-BtOb2qkB.js                                  3.13 kB │ gzip:   1.47 kB
+dist/assets/po-BTJTHyun.js                                    3.24 kB │ gzip:   0.91 kB
+dist/assets/json5-C9tS-k6U.js                                 3.25 kB │ gzip:   0.83 kB
+dist/assets/mipsasm-CKIfxQSi.js                               3.26 kB │ gzip:   1.18 kB
+dist/assets/tasl-QIJgUcNo.js                                  3.29 kB │ gzip:   0.85 kB
+dist/assets/genie-D0YGMca9.js                                 3.36 kB │ gzip:   1.21 kB
+dist/assets/rel-C3B-1QV4.js                                   3.37 kB │ gzip:   1.11 kB
+dist/assets/vala-CsfeWuGM.js                                  3.37 kB │ gzip:   1.19 kB
+dist/assets/splunk-BtCnVYZw.js                                3.44 kB │ gzip:   1.52 kB
+dist/assets/fluent-C4IJs8-o.js                                3.61 kB │ gzip:   0.90 kB
+dist/assets/ssh-config-_ykCGR6B.js                            3.62 kB │ gzip:   1.60 kB
+dist/assets/jsonnet-DFQXde-d.js                               3.62 kB │ gzip:   1.05 kB
+dist/assets/kdl-DV7GczEv.js                                   3.63 kB │ gzip:   1.04 kB
+dist/assets/glsl-DplSGwfg.js                                  3.63 kB │ gzip:   1.41 kB
+dist/assets/hurl-irOxFIW8.js                                  3.65 kB │ gzip:   1.16 kB
+dist/assets/narrat-DRg8JJMk.js                                3.67 kB │ gzip:   1.11 kB
+dist/assets/turtle-BsS91CYL.js                                3.70 kB │ gzip:   0.98 kB
+dist/assets/zenscript-DVFEvuxE.js                             3.91 kB │ gzip:   1.28 kB
+dist/assets/pascal-D93ZcfNL.js                                4.15 kB │ gzip:   1.67 kB
+dist/assets/nextflow-BrzmwbiE.js                              4.42 kB │ gzip:   1.12 kB
+dist/assets/tcl-dwOrl1Do.js                                   4.43 kB │ gzip:   1.52 kB
+dist/assets/rosmsg-BJDFO7_C.js                                4.52 kB │ gzip:   1.06 kB
+dist/assets/http-jrhK8wxY.js                                  4.55 kB │ gzip:   1.12 kB
+dist/assets/polar-C0HS_06l.js                                 4.67 kB │ gzip:   1.12 kB
+dist/assets/sdbl-DVxCFoDh.js                                  4.70 kB │ gzip:   2.01 kB
+dist/assets/fennel-BYunw83y.js                                4.77 kB │ gzip:   1.53 kB
+dist/assets/bibtex-CHM0blh-.js                                4.80 kB │ gzip:   0.83 kB
+dist/assets/llvm-BtvRca6l.js                                  5.04 kB │ gzip:   2.01 kB
+dist/assets/wgsl-Dx-B1_4e.js                                  5.14 kB │ gzip:   1.39 kB
+dist/assets/gdresource-B7Tvp0Sc.js                            5.26 kB │ gzip:   1.33 kB
+dist/assets/qml-3beO22l8.js                                   5.34 kB │ gzip:   1.38 kB
+dist/assets/zig-VOosw3JB.js                                   5.34 kB │ gzip:   1.55 kB
+dist/assets/dax-CEL-wOlO.js                                   5.37 kB │ gzip:   2.23 kB
+dist/assets/bicep-Bmn6On1c.js                                 5.38 kB │ gzip:   1.15 kB
+dist/assets/xml-sdJ4AIDG.js                                   5.38 kB │ gzip:   1.21 kB
+dist/assets/awk-DMzUqQB5.js                                   5.46 kB │ gzip:   1.38 kB
+dist/assets/coq-DkFqJrB1.js                                   5.53 kB │ gzip:   1.92 kB
+dist/assets/jinja-4LBKfQ-Z.js                                 5.69 kB │ gzip:   1.40 kB
+dist/assets/lean-Bc6EcWN3.js                                  5.84 kB │ gzip:   1.93 kB
+dist/assets/powerquery-CEu0bR-o.js                            5.90 kB │ gzip:   1.52 kB
+dist/assets/shaderlab-Dg9Lc6iA.js                             5.92 kB │ gzip:   2.08 kB
+dist/assets/verilog-BQ8w6xss.js                               5.93 kB │ gzip:   1.89 kB
+dist/assets/cypher-COkxafJQ.js                                5.96 kB │ gzip:   1.73 kB
+dist/assets/vb-D17OF-Vu.js                                    6.09 kB │ gzip:   2.34 kB
+dist/assets/red-bN70gL4F.js                                   6.26 kB │ gzip:   1.60 kB
+dist/assets/min-dark-CafNBF8u.js                              6.29 kB │ gzip:   1.71 kB
+dist/assets/gdshader-DkwncUOv.js                              6.33 kB │ gzip:   1.73 kB
+dist/assets/prisma-Dd19v3D-.js                                6.33 kB │ gzip:   1.39 kB
+dist/assets/ara-BRHolxvo.js                                   6.36 kB │ gzip:   1.81 kB
+dist/assets/clojure-P80f7IUj.js                               6.41 kB │ gzip:   1.42 kB
+dist/assets/postcss-CXtECtnM.js                               6.42 kB │ gzip:   1.91 kB
+dist/assets/toml-vGWfd6FD.js                                  6.43 kB │ gzip:   1.28 kB
+dist/assets/solarized-light-L9t79GZl.js                       6.48 kB │ gzip:   1.73 kB
+dist/assets/proto-DyJlTyXw.js                                 6.52 kB │ gzip:   1.41 kB
+dist/assets/smalltalk-BERRCDM3.js                             6.59 kB │ gzip:   1.62 kB
+dist/assets/talonscript-CkByrt1z.js                           6.76 kB │ gzip:   1.49 kB
+dist/assets/solarized-dark-DXbdFlpD.js                        6.85 kB │ gzip:   1.80 kB
+dist/assets/riscv-BM1_JUlF.js                                 6.91 kB │ gzip:   1.98 kB
+dist/assets/min-light-CTRr51gU.js                             6.97 kB │ gzip:   1.89 kB
+dist/assets/soy-Brmx7dQM.js                                   6.98 kB │ gzip:   1.66 kB
+dist/assets/scheme-C98Dy4si.js                                7.17 kB │ gzip:   2.05 kB
+dist/assets/hlsl-D3lLCCz7.js                                  7.26 kB │ gzip:   2.19 kB
+dist/assets/qss-IeuSbFQv.js                                   7.47 kB │ gzip:   2.58 kB
+dist/assets/dart-CF10PKvl.js                                  7.81 kB │ gzip:   1.91 kB
+dist/assets/systemd-4A_iFExJ.js                               7.87 kB │ gzip:   2.55 kB
+dist/assets/monokai-D4h5O-jR.js                               7.88 kB │ gzip:   1.91 kB
+dist/assets/regexp-CDVJQ6XC.js                                7.99 kB │ gzip:   1.42 kB
+dist/assets/haml-B8DHNrY2.js                                  8.26 kB │ gzip:   1.81 kB
+dist/assets/typst-DHCkPAjA.js                                 8.39 kB │ gzip:   1.67 kB
+dist/assets/plsql-ChMvpjG-.js                                 8.51 kB │ gzip:   3.00 kB
+dist/assets/vue-html-CChd_i61.js                              8.67 kB │ gzip:   1.78 kB
+dist/assets/kotlin-BdnUsdx6.js                                8.79 kB │ gzip:   2.13 kB
+dist/assets/ts-tags-zn1MmPIZ.js                               8.95 kB │ gzip:   1.22 kB
+dist/assets/make-CHLpvVh8.js                                  8.96 kB │ gzip:   1.77 kB
+dist/assets/andromeeda-C-Jbm3Hp.js                            8.98 kB │ gzip:   2.35 kB
+dist/assets/sas-cz2c8ADy.js                                   9.06 kB │ gzip:   3.81 kB
+dist/assets/dark-plus-C3mMm8J8.js                             9.10 kB │ gzip:   2.10 kB
+dist/assets/slack-dark-BthQWCQV.js                            9.12 kB │ gzip:   1.97 kB
+dist/assets/sass-Cj5Yp3dK.js                                  9.29 kB │ gzip:   2.49 kB
+dist/assets/plastic-3e1v2bzS.js                               9.30 kB │ gzip:   1.98 kB
+dist/assets/slack-ochin-DqwNpetd.js                           9.43 kB │ gzip:   2.10 kB
+dist/assets/tex-CxkMU7Pf.js                                   9.66 kB │ gzip:   3.05 kB
+dist/assets/jison-wvAkD_A8.js                                 9.69 kB │ gzip:   1.85 kB
+dist/assets/cmake-D1j8_8rp.js                                 9.86 kB │ gzip:   3.37 kB
+dist/assets/light-plus-B7mTdjB0.js                            9.94 kB │ gzip:   2.27 kB
+dist/assets/hcl-BWvSN4gD.js                                  10.05 kB │ gzip:   1.93 kB
+dist/assets/pkl-u5AG7uiY.js                                  10.37 kB │ gzip:   1.38 kB
+dist/assets/beancount-k_qm7-4y.js                            10.37 kB │ gzip:   1.44 kB
+dist/assets/dream-maker-BtqSS_iP.js                          10.47 kB │ gzip:   2.25 kB
+dist/assets/raku-DXvB9xmW.js                                 10.47 kB │ gzip:   2.94 kB
+dist/assets/yaml-Buea-lGh.js                                 10.51 kB │ gzip:   2.27 kB
+dist/assets/rst-B0xPkSld.js                                  10.67 kB │ gzip:   2.42 kB
+dist/assets/elm-DbKCFpqz.js                                  10.97 kB │ gzip:   2.12 kB
+dist/assets/github-light-DAi9KRSo.js                         11.18 kB │ gzip:   2.51 kB
+dist/assets/prolog-CbFg5uaA.js                               11.36 kB │ gzip:   3.83 kB
+dist/assets/terraform-BETggiCN.js                            11.39 kB │ gzip:   2.51 kB
+dist/assets/github-dark-DHJKELXO.js                          11.41 kB │ gzip:   2.55 kB
+dist/assets/puppet-BMWR74SV.js                               11.44 kB │ gzip:   2.11 kB
+dist/assets/laserwave-DUszq2jm.js                            11.50 kB │ gzip:   2.58 kB
+dist/assets/gherkin-DyxjwDmM.js                              11.95 kB │ gzip:   5.05 kB
+dist/assets/wasm-MzD3tlZU.js                                 12.01 kB │ gzip:   2.19 kB
+dist/assets/hjson-D5-asLiD.js                                12.05 kB │ gzip:   1.64 kB
+dist/assets/handlebars-BL8al0AC.js                           12.15 kB │ gzip:   2.38 kB
+dist/assets/apache-Pmp26Uib.js                               12.46 kB │ gzip:   3.72 kB
+dist/assets/vesper-DU1UobuO.js                               12.69 kB │ gzip:   1.97 kB
+dist/assets/bat-BkioyH1T.js                                  12.89 kB │ gzip:   3.22 kB
+dist/assets/fish-BvzEVeQv.js                                 13.04 kB │ gzip:   1.74 kB
+dist/assets/v-BcVCzyr7.js                                    13.21 kB │ gzip:   2.74 kB
+dist/assets/vitesse-light-CVO1_9PV.js                        13.62 kB │ gzip:   3.04 kB
+dist/assets/aurora-x-D-2ljcwZ.js                             13.66 kB │ gzip:   2.28 kB
+dist/assets/vitesse-black-Bkuqu6BP.js                        13.68 kB │ gzip:   3.06 kB
+dist/assets/vitesse-dark-D0r3Knsf.js                         13.76 kB │ gzip:   3.06 kB
+dist/assets/luau-CXu1NL6O.js                                 13.84 kB │ gzip:   3.13 kB
+dist/assets/pug-CGlum2m_.js                                  13.84 kB │ gzip:   2.58 kB
+dist/assets/synthwave-84-CbfX1IO0.js                         14.04 kB │ gzip:   2.87 kB
+dist/assets/actionscript-3-CfeIJUat.js                       14.05 kB │ gzip:   2.58 kB
+dist/assets/github-light-default-D7oLnXFd.js                 14.16 kB │ gzip:   3.04 kB
+dist/assets/clarity-D53aC0YG.js                              14.28 kB │ gzip:   2.46 kB
+dist/assets/github-light-high-contrast-BfjtVDDH.js           14.28 kB │ gzip:   3.02 kB
+dist/assets/github-dark-dimmed-DH5Ifo-i.js                   14.43 kB │ gzip:   3.13 kB
+dist/assets/github-dark-default-Cuk6v7N8.js                  14.44 kB │ gzip:   3.13 kB
+dist/assets/github-dark-high-contrast-E3gJ1_iC.js            14.60 kB │ gzip:   3.09 kB
+dist/assets/gnuplot-DdkO51Og.js                              14.78 kB │ gzip:   3.27 kB
+dist/assets/ayu-dark-Cv9koXgw.js                             14.95 kB │ gzip:   3.08 kB
+dist/assets/rust-B1yitclQ.js                                 15.07 kB │ gzip:   2.72 kB
+dist/assets/kusto-BvAqAH-y.js                                15.17 kB │ gzip:   3.92 kB
+dist/assets/lua-BbnMAYS6.js                                  15.21 kB │ gzip:   3.09 kB
+dist/assets/nix-c8nO5XWb.js                                  15.51 kB │ gzip:   2.48 kB
+dist/assets/abap-BdImnpbu.js                                 15.85 kB │ gzip:   5.91 kB
+dist/assets/solidity-rGO070M0.js                             16.07 kB │ gzip:   3.11 kB
+dist/assets/matlab-D7o27uSR.js                               16.09 kB │ gzip:   3.06 kB
+dist/assets/cue-D82EKSYY.js                                  16.20 kB │ gzip:   2.06 kB
+dist/assets/elixir-CDX3lj18.js                               16.32 kB │ gzip:   2.80 kB
+dist/assets/kanagawa-wave-DWedfzmr.js                        17.12 kB │ gzip:   2.93 kB
+dist/assets/kanagawa-lotus-CfQXZHmo.js                       17.13 kB │ gzip:   2.93 kB
+dist/assets/kanagawa-dragon-CkXjmgJE.js                      17.13 kB │ gzip:   2.95 kB
+dist/assets/move-Bu9oaDYs.js                                 17.33 kB │ gzip:   3.08 kB
+dist/assets/svelte-3Dk4HxPD.js                               17.81 kB │ gzip:   3.04 kB
+dist/assets/graphql-ChdNCCLP.js                              18.00 kB │ gzip:   2.52 kB
+dist/assets/liquid-DYVedYrR.js                               18.09 kB │ gzip:   3.16 kB
+dist/assets/material-theme-D5KoaKCx.js                       18.62 kB │ gzip:   3.11 kB
+dist/assets/material-theme-darker-BfHTSMKl.js                18.63 kB │ gzip:   3.11 kB
+dist/assets/material-theme-ocean-CyktbL80.js                 18.63 kB │ gzip:   3.14 kB
+dist/assets/material-theme-lighter-B0m2ddpp.js               18.63 kB │ gzip:   3.11 kB
+dist/assets/material-theme-palenight-Csfq5Kiy.js             18.64 kB │ gzip:   3.13 kB
+dist/assets/gdscript-DTMYz4Jt.js                             18.98 kB │ gzip:   3.74 kB
+dist/assets/groovy-gcz8RCvz.js                               19.18 kB │ gzip:   3.60 kB
+dist/assets/mdc-DUICxH0z.js                                  19.63 kB │ gzip:   6.66 kB
+dist/assets/glimmer-js-Rg0-pVw9.js                           20.07 kB │ gzip:   2.95 kB
+dist/assets/glimmer-ts-U6CK756n.js                           20.07 kB │ gzip:   2.94 kB
+dist/assets/powershell-Dpen1YoG.js                           20.15 kB │ gzip:   4.07 kB
+dist/assets/viml-CJc9bBzg.js                                 20.37 kB │ gzip:   6.73 kB
+dist/assets/nushell-C-sUppwS.js                              20.40 kB │ gzip:   5.18 kB
+dist/assets/snazzy-light-Bw305WKR.js                         20.77 kB │ gzip:   3.83 kB
+dist/assets/dracula-BzJJZx-M.js                              21.07 kB │ gzip:   4.00 kB
+dist/assets/dracula-soft-BXkSAIEj.js                         21.08 kB │ gzip:   4.04 kB
+dist/assets/vue-DnHKYNfI.js                                  21.11 kB │ gzip:   2.74 kB
+dist/assets/twig-CO9l9SDP.js                                 21.36 kB │ gzip:   3.87 kB
+dist/assets/wit-5i3qLPDT.js                                  21.47 kB │ gzip:   2.89 kB
+dist/assets/rose-pine-qdsjHGoJ.js                            21.74 kB │ gzip:   3.87 kB
+dist/assets/rose-pine-moon-D4_iv3hh.js                       21.75 kB │ gzip:   3.89 kB
+dist/assets/rose-pine-dawn-DHQR4-dF.js                       21.75 kB │ gzip:   3.89 kB
+dist/assets/nim-CVrawwO9.js                                  22.46 kB │ gzip:   3.16 kB
+dist/assets/common-lisp-Cg-RD9OK.js                          22.58 kB │ gzip:   6.06 kB
+dist/assets/gruvbox-dark-hard-CFHQjOhq.js                    22.63 kB │ gzip:   4.18 kB
+dist/assets/gruvbox-dark-soft-CVdnzihN.js                    22.63 kB │ gzip:   4.17 kB
+dist/assets/gruvbox-light-hard-CH1njM8p.js                   22.64 kB │ gzip:   4.18 kB
+dist/assets/gruvbox-light-soft-hJgmCMqR.js                   22.64 kB │ gzip:   4.18 kB
+dist/assets/gruvbox-dark-medium-GsRaNv29.js                  22.64 kB │ gzip:   4.18 kB
+dist/assets/gruvbox-light-medium-DRw_LuNl.js                 22.64 kB │ gzip:   4.18 kB
+dist/assets/sql-BLtJtn59.js                                  23.41 kB │ gzip:   7.40 kB
+dist/assets/cadence-Bv_4Rxtq.js                              23.67 kB │ gzip:   3.67 kB
+dist/assets/astro-CbQHKStN.js                                24.01 kB │ gzip:   7.54 kB
+dist/assets/typespec-BGHnOYBU.js                             24.02 kB │ gzip:   2.59 kB
+dist/assets/apl-dKokRX4l.js                                  24.04 kB │ gzip:   4.20 kB
+dist/assets/templ-W15q3VgB.js                                24.06 kB │ gzip:   5.39 kB
+dist/assets/vhdl-CeAyd5Ju.js                                 24.26 kB │ gzip:   3.87 kB
+dist/assets/angular-html-CU67Zn6k.js                         24.29 kB │ gzip:   4.01 kB
+dist/assets/purescript-CklMAg4u.js                           24.69 kB │ gzip:   3.25 kB
+dist/assets/one-light-PoHY5YXO.js                            25.30 kB │ gzip:   3.68 kB
+dist/assets/fsharp-CXgrBDvD.js                               25.31 kB │ gzip:   4.13 kB
+dist/assets/marko-CPi9NSCl.js                                25.44 kB │ gzip:   3.57 kB
+dist/assets/razor-CE9lU5zL.js                                25.56 kB │ gzip:   3.44 kB
+dist/assets/system-verilog-CnnmHF94.js                       26.20 kB │ gzip:   4.85 kB
+dist/assets/nord-Ddv68eIx.js                                 26.72 kB │ gzip:   4.40 kB
+dist/assets/codeql-DsOJ9woJ.js                               26.88 kB │ gzip:   3.79 kB
+dist/assets/scss-OYdSNvt2.js                                 27.20 kB │ gzip:   4.20 kB
+dist/assets/java-CylS5w8V.js                                 27.22 kB │ gzip:   4.26 kB
+dist/assets/coffee-Ch7k5sss.js                               27.42 kB │ gzip:   6.35 kB
+dist/assets/mermaid-DKYwYmdq.js                              28.50 kB │ gzip:   3.55 kB
+dist/assets/scala-C151Ov-r.js                                28.88 kB │ gzip:   3.94 kB
+dist/assets/night-owl-C39BiMTA.js                            28.91 kB │ gzip:   5.16 kB
+dist/assets/pierre-dark-DF2SEV7i.js                          29.35 kB │ gzip:   4.54 kB
+dist/assets/pierre-light-DOlZxES8.js                         29.35 kB │ gzip:   4.49 kB
+dist/assets/crystal-tKQVLTB8.js                              29.39 kB │ gzip:   4.44 kB
+dist/assets/applescript-Co6uUVPk.js                          29.57 kB │ gzip:   5.93 kB
+dist/assets/julia-C8NyazO9.js                                31.07 kB │ gzip:   4.33 kB
+dist/assets/stylus-BEDo0Tqx.js                               31.07 kB │ gzip:   7.99 kB
+dist/assets/poimandres-CS3Unz2-.js                           33.49 kB │ gzip:   5.50 kB
+dist/assets/one-dark-pro-DVMEJ2y_.js                         33.79 kB │ gzip:   5.52 kB
+dist/assets/bsl-BO_Y6i37.js                                  33.87 kB │ gzip:   8.35 kB
+dist/assets/haxe-CzTSHFRz.js                                 35.16 kB │ gzip:   5.91 kB
+dist/assets/nginx-DknmC5AR.js                                35.37 kB │ gzip:   4.43 kB
+dist/assets/houston-DnULxvSX.js                              35.42 kB │ gzip:   5.78 kB
+dist/assets/tokyo-night-hegEt444.js                          35.67 kB │ gzip:   6.24 kB
+dist/assets/erlang-DsQrWhSR.js                               37.48 kB │ gzip:   4.40 kB
+dist/assets/cobol-nwyudZeR.js                                39.15 kB │ gzip:  10.87 kB
+dist/assets/asm-D_Q5rh1f.js                                  40.72 kB │ gzip:   8.21 kB
+dist/assets/shellscript-Yzrsuije.js                          41.48 kB │ gzip:   6.09 kB
+dist/assets/haskell-Df6bDoY_.js                              41.49 kB │ gzip:   6.44 kB
+dist/assets/perl-C0TMdlhV.js                                 43.16 kB │ gzip:   4.67 kB
+dist/assets/d-85-TOEBH.js                                    43.80 kB │ gzip:   8.47 kB
+dist/assets/ruby-BvKwtOVI.js                                 45.91 kB │ gzip:   5.68 kB
+dist/assets/go-Dn2_MT6a.js                                   46.78 kB │ gzip:   5.18 kB
+dist/assets/apex-DDbsPZ6N.js                                 46.97 kB │ gzip:   6.76 kB
+dist/assets/catppuccin-mocha-D87Tk5Gz.js                     47.26 kB │ gzip:   8.00 kB
+dist/assets/catppuccin-latte-C9dUb6Cb.js                     47.26 kB │ gzip:   8.00 kB
+dist/assets/catppuccin-frappe-DFWUc33u.js                    47.26 kB │ gzip:   8.02 kB
+dist/assets/catppuccin-macchiato-DQyhUUbL.js                 47.26 kB │ gzip:   8.01 kB
+dist/assets/ada-bCR0ucgS.js                                  48.08 kB │ gzip:   6.03 kB
+dist/assets/css-DPfMkruS.js                                  49.02 kB │ gzip:  11.85 kB
+dist/assets/imba-DGztddWO.js                                 49.93 kB │ gzip:   9.46 kB
+dist/assets/everforest-dark-BgDCqdQA.js                      53.75 kB │ gzip:   8.42 kB
+dist/assets/everforest-light-C8M2exoo.js                     53.75 kB │ gzip:   8.42 kB
+dist/assets/r-DiinP2Uv.js                                    55.81 kB │ gzip:  15.13 kB
+dist/assets/wikitext-BhOHFoWU.js                             55.89 kB │ gzip:   4.76 kB
+dist/assets/stata-BH5u7GGu.js                                56.99 kB │ gzip:  12.36 kB
+dist/assets/html-GMplVEZG.js                                 57.25 kB │ gzip:  11.69 kB
+dist/assets/ballerina-BFfxhgS-.js                            58.69 kB │ gzip:   8.15 kB
+dist/assets/markdown-Cvjx9yec.js                             59.34 kB │ gzip:   5.64 kB
+dist/assets/ocaml-C0hk2d4L.js                                62.45 kB │ gzip:   5.02 kB
+dist/assets/mojo-1DNp92w6.js                                 69.29 kB │ gzip:   9.18 kB
+dist/assets/python-B6aJPvgy.js                               69.95 kB │ gzip:   9.13 kB
+dist/assets/c-BIGW1oBm.js                                    72.11 kB │ gzip:  10.51 kB
+dist/assets/latex-BdAV_C_H.js                                72.19 kB │ gzip:   6.62 kB
+dist/assets/vyper-CDx5xZoG.js                                74.65 kB │ gzip:  10.74 kB
+dist/assets/hack-CaT9iCJl.js                                 80.24 kB │ gzip:  26.21 kB
+dist/assets/swift-Dg5xB15N.js                                86.61 kB │ gzip:  14.70 kB
+dist/assets/fortran-free-form-D22FLkUw.js                    87.15 kB │ gzip:  10.92 kB
+dist/assets/csharp-K5feNrxe.js                               87.72 kB │ gzip:  10.46 kB
+dist/assets/racket-BqYA7rlc.js                               92.39 kB │ gzip:  15.02 kB
+dist/assets/less-B1dDrJ26.js                                 97.63 kB │ gzip:  14.70 kB
+dist/assets/blade-DVc8C-J4.js                               103.80 kB │ gzip:  28.14 kB
+dist/assets/objective-c-DXmwc3jG.js                         105.41 kB │ gzip:  23.33 kB
+dist/assets/php-CDn_0X-4.js                                 111.00 kB │ gzip:  28.52 kB
+dist/assets/asciidoc-Dv7Oe6Be.js                            131.51 kB │ gzip:   9.34 kB
+dist/assets/mdx-Cmh6b_Ma.js                                 136.11 kB │ gzip:  23.35 kB
+dist/assets/objective-cpp-CLxacb5B.js                       171.97 kB │ gzip:  30.62 kB
+dist/assets/javascript-wDzz0qaB.js                          174.83 kB │ gzip:  16.51 kB
+dist/assets/tsx-COt5Ahok.js                                 175.54 kB │ gzip:  16.51 kB
+dist/assets/jsx-g9-lgVsj.js                                 177.79 kB │ gzip:  16.61 kB
+dist/assets/typescript-BPQ3VLAy.js                          181.08 kB │ gzip:  16.04 kB
+dist/assets/angular-ts-BwZT4LLn.js                          183.82 kB │ gzip:  16.63 kB
+dist/assets/vue-vine-8moa0y9V.js                            190.22 kB │ gzip:  18.07 kB
+dist/assets/wolfram-lXgVvXCa.js                             262.39 kB │ gzip:  77.14 kB
+dist/assets/wasm-CG6Dc4jp.js                                622.34 kB │ gzip: 230.29 kB
+dist/assets/cpp-CofmeUqb.js                                 626.08 kB │ gzip:  44.82 kB
+dist/assets/emacs-lisp-C9XAeP06.js                          779.85 kB │ gzip: 196.03 kB
+dist/assets/index-BPnpXh6t.js                             2,233.93 kB │ gzip: 579.63 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 12.94s
+bun add v1.3.14 (0d9b296a)
+Resolving dependencies
+Resolved, downloaded and extracted [6]
+Saved lockfile
+
+$ bun run --cwd packages/opencode fix-node-pty && bun run script/setup-git.ts
+$ bun run script/fix-node-pty.ts
+$ husky
+
++ @parcel/watcher-darwin-arm64@2.5.1
++ @parcel/watcher-darwin-x64@2.5.1
++ @parcel/watcher-linux-arm64-glibc@2.5.1
++ @parcel/watcher-linux-arm64-musl@2.5.1
++ @parcel/watcher-linux-x64-glibc@2.5.1
++ @parcel/watcher-linux-x64-musl@2.5.1
++ @parcel/watcher-win32-arm64@2.5.1
+
+installed @opentui/core@0.2.15
+
+466 packages installed [5.34s]
+bun add v1.3.14 (0d9b296a)
+Resolving dependencies
+Resolved, downloaded and extracted [6]
+Saved lockfile
+
+$ bun run --cwd packages/opencode fix-node-pty && bun run script/setup-git.ts
+$ bun run script/fix-node-pty.ts
+$ husky
+
+installed @parcel/watcher@2.5.1
+
+[4.16s] done
+building @kilocode/cli-windows-x64
+copied 37 tree-sitter wasm files to C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\tree-sitter
+copied Kilo Console assets to C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\console
+copied Kilo sandbox mutation worker to C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\kilo-sandbox-mutation-worker.js
+Archive:  C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw\ripgrep-15.1.0-x86_64-pc-windows-msvc.zip
+   creating: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw/ripgrep-15.1.0-x86_64-pc-windows-msvc/
+   creating: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw/ripgrep-15.1.0-x86_64-pc-windows-msvc/complete/
+  inflating: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw/ripgrep-15.1.0-x86_64-pc-windows-msvc/complete/rg.bash
+  inflating: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw/ripgrep-15.1.0-x86_64-pc-windows-msvc/complete/rg.fish
+  inflating: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw/ripgrep-15.1.0-x86_64-pc-windows-msvc/complete/_rg
+  inflating: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw/ripgrep-15.1.0-x86_64-pc-windows-msvc/complete/_rg.ps1
+  inflating: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw/ripgrep-15.1.0-x86_64-pc-windows-msvc/COPYING
+   creating: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw/ripgrep-15.1.0-x86_64-pc-windows-msvc/doc/
+  inflating: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw/ripgrep-15.1.0-x86_64-pc-windows-msvc/doc/CHANGELOG.md
+  inflating: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw/ripgrep-15.1.0-x86_64-pc-windows-msvc/doc/FAQ.md
+  inflating: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw/ripgrep-15.1.0-x86_64-pc-windows-msvc/doc/GUIDE.md
+  inflating: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw/ripgrep-15.1.0-x86_64-pc-windows-msvc/doc/rg.1
+  inflating: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw/ripgrep-15.1.0-x86_64-pc-windows-msvc/LICENSE-MIT
+  inflating: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw/ripgrep-15.1.0-x86_64-pc-windows-msvc/README.md
+  inflating: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw/ripgrep-15.1.0-x86_64-pc-windows-msvc/rg.exe
+  inflating: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\.rg-tmp-XXXXXXYF3pdw/ripgrep-15.1.0-x86_64-pc-windows-msvc/UNLICENSE
+ripgrep extracted to C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin\rg.exe
+Running smoke test: dist/@kilocode/cli-windows-x64/bin/kilo --version
+Smoke test passed: 7.4.5
+Running smoke test: dist/@kilocode/cli-windows-x64/bin/kilo --pure models anthropic
+Models snapshot smoke test passed
+Kilo sandbox mutation worker smoke test passed
+  adding: console/ (192 bytes security) (stored 0%)
+  adding: console/assets/ (192 bytes security) (stored 0%)
+  adding: console/assets/abap-BdImnpbu.js (172 bytes security) (deflated 63%)
+  adding: console/assets/actionscript-3-CfeIJUat.js (172 bytes security) (deflated 82%)
+  adding: console/assets/ada-bCR0ucgS.js (172 bytes security) (deflated 87%)
+  adding: console/assets/andromeeda-C-Jbm3Hp.js (172 bytes security) (deflated 74%)
+  adding: console/assets/angular-html-CU67Zn6k.js (172 bytes security) (deflated 84%)
+  adding: console/assets/angular-ts-BwZT4LLn.js (172 bytes security) (deflated 91%)
+  adding: console/assets/apache-Pmp26Uib.js (172 bytes security) (deflated 70%)
+  adding: console/assets/apex-DDbsPZ6N.js (172 bytes security) (deflated 86%)
+  adding: console/assets/apl-dKokRX4l.js (172 bytes security) (deflated 83%)
+  adding: console/assets/applescript-Co6uUVPk.js (172 bytes security) (deflated 80%)
+  adding: console/assets/ara-BRHolxvo.js (172 bytes security) (deflated 72%)
+  adding: console/assets/asciidoc-Dv7Oe6Be.js (172 bytes security) (deflated 93%)
+  adding: console/assets/asm-D_Q5rh1f.js (172 bytes security) (deflated 80%)
+  adding: console/assets/astro-CbQHKStN.js (172 bytes security) (deflated 69%)
+  adding: console/assets/aurora-x-D-2ljcwZ.js (172 bytes security) (deflated 83%)
+  adding: console/assets/awk-DMzUqQB5.js (172 bytes security) (deflated 75%)
+  adding: console/assets/ayu-dark-Cv9koXgw.js (172 bytes security) (deflated 79%)
+  adding: console/assets/ballerina-BFfxhgS-.js (172 bytes security) (deflated 86%)
+  adding: console/assets/bat-BkioyH1T.js (172 bytes security) (deflated 75%)
+  adding: console/assets/beancount-k_qm7-4y.js (172 bytes security) (deflated 86%)
+  adding: console/assets/berry-uYugtg8r.js (172 bytes security) (deflated 74%)
+  adding: console/assets/bibtex-CHM0blh-.js (172 bytes security) (deflated 83%)
+  adding: console/assets/bicep-Bmn6On1c.js (172 bytes security) (deflated 79%)
+  adding: console/assets/blade-DVc8C-J4.js (172 bytes security) (deflated 73%)
+  adding: console/assets/bsl-BO_Y6i37.js (172 bytes security) (deflated 76%)
+  adding: console/assets/c-BIGW1oBm.js (172 bytes security) (deflated 85%)
+  adding: console/assets/cadence-Bv_4Rxtq.js (172 bytes security) (deflated 85%)
+  adding: console/assets/cairo-KRGpt6FW.js (172 bytes security) (deflated 73%)
+  adding: console/assets/catppuccin-frappe-DFWUc33u.js (172 bytes security) (deflated 83%)
+  adding: console/assets/catppuccin-latte-C9dUb6Cb.js (172 bytes security) (deflated 83%)
+  adding: console/assets/catppuccin-macchiato-DQyhUUbL.js (172 bytes security) (deflated 83%)
+  adding: console/assets/catppuccin-mocha-D87Tk5Gz.js (172 bytes security) (deflated 83%)
+  adding: console/assets/clarity-D53aC0YG.js (172 bytes security) (deflated 83%)
+  adding: console/assets/clojure-P80f7IUj.js (172 bytes security) (deflated 78%)
+  adding: console/assets/cmake-D1j8_8rp.js (172 bytes security) (deflated 66%)
+  adding: console/assets/cobol-nwyudZeR.js (172 bytes security) (deflated 72%)
+  adding: console/assets/codeowners-Bp6g37R7.js (172 bytes security) (deflated 45%)
+  adding: console/assets/codeql-DsOJ9woJ.js (172 bytes security) (deflated 86%)
+  adding: console/assets/coffee-Ch7k5sss.js (172 bytes security) (deflated 77%)
+  adding: console/assets/common-lisp-Cg-RD9OK.js (172 bytes security) (deflated 73%)
+  adding: console/assets/coq-DkFqJrB1.js (172 bytes security) (deflated 65%)
+  adding: console/assets/cpp-CofmeUqb.js (172 bytes security) (deflated 93%)
+  adding: console/assets/crystal-tKQVLTB8.js (172 bytes security) (deflated 85%)
+  adding: console/assets/csharp-K5feNrxe.js (172 bytes security) (deflated 88%)
+  adding: console/assets/css-DPfMkruS.js (172 bytes security) (deflated 76%)
+  adding: console/assets/csv-fuZLfV_i.js (172 bytes security) (deflated 69%)
+  adding: console/assets/cue-D82EKSYY.js (172 bytes security) (deflated 87%)
+  adding: console/assets/cypher-COkxafJQ.js (172 bytes security) (deflated 72%)
+  adding: console/assets/d-85-TOEBH.js (172 bytes security) (deflated 81%)
+  adding: console/assets/dark-plus-C3mMm8J8.js (172 bytes security) (deflated 77%)
+  adding: console/assets/dart-CF10PKvl.js (172 bytes security) (deflated 76%)
+  adding: console/assets/dax-CEL-wOlO.js (172 bytes security) (deflated 59%)
+  adding: console/assets/desktop-BmXAJ9_W.js (172 bytes security) (deflated 60%)
+  adding: console/assets/diff-D97Zzqfu.js (172 bytes security) (deflated 74%)
+  adding: console/assets/docker-BcOcwvcX.js (172 bytes security) (deflated 67%)
+  adding: console/assets/dotenv-Da5cRb03.js (172 bytes security) (deflated 64%)
+  adding: console/assets/dracula-BzJJZx-M.js (172 bytes security) (deflated 81%)
+  adding: console/assets/dracula-soft-BXkSAIEj.js (172 bytes security) (deflated 81%)
+  adding: console/assets/dream-maker-BtqSS_iP.js (172 bytes security) (deflated 79%)
+  adding: console/assets/edge-BkV0erSs.js (172 bytes security) (deflated 71%)
+  adding: console/assets/elixir-CDX3lj18.js (172 bytes security) (deflated 83%)
+  adding: console/assets/elm-DbKCFpqz.js (172 bytes security) (deflated 81%)
+  adding: console/assets/emacs-lisp-C9XAeP06.js (172 bytes security) (deflated 75%)
+  adding: console/assets/erb-BOJIQeun.js (172 bytes security) (deflated 69%)
+  adding: console/assets/erlang-DsQrWhSR.js (172 bytes security) (deflated 88%)
+  adding: console/assets/everforest-dark-BgDCqdQA.js (172 bytes security) (deflated 84%)
+  adding: console/assets/everforest-light-C8M2exoo.js (172 bytes security) (deflated 84%)
+  adding: console/assets/fennel-BYunw83y.js (172 bytes security) (deflated 68%)
+  adding: console/assets/fish-BvzEVeQv.js (172 bytes security) (deflated 87%)
+  adding: console/assets/fluent-C4IJs8-o.js (172 bytes security) (deflated 76%)
+  adding: console/assets/fortran-fixed-form-BZjJHVRy.js (172 bytes security) (deflated 53%)
+  adding: console/assets/fortran-free-form-D22FLkUw.js (172 bytes security) (deflated 87%)
+  adding: console/assets/fsharp-CXgrBDvD.js (172 bytes security) (deflated 84%)
+  adding: console/assets/gdresource-B7Tvp0Sc.js (172 bytes security) (deflated 75%)
+  adding: console/assets/gdscript-DTMYz4Jt.js (172 bytes security) (deflated 80%)
+  adding: console/assets/gdshader-DkwncUOv.js (172 bytes security) (deflated 73%)
+  adding: console/assets/genie-D0YGMca9.js (172 bytes security) (deflated 65%)
+  adding: console/assets/gherkin-DyxjwDmM.js (172 bytes security) (deflated 59%)
+  adding: console/assets/git-commit-F4YmCXRG.js (172 bytes security) (deflated 59%)
+  adding: console/assets/git-rebase-r7XF79zn.js (172 bytes security) (deflated 57%)
+  adding: console/assets/github-dark-default-Cuk6v7N8.js (172 bytes security) (deflated 78%)
+  adding: console/assets/github-dark-DHJKELXO.js (172 bytes security) (deflated 78%)
+  adding: console/assets/github-dark-dimmed-DH5Ifo-i.js (172 bytes security) (deflated 78%)
+  adding: console/assets/github-dark-high-contrast-E3gJ1_iC.js (172 bytes security) (deflated 79%)
+  adding: console/assets/github-light-DAi9KRSo.js (172 bytes security) (deflated 78%)
+  adding: console/assets/github-light-default-D7oLnXFd.js (172 bytes security) (deflated 78%)
+  adding: console/assets/github-light-high-contrast-BfjtVDDH.js (172 bytes security) (deflated 79%)
+  adding: console/assets/gleam-BspZqrRM.js (172 bytes security) (deflated 69%)
+  adding: console/assets/glimmer-js-Rg0-pVw9.js (172 bytes security) (deflated 85%)
+  adding: console/assets/glimmer-ts-U6CK756n.js (172 bytes security) (deflated 85%)
+  adding: console/assets/glsl-DplSGwfg.js (172 bytes security) (deflated 61%)
+  adding: console/assets/gnuplot-DdkO51Og.js (172 bytes security) (deflated 78%)
+  adding: console/assets/go-Dn2_MT6a.js (172 bytes security) (deflated 89%)
+  adding: console/assets/graphql-ChdNCCLP.js (172 bytes security) (deflated 86%)
+  adding: console/assets/groovy-gcz8RCvz.js (172 bytes security) (deflated 81%)
+  adding: console/assets/gruvbox-dark-hard-CFHQjOhq.js (172 bytes security) (deflated 82%)
+  adding: console/assets/gruvbox-dark-medium-GsRaNv29.js (172 bytes security) (deflated 82%)
+  adding: console/assets/gruvbox-dark-soft-CVdnzihN.js (172 bytes security) (deflated 82%)
+  adding: console/assets/gruvbox-light-hard-CH1njM8p.js (172 bytes security) (deflated 82%)
+  adding: console/assets/gruvbox-light-medium-DRw_LuNl.js (172 bytes security) (deflated 81%)
+  adding: console/assets/gruvbox-light-soft-hJgmCMqR.js (172 bytes security) (deflated 82%)
+  adding: console/assets/hack-CaT9iCJl.js (172 bytes security) (deflated 68%)
+  adding: console/assets/haml-B8DHNrY2.js (172 bytes security) (deflated 78%)
+  adding: console/assets/handlebars-BL8al0AC.js (172 bytes security) (deflated 81%)
+  adding: console/assets/haskell-Df6bDoY_.js (172 bytes security) (deflated 85%)
+  adding: console/assets/haxe-CzTSHFRz.js (172 bytes security) (deflated 83%)
+  adding: console/assets/hcl-BWvSN4gD.js (172 bytes security) (deflated 81%)
+  adding: console/assets/hjson-D5-asLiD.js (172 bytes security) (deflated 87%)
+  adding: console/assets/hlsl-D3lLCCz7.js (172 bytes security) (deflated 70%)
+  adding: console/assets/houston-DnULxvSX.js (172 bytes security) (deflated 84%)
+  adding: console/assets/html-derivative-BFtXZ54Q.js (172 bytes security) (deflated 47%)
+  adding: console/assets/html-GMplVEZG.js (172 bytes security) (deflated 80%)
+  adding: console/assets/http-jrhK8wxY.js (172 bytes security) (deflated 76%)
+  adding: console/assets/hurl-irOxFIW8.js (172 bytes security) (deflated 69%)
+  adding: console/assets/hxml-Bvhsp5Yf.js (172 bytes security) (deflated 50%)
+  adding: console/assets/hy-DFXneXwc.js (172 bytes security) (deflated 56%)
+  adding: console/assets/imba-DGztddWO.js (172 bytes security) (deflated 81%)
+  adding: console/assets/index-BPnpXh6t.js (172 bytes security) (deflated 74%)
+  adding: console/assets/index-DEDaeHO5.css (172 bytes security) (deflated 84%)
+  adding: console/assets/ini-BEwlwnbL.js (172 bytes security) (deflated 69%)
+  adding: console/assets/Inter-Variable-CWi-zmRD.woff2 (172 bytes security) (deflated 0%)
+  adding: console/assets/Inter-Variable-Italic-d6KXgdvN.woff2 (172 bytes security) (deflated 0%)
+  adding: console/assets/java-CylS5w8V.js (172 bytes security) (deflated 84%)
+  adding: console/assets/javascript-wDzz0qaB.js (172 bytes security) (deflated 91%)
+  adding: console/assets/JetBrainsMono-Variable-BzuZpUCI.woff2 (172 bytes security) (deflated 0%)
+  adding: console/assets/jinja-4LBKfQ-Z.js (172 bytes security) (deflated 76%)
+  adding: console/assets/jison-wvAkD_A8.js (172 bytes security) (deflated 81%)
+  adding: console/assets/json-Cp-IABpG.js (172 bytes security) (deflated 73%)
+  adding: console/assets/json5-C9tS-k6U.js (172 bytes security) (deflated 75%)
+  adding: console/assets/jsonc-Des-eS-w.js (172 bytes security) (deflated 75%)
+  adding: console/assets/jsonl-DcaNXYhu.js (172 bytes security) (deflated 74%)
+  adding: console/assets/jsonnet-DFQXde-d.js (172 bytes security) (deflated 71%)
+  adding: console/assets/jssm-C2t-YnRu.js (172 bytes security) (deflated 73%)
+  adding: console/assets/jsx-g9-lgVsj.js (172 bytes security) (deflated 91%)
+  adding: console/assets/julia-C8NyazO9.js (172 bytes security) (deflated 86%)
+  adding: console/assets/kanagawa-dragon-CkXjmgJE.js (172 bytes security) (deflated 83%)
+  adding: console/assets/kanagawa-lotus-CfQXZHmo.js (172 bytes security) (deflated 83%)
+  adding: console/assets/kanagawa-wave-DWedfzmr.js (172 bytes security) (deflated 83%)
+  adding: console/assets/KaTeX_AMS-Regular-BQhdFMY1.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_AMS-Regular-DMm9YOAa.woff (172 bytes security) (deflated 0%)
+  adding: console/assets/KaTeX_AMS-Regular-DRggAlZN.ttf (172 bytes security) (deflated 46%)
+  adding: console/assets/KaTeX_Caligraphic-Bold-ATXxdsX0.ttf (172 bytes security) (deflated 38%)
+  adding: console/assets/KaTeX_Caligraphic-Bold-BEiXGLvX.woff (172 bytes security) (deflated 1%)
+  adding: console/assets/KaTeX_Caligraphic-Bold-Dq_IR9rO.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_Caligraphic-Regular-CTRA-rTL.woff (172 bytes security) (deflated 1%)
+  adding: console/assets/KaTeX_Caligraphic-Regular-Di6jR-x-.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_Caligraphic-Regular-wX97UBjC.ttf (172 bytes security) (deflated 38%)
+  adding: console/assets/KaTeX_Fraktur-Bold-BdnERNNW.ttf (172 bytes security) (deflated 32%)
+  adding: console/assets/KaTeX_Fraktur-Bold-BsDP51OF.woff (172 bytes security) (deflated 0%)
+  adding: console/assets/KaTeX_Fraktur-Bold-CL6g_b3V.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_Fraktur-Regular-CB_wures.ttf (172 bytes security) (deflated 32%)
+  adding: console/assets/KaTeX_Fraktur-Regular-CTYiF6lA.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_Fraktur-Regular-Dxdc4cR9.woff (172 bytes security) (deflated 0%)
+  adding: console/assets/KaTeX_Main-Bold-Cx986IdX.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_Main-Bold-Jm3AIy58.woff (172 bytes security) (deflated 0%)
+  adding: console/assets/KaTeX_Main-Bold-waoOVXN0.ttf (172 bytes security) (deflated 40%)
+  adding: console/assets/KaTeX_Main-BoldItalic-DxDJ3AOS.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_Main-BoldItalic-DzxPMmG6.ttf (172 bytes security) (deflated 40%)
+  adding: console/assets/KaTeX_Main-BoldItalic-SpSLRI95.woff (172 bytes security) (deflated 0%)
+  adding: console/assets/KaTeX_Main-Italic-3WenGoN9.ttf (172 bytes security) (deflated 40%)
+  adding: console/assets/KaTeX_Main-Italic-BMLOBm91.woff (172 bytes security) (deflated 0%)
+  adding: console/assets/KaTeX_Main-Italic-NWA7e6Wa.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_Main-Regular-B22Nviop.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_Main-Regular-Dr94JaBh.woff (172 bytes security) (deflated 0%)
+  adding: console/assets/KaTeX_Main-Regular-ypZvNtVU.ttf (172 bytes security) (deflated 41%)
+  adding: console/assets/KaTeX_Math-BoldItalic-B3XSjfu4.ttf (172 bytes security) (deflated 39%)
+  adding: console/assets/KaTeX_Math-BoldItalic-CZnvNsCZ.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_Math-BoldItalic-iY-2wyZ7.woff (172 bytes security) (deflated 0%)
+  adding: console/assets/KaTeX_Math-Italic-DA0__PXp.woff (172 bytes security) (deflated 0%)
+  adding: console/assets/KaTeX_Math-Italic-flOr_0UB.ttf (172 bytes security) (deflated 39%)
+  adding: console/assets/KaTeX_Math-Italic-t53AETM-.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_SansSerif-Bold-CFMepnvq.ttf (172 bytes security) (deflated 41%)
+  adding: console/assets/KaTeX_SansSerif-Bold-D1sUS0GD.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_SansSerif-Bold-DbIhKOiC.woff (172 bytes security) (deflated 0%)
+  adding: console/assets/KaTeX_SansSerif-Italic-C3H0VqGB.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_SansSerif-Italic-DN2j7dab.woff (172 bytes security) (deflated 0%)
+  adding: console/assets/KaTeX_SansSerif-Italic-YYjJ1zSn.ttf (172 bytes security) (deflated 36%)
+  adding: console/assets/KaTeX_SansSerif-Regular-BNo7hRIc.ttf (172 bytes security) (deflated 37%)
+  adding: console/assets/KaTeX_SansSerif-Regular-CS6fqUqJ.woff (172 bytes security) (deflated 0%)
+  adding: console/assets/KaTeX_SansSerif-Regular-DDBCnlJ7.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_Script-Regular-C5JkGWo-.ttf (172 bytes security) (deflated 36%)
+  adding: console/assets/KaTeX_Script-Regular-D3wIWfF6.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_Script-Regular-D5yQViql.woff (172 bytes security) (deflated 1%)
+  adding: console/assets/KaTeX_Size1-Regular-C195tn64.woff (172 bytes security) (deflated 1%)
+  adding: console/assets/KaTeX_Size1-Regular-Dbsnue_I.ttf (172 bytes security) (deflated 48%)
+  adding: console/assets/KaTeX_Size1-Regular-mCD8mA8B.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_Size2-Regular-B7gKUWhC.ttf (172 bytes security) (deflated 47%)
+  adding: console/assets/KaTeX_Size2-Regular-Dy4dx90m.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_Size2-Regular-oD1tc_U0.woff (172 bytes security) (deflated 1%)
+  adding: console/assets/KaTeX_Size3-Regular-CTq5MqoE.woff (172 bytes security) (deflated 2%)
+  adding: console/assets/KaTeX_Size3-Regular-DgpXs0kz.ttf (172 bytes security) (deflated 44%)
+  adding: console/assets/KaTeX_Size4-Regular-BF-4gkZK.woff (172 bytes security) (deflated 1%)
+  adding: console/assets/KaTeX_Size4-Regular-Dl5lxZxV.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_Size4-Regular-DWFBv043.ttf (172 bytes security) (deflated 43%)
+  adding: console/assets/KaTeX_Typewriter-Regular-C0xS9mPB.woff (172 bytes security) (deflated 0%)
+  adding: console/assets/KaTeX_Typewriter-Regular-CO6r4hn1.woff2 (172 bytes security) (stored 0%)
+  adding: console/assets/KaTeX_Typewriter-Regular-D3Ib7_Hf.ttf (172 bytes security) (deflated 41%)
+  adding: console/assets/kdl-DV7GczEv.js (172 bytes security) (deflated 72%)
+  adding: console/assets/kotlin-BdnUsdx6.js (172 bytes security) (deflated 76%)
+  adding: console/assets/kusto-BvAqAH-y.js (172 bytes security) (deflated 74%)
+  adding: console/assets/laserwave-DUszq2jm.js (172 bytes security) (deflated 78%)
+  adding: console/assets/latex-BdAV_C_H.js (172 bytes security) (deflated 91%)
+  adding: console/assets/lean-Bc6EcWN3.js (172 bytes security) (deflated 67%)
+  adding: console/assets/less-B1dDrJ26.js (172 bytes security) (deflated 85%)
+  adding: console/assets/light-plus-B7mTdjB0.js (172 bytes security) (deflated 77%)
+  adding: console/assets/liquid-DYVedYrR.js (172 bytes security) (deflated 83%)
+  adding: console/assets/llvm-BtvRca6l.js (172 bytes security) (deflated 60%)
+  adding: console/assets/log-2UxHyX5q.js (172 bytes security) (deflated 70%)
+  adding: console/assets/logo-BtOb2qkB.js (172 bytes security) (deflated 53%)
+  adding: console/assets/lua-BbnMAYS6.js (172 bytes security) (deflated 80%)
+  adding: console/assets/luau-CXu1NL6O.js (172 bytes security) (deflated 77%)
+  adding: console/assets/make-CHLpvVh8.js (172 bytes security) (deflated 81%)
+  adding: console/assets/markdown-Cvjx9yec.js (172 bytes security) (deflated 91%)
+  adding: console/assets/marko-CPi9NSCl.js (172 bytes security) (deflated 86%)
+  adding: console/assets/material-theme-D5KoaKCx.js (172 bytes security) (deflated 83%)
+  adding: console/assets/material-theme-darker-BfHTSMKl.js (172 bytes security) (deflated 83%)
+  adding: console/assets/material-theme-lighter-B0m2ddpp.js (172 bytes security) (deflated 83%)
+  adding: console/assets/material-theme-ocean-CyktbL80.js (172 bytes security) (deflated 83%)
+  adding: console/assets/material-theme-palenight-Csfq5Kiy.js (172 bytes security) (deflated 83%)
+  adding: console/assets/matlab-D7o27uSR.js (172 bytes security) (deflated 81%)
+  adding: console/assets/mdc-DUICxH0z.js (172 bytes security) (deflated 66%)
+  adding: console/assets/mdx-Cmh6b_Ma.js (172 bytes security) (deflated 83%)
+  adding: console/assets/mermaid-DKYwYmdq.js (172 bytes security) (deflated 88%)
+  adding: console/assets/min-dark-CafNBF8u.js (172 bytes security) (deflated 73%)
+  adding: console/assets/min-light-CTRr51gU.js (172 bytes security) (deflated 73%)
+  adding: console/assets/mipsasm-CKIfxQSi.js (172 bytes security) (deflated 65%)
+  adding: console/assets/mojo-1DNp92w6.js (172 bytes security) (deflated 87%)
+  adding: console/assets/monokai-D4h5O-jR.js (172 bytes security) (deflated 76%)
+  adding: console/assets/move-Bu9oaDYs.js (172 bytes security) (deflated 82%)
+  adding: console/assets/narrat-DRg8JJMk.js (172 bytes security) (deflated 70%)
+  adding: console/assets/nextflow-BrzmwbiE.js (172 bytes security) (deflated 75%)
+  adding: console/assets/nginx-DknmC5AR.js (172 bytes security) (deflated 87%)
+  adding: console/assets/night-owl-C39BiMTA.js (172 bytes security) (deflated 82%)
+  adding: console/assets/nim-CVrawwO9.js (172 bytes security) (deflated 86%)
+  adding: console/assets/nix-c8nO5XWb.js (172 bytes security) (deflated 84%)
+  adding: console/assets/nord-Ddv68eIx.js (172 bytes security) (deflated 84%)
+  adding: console/assets/nushell-C-sUppwS.js (172 bytes security) (deflated 75%)
+  adding: console/assets/objective-c-DXmwc3jG.js (172 bytes security) (deflated 78%)
+  adding: console/assets/objective-cpp-CLxacb5B.js (172 bytes security) (deflated 82%)
+  adding: console/assets/ocaml-C0hk2d4L.js (172 bytes security) (deflated 92%)
+  adding: console/assets/one-dark-pro-DVMEJ2y_.js (172 bytes security) (deflated 84%)
+  adding: console/assets/one-light-PoHY5YXO.js (172 bytes security) (deflated 86%)
+  adding: console/assets/openscad-C4EeE6gA.js (172 bytes security) (deflated 65%)
+  adding: console/assets/pascal-D93ZcfNL.js (172 bytes security) (deflated 60%)
+  adding: console/assets/perl-C0TMdlhV.js (172 bytes security) (deflated 89%)
+  adding: console/assets/php-CDn_0X-4.js (172 bytes security) (deflated 74%)
+  adding: console/assets/pierre-dark-DF2SEV7i.js (172 bytes security) (deflated 85%)
+  adding: console/assets/pierre-light-DOlZxES8.js (172 bytes security) (deflated 85%)
+  adding: console/assets/pkl-u5AG7uiY.js (172 bytes security) (deflated 87%)
+  adding: console/assets/plastic-3e1v2bzS.js (172 bytes security) (deflated 79%)
+  adding: console/assets/plsql-ChMvpjG-.js (172 bytes security) (deflated 65%)
+  adding: console/assets/po-BTJTHyun.js (172 bytes security) (deflated 73%)
+  adding: console/assets/poimandres-CS3Unz2-.js (172 bytes security) (deflated 84%)
+  adding: console/assets/polar-C0HS_06l.js (172 bytes security) (deflated 76%)
+  adding: console/assets/postcss-CXtECtnM.js (172 bytes security) (deflated 70%)
+  adding: console/assets/powerquery-CEu0bR-o.js (172 bytes security) (deflated 75%)
+  adding: console/assets/powershell-Dpen1YoG.js (172 bytes security) (deflated 80%)
+  adding: console/assets/prisma-Dd19v3D-.js (172 bytes security) (deflated 78%)
+  adding: console/assets/prolog-CbFg5uaA.js (172 bytes security) (deflated 66%)
+  adding: console/assets/proto-DyJlTyXw.js (172 bytes security) (deflated 79%)
+  adding: console/assets/pug-CGlum2m_.js (172 bytes security) (deflated 82%)
+  adding: console/assets/puppet-BMWR74SV.js (172 bytes security) (deflated 82%)
+  adding: console/assets/purescript-CklMAg4u.js (172 bytes security) (deflated 87%)
+  adding: console/assets/python-B6aJPvgy.js (172 bytes security) (deflated 87%)
+  adding: console/assets/qml-3beO22l8.js (172 bytes security) (deflated 74%)
+  adding: console/assets/qmldir-C8lEn-DE.js (172 bytes security) (deflated 57%)
+  adding: console/assets/qss-IeuSbFQv.js (172 bytes security) (deflated 66%)
+  adding: console/assets/r-DiinP2Uv.js (172 bytes security) (deflated 73%)
+  adding: console/assets/racket-BqYA7rlc.js (172 bytes security) (deflated 84%)
+  adding: console/assets/raku-DXvB9xmW.js (172 bytes security) (deflated 72%)
+  adding: console/assets/razor-CE9lU5zL.js (172 bytes security) (deflated 87%)
+  adding: console/assets/red-bN70gL4F.js (172 bytes security) (deflated 75%)
+  adding: console/assets/reg-C-SQnVFl.js (172 bytes security) (deflated 71%)
+  adding: console/assets/regexp-CDVJQ6XC.js (172 bytes security) (deflated 83%)
+  adding: console/assets/rel-C3B-1QV4.js (172 bytes security) (deflated 68%)
+  adding: console/assets/riscv-BM1_JUlF.js (172 bytes security) (deflated 72%)
+  adding: console/assets/RobotoMono-Variable-D-uY7J2_.woff2 (172 bytes security) (deflated 0%)
+  adding: console/assets/rose-pine-dawn-DHQR4-dF.js (172 bytes security) (deflated 82%)
+  adding: console/assets/rose-pine-moon-D4_iv3hh.js (172 bytes security) (deflated 82%)
+  adding: console/assets/rose-pine-qdsjHGoJ.js (172 bytes security) (deflated 82%)
+  adding: console/assets/rosmsg-BJDFO7_C.js (172 bytes security) (deflated 77%)
+  adding: console/assets/rst-B0xPkSld.js (172 bytes security) (deflated 78%)
+  adding: console/assets/ruby-BvKwtOVI.js (172 bytes security) (deflated 88%)
+  adding: console/assets/rust-B1yitclQ.js (172 bytes security) (deflated 82%)
+  adding: console/assets/sas-cz2c8ADy.js (172 bytes security) (deflated 58%)
+  adding: console/assets/sass-Cj5Yp3dK.js (172 bytes security) (deflated 73%)
+  adding: console/assets/scala-C151Ov-r.js (172 bytes security) (deflated 86%)
+  adding: console/assets/scheme-C98Dy4si.js (172 bytes security) (deflated 72%)
+  adding: console/assets/scss-OYdSNvt2.js (172 bytes security) (deflated 85%)
+  adding: console/assets/sdbl-DVxCFoDh.js (172 bytes security) (deflated 59%)
+  adding: console/assets/shaderlab-Dg9Lc6iA.js (172 bytes security) (deflated 65%)
+  adding: console/assets/shellscript-Yzrsuije.js (172 bytes security) (deflated 85%)
+  adding: console/assets/shellsession-BADoaaVG.js (172 bytes security) (deflated 43%)
+  adding: console/assets/slack-dark-BthQWCQV.js (172 bytes security) (deflated 79%)
+  adding: console/assets/slack-ochin-DqwNpetd.js (172 bytes security) (deflated 78%)
+  adding: console/assets/smalltalk-BERRCDM3.js (172 bytes security) (deflated 76%)
+  adding: console/assets/snazzy-light-Bw305WKR.js (172 bytes security) (deflated 82%)
+  adding: console/assets/solarized-dark-DXbdFlpD.js (172 bytes security) (deflated 74%)
+  adding: console/assets/solarized-light-L9t79GZl.js (172 bytes security) (deflated 73%)
+  adding: console/assets/solidity-rGO070M0.js (172 bytes security) (deflated 81%)
+  adding: console/assets/soy-Brmx7dQM.js (172 bytes security) (deflated 77%)
+  adding: console/assets/sparql-rVzFXLq3.js (172 bytes security) (deflated 46%)
+  adding: console/assets/splunk-BtCnVYZw.js (172 bytes security) (deflated 56%)
+  adding: console/assets/sprite-Fb-TFjRY.svg (172 bytes security) (deflated 74%)
+  adding: console/assets/sprite-iclrYEAD.svg (172 bytes security) (deflated 58%)
+  adding: console/assets/sql-BLtJtn59.js (172 bytes security) (deflated 68%)
+  adding: console/assets/ssh-config-_ykCGR6B.js (172 bytes security) (deflated 56%)
+  adding: console/assets/stata-BH5u7GGu.js (172 bytes security) (deflated 78%)
+  adding: console/assets/stylus-BEDo0Tqx.js (172 bytes security) (deflated 74%)
+  adding: console/assets/svelte-3Dk4HxPD.js (172 bytes security) (deflated 83%)
+  adding: console/assets/swift-Dg5xB15N.js (172 bytes security) (deflated 83%)
+  adding: console/assets/synthwave-84-CbfX1IO0.js (172 bytes security) (deflated 80%)
+  adding: console/assets/system-verilog-CnnmHF94.js (172 bytes security) (deflated 82%)
+  adding: console/assets/systemd-4A_iFExJ.js (172 bytes security) (deflated 68%)
+  adding: console/assets/talonscript-CkByrt1z.js (172 bytes security) (deflated 78%)
+  adding: console/assets/tasl-QIJgUcNo.js (172 bytes security) (deflated 75%)
+  adding: console/assets/tcl-dwOrl1Do.js (172 bytes security) (deflated 66%)
+  adding: console/assets/templ-W15q3VgB.js (172 bytes security) (deflated 78%)
+  adding: console/assets/terraform-BETggiCN.js (172 bytes security) (deflated 78%)
+  adding: console/assets/tex-CxkMU7Pf.js (172 bytes security) (deflated 68%)
+  adding: console/assets/tokyo-night-hegEt444.js (172 bytes security) (deflated 83%)
+  adding: console/assets/toml-vGWfd6FD.js (172 bytes security) (deflated 80%)
+  adding: console/assets/ts-tags-zn1MmPIZ.js (172 bytes security) (deflated 87%)
+  adding: console/assets/tsv-B_m7g4N7.js (172 bytes security) (deflated 56%)
+  adding: console/assets/tsx-COt5Ahok.js (172 bytes security) (deflated 91%)
+  adding: console/assets/turtle-BsS91CYL.js (172 bytes security) (deflated 74%)
+  adding: console/assets/twig-CO9l9SDP.js (172 bytes security) (deflated 82%)
+  adding: console/assets/typescript-BPQ3VLAy.js (172 bytes security) (deflated 91%)
+  adding: console/assets/typespec-BGHnOYBU.js (172 bytes security) (deflated 89%)
+  adding: console/assets/typst-DHCkPAjA.js (172 bytes security) (deflated 80%)
+  adding: console/assets/v-BcVCzyr7.js (172 bytes security) (deflated 79%)
+  adding: console/assets/vala-CsfeWuGM.js (172 bytes security) (deflated 65%)
+  adding: console/assets/vb-D17OF-Vu.js (172 bytes security) (deflated 62%)
+  adding: console/assets/verilog-BQ8w6xss.js (172 bytes security) (deflated 68%)
+  adding: console/assets/vesper-DU1UobuO.js (172 bytes security) (deflated 85%)
+  adding: console/assets/vhdl-CeAyd5Ju.js (172 bytes security) (deflated 84%)
+  adding: console/assets/viml-CJc9bBzg.js (172 bytes security) (deflated 67%)
+  adding: console/assets/vitesse-black-Bkuqu6BP.js (172 bytes security) (deflated 78%)
+  adding: console/assets/vitesse-dark-D0r3Knsf.js (172 bytes security) (deflated 78%)
+  adding: console/assets/vitesse-light-CVO1_9PV.js (172 bytes security) (deflated 78%)
+  adding: console/assets/vue-DnHKYNfI.js (172 bytes security) (deflated 87%)
+  adding: console/assets/vue-html-CChd_i61.js (172 bytes security) (deflated 80%)
+  adding: console/assets/vue-vine-8moa0y9V.js (172 bytes security) (deflated 90%)
+  adding: console/assets/vyper-CDx5xZoG.js (172 bytes security) (deflated 86%)
+  adding: console/assets/wasm-CG6Dc4jp.js (172 bytes security) (deflated 63%)
+  adding: console/assets/wasm-MzD3tlZU.js (172 bytes security) (deflated 82%)
+  adding: console/assets/wenyan-BV7otONQ.js (172 bytes security) (deflated 52%)
+  adding: console/assets/wgsl-Dx-B1_4e.js (172 bytes security) (deflated 74%)
+  adding: console/assets/wikitext-BhOHFoWU.js (172 bytes security) (deflated 92%)
+  adding: console/assets/wit-5i3qLPDT.js (172 bytes security) (deflated 87%)
+  adding: console/assets/wolfram-lXgVvXCa.js (172 bytes security) (deflated 71%)
+  adding: console/assets/worker-CRPzXMd6.js (172 bytes security) (deflated 67%)
+  adding: console/assets/xml-sdJ4AIDG.js (172 bytes security) (deflated 78%)
+  adding: console/assets/xsl-CtQFsRM5.js (172 bytes security) (deflated 64%)
+  adding: console/assets/yaml-Buea-lGh.js (172 bytes security) (deflated 79%)
+  adding: console/assets/zenscript-DVFEvuxE.js (172 bytes security) (deflated 68%)
+  adding: console/assets/zig-VOosw3JB.js (172 bytes security) (deflated 71%)
+  adding: console/assets/__vite-browser-external-2447137e-BIHI7g3E.js (172 bytes security) (stored 0%)
+  adding: console/favicon.ico (172 bytes security) (deflated 96%)
+  adding: console/favicon.svg (172 bytes security) (deflated 48%)
+  adding: console/index.html (172 bytes security) (deflated 47%)
+  adding: console/kilo-logo.svg (172 bytes security) (deflated 43%)
+  adding: console/logo.lottie (172 bytes security) (deflated 2%)
+  adding: kilo-sandbox-mutation-worker.js (172 bytes security) (deflated 63%)
+  adding: kilo.exe (172 bytes security) (deflated 66%)
+  adding: rg.exe (172 bytes security) (deflated 59%)
+  adding: tree-sitter/ (192 bytes security) (stored 0%)
+  adding: tree-sitter/tree-sitter-bash.wasm (172 bytes security) (deflated 86%)
+  adding: tree-sitter/tree-sitter-c.wasm (172 bytes security) (deflated 88%)
+  adding: tree-sitter/tree-sitter-cpp.wasm (172 bytes security) (deflated 92%)
+  adding: tree-sitter/tree-sitter-css.wasm (172 bytes security) (deflated 83%)
+  adding: tree-sitter/tree-sitter-c_sharp.wasm (172 bytes security) (deflated 93%)
+  adding: tree-sitter/tree-sitter-dart.wasm (172 bytes security) (deflated 90%)
+  adding: tree-sitter/tree-sitter-elisp.wasm (172 bytes security) (deflated 84%)
+  adding: tree-sitter/tree-sitter-elixir.wasm (172 bytes security) (deflated 88%)
+  adding: tree-sitter/tree-sitter-elm.wasm (172 bytes security) (deflated 77%)
+  adding: tree-sitter/tree-sitter-embedded_template.wasm (172 bytes security) (deflated 63%)
+  adding: tree-sitter/tree-sitter-go.wasm (172 bytes security) (deflated 78%)
+  adding: tree-sitter/tree-sitter-html.wasm (172 bytes security) (deflated 65%)
+  adding: tree-sitter/tree-sitter-java.wasm (172 bytes security) (deflated 87%)
+  adding: tree-sitter/tree-sitter-javascript.wasm (172 bytes security) (deflated 88%)
+  adding: tree-sitter/tree-sitter-json.wasm (172 bytes security) (deflated 61%)
+  adding: tree-sitter/tree-sitter-kotlin.wasm (172 bytes security) (deflated 92%)
+  adding: tree-sitter/tree-sitter-lua.wasm (172 bytes security) (deflated 76%)
+  adding: tree-sitter/tree-sitter-objc.wasm (172 bytes security) (deflated 94%)
+  adding: tree-sitter/tree-sitter-ocaml.wasm (172 bytes security) (deflated 90%)
+  adding: tree-sitter/tree-sitter-php.wasm (172 bytes security) (deflated 89%)
+  adding: tree-sitter/tree-sitter-python.wasm (172 bytes security) (deflated 85%)
+  adding: tree-sitter/tree-sitter-ql.wasm (172 bytes security) (deflated 93%)
+  adding: tree-sitter/tree-sitter-rescript.wasm (172 bytes security) (deflated 88%)
+  adding: tree-sitter/tree-sitter-ruby.wasm (172 bytes security) (deflated 92%)
+  adding: tree-sitter/tree-sitter-rust.wasm (172 bytes security) (deflated 88%)
+  adding: tree-sitter/tree-sitter-scala.wasm (172 bytes security) (deflated 80%)
+  adding: tree-sitter/tree-sitter-solidity.wasm (172 bytes security) (deflated 90%)
+  adding: tree-sitter/tree-sitter-swift.wasm (172 bytes security) (deflated 90%)
+  adding: tree-sitter/tree-sitter-systemrdl.wasm (172 bytes security) (deflated 81%)
+  adding: tree-sitter/tree-sitter-tlaplus.wasm (172 bytes security) (deflated 95%)
+  adding: tree-sitter/tree-sitter-toml.wasm (172 bytes security) (deflated 70%)
+  adding: tree-sitter/tree-sitter-tsx.wasm (172 bytes security) (deflated 91%)
+  adding: tree-sitter/tree-sitter-typescript.wasm (172 bytes security) (deflated 91%)
+  adding: tree-sitter/tree-sitter-vue.wasm (172 bytes security) (deflated 65%)
+  adding: tree-sitter/tree-sitter-yaml.wasm (172 bytes security) (deflated 81%)
+  adding: tree-sitter/tree-sitter-zig.wasm (172 bytes security) (deflated 92%)
+  adding: tree-sitter/tree-sitter.wasm (172 bytes security) (deflated 60%)
+[3/5] 复制 CLI 二进制...
+  源: C:\tmp\kilocode\packages\opencode\dist\@kilocode\cli-windows-x64\bin
+  目标: C:\tmp\kilocode\packages\kilo-vscode\bin
+  复制完成
+[4/5] 编译扩展代码...
+  当前目录: C:\tmp\kilocode\packages\kilo-vscode
+
+$ bun run --cwd ../sdk/js build
+$ bun ./script/build.ts
+$ bun run --conditions=browser ./src/index.ts generate
+[@hey-api/sdk] `instance` is deprecated. Use `operations: { strategy: "single", containerName: "KiloClient", methods: "instance" }` instead.
+@hey-api/openapi-ts v0.90.10
+
+[Job 1] ⏳ Generating from 1 input:
+[Job 1]   [1] ./openapi.json
+[Job 1] ✅ Done! Your output is in C:\tmp\kilocode\packages\sdk\js\src\v2\gen
+src/gen/client.gen.ts 70ms (unchanged)
+src/gen/client/client.gen.ts 72ms (unchanged)
+src/gen/client/index.ts 7ms (unchanged)
+src/gen/client/types.gen.ts 27ms (unchanged)
+src/gen/client/utils.gen.ts 58ms (unchanged)
+src/gen/core/auth.gen.ts 6ms (unchanged)
+src/gen/core/bodySerializer.gen.ts 16ms (unchanged)
+src/gen/core/params.gen.ts 17ms (unchanged)
+src/gen/core/pathSerializer.gen.ts 22ms (unchanged)
+src/gen/core/queryKeySerializer.gen.ts 10ms (unchanged)
+src/gen/core/serverSentEvents.gen.ts 29ms (unchanged)
+src/gen/core/types.gen.ts 10ms (unchanged)
+src/gen/core/utils.gen.ts 14ms (unchanged)
+src/gen/sdk.gen.ts 122ms (unchanged)
+src/gen/types.gen.ts 133ms (unchanged)
+src/v2/client.ts 100ms (unchanged)
+src/v2/data.ts 15ms (unchanged)
+src/v2/gen/client.gen.ts 9ms
+src/v2/gen/client/client.gen.ts 45ms
+src/v2/gen/client/index.ts 4ms
+src/v2/gen/client/types.gen.ts 27ms
+src/v2/gen/client/utils.gen.ts 52ms
+src/v2/gen/core/auth.gen.ts 6ms
+src/v2/gen/core/bodySerializer.gen.ts 22ms
+src/v2/gen/core/params.gen.ts 17ms
+src/v2/gen/core/pathSerializer.gen.ts 20ms
+src/v2/gen/core/queryKeySerializer.gen.ts 14ms
+src/v2/gen/core/serverSentEvents.gen.ts 36ms
+src/v2/gen/core/types.gen.ts 10ms
+src/v2/gen/core/utils.gen.ts 14ms
+src/v2/gen/sdk.gen.ts 464ms
+src/v2/gen/types.gen.ts 485ms
+src/v2/index.ts 3ms (unchanged)
+src/v2/server.ts 19ms (unchanged)
+$ bun run check-types:extension && bun run check-types:webview
+$ bun script/typecheck.ts
+$ bun script/typecheck.ts --project webview-ui/tsconfig.json
+$ eslint src webview-ui
+[watch] build started
+[watch] build started
+[watch] build started
+[watch] build started
+[watch] build started
+[watch] build started
+[watch] build started
+[watch] build started
+[watch] build finished
+[watch] build finished
+[watch] build finished
+[watch] build finished
+[watch] build finished
+[watch] build finished
+[watch] build finished
+[watch] build finished
+[5/5] 打包 VSIX...
+  当前目录: C:\tmp\kilocode\packages\kilo-vscode
+
+ WARNING  This extension consists of 612 files, out of which 303 are JavaScript files. For performance reasons, you should bundle your extension: https://aka.ms/vscode-bundle-extension. You should also exclude unnecessary files by adding them to your .vscodeignore: https://aka.ms/vscode-vscodeignore.
+
+ INFO  Files included in the VSIX:
+kilo-code-win32-x64-7.4.5.vsix
+├─ [Content_Types].xml
+├─ extension.vsixmanifest
+└─ extension/
+   ├─ LICENSE.txt [1.07 KB]
+   ├─ bunfig.toml [0.05 KB]
+   ├─ changelog.md [500.84 KB]
+   ├─ knip.json [0.67 KB]
+   ├─ package.json [39.67 KB]
+   ├─ readme.md [7.47 KB]
+   ├─ .storybook/ (1 file) [2.7 KB]
+   ├─ THIRD_PARTY_LICENSES/ (1 file) [10.09 KB]
+   ├─ assets/ (6 files) [8.04 KB]
+   ├─ audio-wav/ (45 files) [2.59 MB]
+   ├─ bin/ (403 files) [209.23 MB]
+   ├─ dist/ (74 files) [101.99 MB]
+   ├─ docs/ (72 files) [98.8 KB]
+   └─ tests/ (2 files) [4.6 KB]
+
+=> Run vsce ls --tree to see all included files.
+
+ DONE  Packaged: C:\tmp\kilocode\packages\kilo-vscode\kilo-code-win32-x64-7.4.5.vsix (612 files, 84.88 MB)
+==========================================
+ ? 打包完成！
+ ? 文件位置: C:\tmp\kilocode\packages\kilo-vscode\kilo-code-win32-x64-7.4.5.vsix
+==========================================
+PS C:\tmp\kilocode\packages\kilo-vscode>
