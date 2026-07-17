@@ -395,7 +395,9 @@ export const make = Effect.gen(function* () {
           if (cmdHistoryLogPath) {
             try {
               const shell = typeof command.options.shell === "string" ? command.options.shell : ""
-              const fullCmd = target.args.length > 0 ? `${target.command} ${target.args.join(" ")}` : target.command
+              const fullCmd = target.args.length > 0
+                ? `${target.command} ${target.args.map((a) => (a.includes(" ") || a.includes('"')) ? `"${a.replaceAll('"', '\\"')}"` : a).join(" ")}`
+                : target.command
               appendFileSync(cmdHistoryLogPath, `[${localTS(new Date())}] [${dir}] [${shell}] ${fullCmd}\n`)
             } catch {
               // logging failure is non-fatal

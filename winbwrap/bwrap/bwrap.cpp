@@ -8,6 +8,20 @@
 #include <algorithm>
 
 // ---------------------------------------------------------------------------
+// Suppress all bwrap.exe diagnostic output when the wrapped command is rg/rg.exe
+// (ripgrep's --json stdout must not be contaminated by sandbox log lines)
+// ---------------------------------------------------------------------------
+static bool g_bNoStdOut = false;
+
+static bool IsRipgrepExe(const std::wstring& path) {
+    std::wstring name = path;
+    size_t pos = name.find_last_of(L"\\/");
+    if (pos != std::wstring::npos) name = name.substr(pos + 1);
+    std::transform(name.begin(), name.end(), name.begin(), ::towlower);
+    return name == L"rg.exe" || name == L"rg";
+}
+
+// ---------------------------------------------------------------------------
 // NT path → Win32 path conversion (e.g. \Device\HarddiskVolume3\foo → C:\foo)
 // ---------------------------------------------------------------------------
 static std::wstring NtPathToWin32(const std::wstring& ntPath)
@@ -148,6 +162,14 @@ typedef struct _KG_PORT_MESSAGE {
     ExitProcess(GetLastError() ? GetLastError() : 1);
 }
 
+static void Wprintln(const std::wstring& s) {
+    if (g_bNoStdOut) return;
+    HANDLE hCon = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hCon == INVALID_HANDLE_VALUE) return;
+    DWORD w;
+    WriteConsoleW(hCon, s.c_str(), (DWORD)s.size(), &w, NULL);
+}
+
 // ---------------------------------------------------------------------------
 // Path conversion: Win32 → NT (\Device\HarddiskVolumeX\...)
 // ---------------------------------------------------------------------------
@@ -222,7 +244,7 @@ public:
     void AddPid(DWORD pid) {
         std::lock_guard<std::mutex> lock(m_pidMutex);
         m_pids.insert(pid);
-        std::wcout << L"bwrap.exe: [Port] PID " << pid << L" created (initial)" << std::endl;
+        if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Sandbox SID=" << m_sid << L" Create PID=" << pid << L" (initial)" << std::endl;
     }
 
     void Open() {
@@ -418,12 +440,12 @@ public:
             L"\\KiloGuardPort", 0, &m_sid, sizeof(m_sid),
             NULL, &m_portHandle);
         if (FAILED(hr)) {
-            std::wcerr << L"bwrap.exe: Port connect failed ("
+            if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: Port connect failed ("
                        << std::hex << hr << std::dec << L")\n";
             m_portHandle = NULL;
             return;
         }
-        std::wcout << L"bwrap.exe: Notification port connected SID="
+        if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Notification port connected SID="
                    << m_sid << std::endl;
         m_portThread = CreateThread(NULL, 0, PortThreadProc, this, 0, NULL);
     }
@@ -447,7 +469,7 @@ public:
         BYTE buffer[sizeof(FILTER_MESSAGE_HEADER) + sizeof(KG_PORT_MESSAGE)];
         FILTER_MESSAGE_HEADER* hdr = (FILTER_MESSAGE_HEADER*)buffer;
 
-        std::wcout << L"bwrap.exe: Port thread started" << std::endl;
+        if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Sandbox SID=" << self->m_sid << L" Port thread started" << std::endl;
         while (true) {
             HRESULT hr = FilterGetMessage(self->m_portHandle, hdr,
                 sizeof(buffer), NULL);
@@ -458,9 +480,10 @@ public:
                 std::lock_guard<std::mutex> lock(self->m_pidMutex);
                 if (msg->MsgType == KG_PORT_MSG_PROCESS_CREATE) {
                     self->m_pids.insert(msg->Pid);
-                    std::wcout << L"bwrap.exe: [Port] PID " << msg->Pid
-                               << L" created SID=" << msg->SID
-                               << L" Image=" << msg->ImageName << std::endl;
+                    std::wstring winPath = NtPathToWin32(msg->ImageName);
+                    if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Sandbox SID=" << msg->SID
+                               << L" Create PID=" << msg->Pid
+                               << L" ProcName=" << winPath << std::endl;
 
                     if (!self->m_hookDllPath.empty()) {
                         std::wstring image(msg->ImageName);
@@ -468,7 +491,7 @@ public:
                         bool isPwsh = (image.find(L"pwsh.exe") != std::wstring::npos ||
                                        image.find(L"powershell.exe") != std::wstring::npos);
                         if (isPwsh) {
-                            std::wcout << L"bwrap.exe: [Inject] PID=" << msg->Pid << std::endl;
+                            if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Sandbox SID=" << self->m_sid << L" Inject PID=" << msg->Pid << std::endl;
 
                             HANDLE hProc = OpenProcess(
                                 PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION |
@@ -493,13 +516,13 @@ public:
                                 }
                                 CloseHandle(hProc);
                             }
-                            std::wcout << L"bwrap.exe: [Inject] Done PID=" << msg->Pid << std::endl;
+                            if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Sandbox SID=" << self->m_sid << L" Inject Done PID=" << msg->Pid << std::endl;
                         }
                     }
                 } else if (msg->MsgType == KG_PORT_MSG_PROCESS_EXIT) {
                     self->m_pids.erase(msg->Pid);
-                    std::wcout << L"bwrap.exe: [Port] PID " << msg->Pid
-                               << L" exited" << std::endl;
+                    if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Sandbox SID=" << msg->SID
+                               << L" Exit PID=" << msg->Pid << std::endl;
                 }
             }
         }
@@ -608,7 +631,7 @@ static void KgAutoProtectVcs(std::vector<std::wstring>& roList,
                 if (!svnDir.empty() &&
                     std::find(roList.begin(), roList.end(), svnDir) == roList.end()) {
                     roList.push_back(svnDir);
-                    std::wcout << L"bwrap.exe: Auto-protected " << svnDir << L" (read-only)" << std::endl;
+                    Wprintln(L"bwrap.exe: Auto-protected " + svnDir + L" (read-only)\n");
                 }
             }
             if (hasGit) {
@@ -616,7 +639,7 @@ static void KgAutoProtectVcs(std::vector<std::wstring>& roList,
                 if (!gitDir.empty() &&
                     std::find(roList.begin(), roList.end(), gitDir) == roList.end()) {
                     roList.push_back(gitDir);
-                    std::wcout << L"bwrap.exe: Auto-protected " << gitDir << L" (read-only)" << std::endl;
+                    Wprintln(L"bwrap.exe: Auto-protected " + gitDir + L" (read-only)\n");
                 }
             }
         }
@@ -633,7 +656,7 @@ static void KgAutoProtectVcs(std::vector<std::wstring>& roList,
             if (attr != INVALID_FILE_ATTRIBUTES && (attr & FILE_ATTRIBUTE_DIRECTORY)) {
                 if (std::find(roList.begin(), roList.end(), svnCfg) == roList.end()) {
                     roList.push_back(svnCfg);
-                    std::wcout << L"bwrap.exe: Auto-protected " << svnCfg << L" (read-only)" << std::endl;
+                    Wprintln(L"bwrap.exe: Auto-protected " + svnCfg + L" (read-only)\n");
                 }
             }
         }
@@ -721,6 +744,16 @@ int wmain(int argc, wchar_t* argv[]) {
         return 0;
     }
 
+    // Early scan: detect if the wrapped command is rg/rg.exe and suppress
+    // all bwrap.exe diagnostic output to avoid contaminating ripgrep's
+    // --json stdout stream.
+    for (int j = 1; j < argc; ++j) {
+        if (std::wstring(argv[j]) == L"--" && j + 1 < argc) {
+            g_bNoStdOut = IsRipgrepExe(argv[j + 1]);
+            break;
+        }
+    }
+
     std::vector<std::wstring> roList;
     std::vector<std::wstring> rwList;
     std::vector<std::wstring> denyList;
@@ -745,8 +778,8 @@ int wmain(int argc, wchar_t* argv[]) {
                 list.push_back(next);
             }
             if (list.empty()) {
-                std::wcerr << L"bwrap.exe: " << a << L" requires at least one path\n";
-                std::wcerr << L"Try --help for usage.\n";
+                if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: " << a << L" requires at least one path\n";
+                if (!g_bNoStdOut) std::wcerr << L"Try --help for usage.\n";
                 ExitProcess(1);
             }
         };
@@ -762,8 +795,8 @@ int wmain(int argc, wchar_t* argv[]) {
         } else if (a == L"--alias") {
             drain(aliasList);
         } else {
-            std::wcerr << L"bwrap.exe: unknown flag: " << a << L"\n";
-            std::wcerr << L"Try --help for usage.\n";
+            if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: unknown flag: " << a << L"\n";
+            if (!g_bNoStdOut) std::wcerr << L"Try --help for usage.\n";
             return 1;
         }
     }
@@ -807,8 +840,8 @@ int wmain(int argc, wchar_t* argv[]) {
     }
 
     if (i >= argc) {
-        std::wcerr << L"bwrap.exe: missing '--' separator and command.\n";
-        std::wcerr << L"Try --help for usage.\n";
+        if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: missing '--' separator and command.\n";
+        if (!g_bNoStdOut) std::wcerr << L"Try --help for usage.\n";
         return 1;
     }
 
@@ -822,7 +855,7 @@ int wmain(int argc, wchar_t* argv[]) {
         for (auto& p : paths) {
             std::wstring nt;
             if (!Win32ToNtPath(p, nt)) {
-                std::wcerr << L"bwrap.exe: cannot resolve path: " << p << L"\n";
+                if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: cannot resolve path: " << p << L"\n";
                 ExitProcess(1);
             }
             out.push_back(nt);
@@ -839,7 +872,7 @@ int wmain(int argc, wchar_t* argv[]) {
                 selfDir = selfDir.substr(0, pos);
                 if (std::find(roList.begin(), roList.end(), selfDir) == roList.end()) {
                     roList.push_back(selfDir);
-                    std::wcout << L"bwrap.exe: Auto-protected own directory " << selfDir << L" (read-only)" << std::endl;
+                    Wprintln(L"bwrap.exe: Auto-protected own directory " + selfDir + L" (read-only)\n");
                 }
             }
         }
@@ -860,8 +893,7 @@ int wmain(int argc, wchar_t* argv[]) {
             if (GetFileAttributesW(winApps.c_str()) != INVALID_FILE_ATTRIBUTES &&
                 std::find(roList.begin(), roList.end(), winApps) == roList.end()) {
                 roList.push_back(winApps);
-                std::wcout << L"bwrap.exe: Auto-bind alias directory " << winApps
-                           << L" (read-only)" << std::endl;
+                Wprintln(L"bwrap.exe: Auto-bind alias directory " + winApps + L" (read-only)\n");
             }
         }
 
@@ -873,14 +905,13 @@ int wmain(int argc, wchar_t* argv[]) {
         for (auto& name : effectiveAliases) {
             std::wstring dir = ResolveAliasTargetDir(name);
             if (dir.empty()) {
-                std::wcout << L"bwrap.exe: alias " << name
+                if (!g_bNoStdOut) std::wcout << L"bwrap.exe: alias " << name
                            << L" not found in WindowsApps, skipped" << std::endl;
                 continue;
             }
             if (std::find(roList.begin(), roList.end(), dir) == roList.end()) {
                 roList.push_back(dir);
-                std::wcout << L"bwrap.exe: alias " << name
-                           << L" -> --ro-bind " << dir << L" (read-only)" << std::endl;
+                Wprintln(L"bwrap.exe: alias " + name + L" -> --ro-bind " + dir + L" (read-only)\n");
             }
         }
     }
@@ -892,8 +923,7 @@ int wmain(int argc, wchar_t* argv[]) {
         if (GetFileAttributesW(appRepo.c_str()) != INVALID_FILE_ATTRIBUTES &&
             std::find(roList.begin(), roList.end(), appRepo) == roList.end()) {
             roList.push_back(appRepo);
-            std::wcout << L"bwrap.exe: Auto-bind AppRepository " << appRepo
-                       << L" (read-only)" << std::endl;
+            Wprintln(L"bwrap.exe: Auto-bind AppRepository " + appRepo + L" (read-only)\n");
         }
     }
 
@@ -956,21 +986,21 @@ int wmain(int argc, wchar_t* argv[]) {
         for (auto& p : netAllowList) {
             std::wstring nt;
             if (!Win32ToNtPath(p, nt)) {
-                std::wcerr << L"bwrap.exe: cannot resolve path: " << p << L"\n";
+                if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: cannot resolve path: " << p << L"\n";
                 ExitProcess(1);
             }
             netAllowNt.push_back(nt);
         }
         drv.SetNetExeList(netAllowNt);
         for (auto& nt : netAllowNt)
-            std::wcout << L"bwrap.exe: Net-whitelisted " << nt << std::endl;
+            Wprintln(L"bwrap.exe: Net-whitelisted " + nt + L"\n");
     }
 
     // Attach bwrap itself to the sandbox.
     // Subsequent CreateProcess will have bwrap as parent, which IS in PidMap,
     // so child processes automatically inherit sandbox via KiloProcessNotify.
     drv.AttachProcess(GetCurrentProcessId(), sid);
-    std::wcout << L"bwrap.exe: Attached own PID " << GetCurrentProcessId()
+    if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Attached own PID " << GetCurrentProcessId()
                << L" to sandbox SID=" << sid << std::endl;
 
     // Set KiloHook.dll path from bwrap.exe's own directory for injection
@@ -985,7 +1015,7 @@ int wmain(int argc, wchar_t* argv[]) {
                 if (GetFileAttributesW(dllPath.c_str()) != INVALID_FILE_ATTRIBUTES)
                     drv.SetHookDllPath(dllPath);
                 else
-                    std::wcout << L"bwrap.exe: KiloHook.dll not found at " << dllPath << std::endl;
+                    if (!g_bNoStdOut) std::wcout << L"bwrap.exe: KiloHook.dll not found at " << dllPath << std::endl;
             }
         }
     }
@@ -1016,13 +1046,11 @@ int wmain(int argc, wchar_t* argv[]) {
             if (!foundPath.empty()) {
                 exe = foundPath;
                 if (IsAppExecutionAlias(exe))
-                    std::wcout << L"bwrap.exe: Resolved AppExec alias "
-                               << shortName << L" -> " << exe << std::endl;
+                    Wprintln(L"bwrap.exe: Resolved AppExec alias " + shortName + L" -> " + exe + L"\n");
                 else
-                    std::wcout << L"bwrap.exe: Resolved from PATH: "
-                               << shortName << L" -> " << exe << std::endl;
+                    Wprintln(L"bwrap.exe: Resolved from PATH: " + shortName + L" -> " + exe + L"\n");
             } else {
-                std::wcerr << L"bwrap.exe: command not found: "
+                if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: command not found: "
                            << shortName << L"\n";
                 return 1;
             }
@@ -1051,12 +1079,12 @@ int wmain(int argc, wchar_t* argv[]) {
         else if (KgFindTool(L"powershell.exe", shell))
             cmdLine = shell + L" -File " + cmdLine;
         else {
-            std::wcerr << L"bwrap.exe: cannot execute " << exe
+            if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: cannot execute " << exe
                        << L" — no pwsh.exe or powershell.exe found\n";
             return 1;
         }
     } else {
-        std::wcerr << L"bwrap.exe: cannot execute " << exe
+        if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: cannot execute " << exe
                    << L" — unsupported file extension\n";
         return 1;
     }
@@ -1096,11 +1124,11 @@ int wmain(int argc, wchar_t* argv[]) {
 
     if (!ok) {
         if (hJob) CloseHandle(hJob);
-        std::wcerr << L"bwrap.exe: CreateProcess failed ("
+        if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: CreateProcess failed ("
                    << GetLastError() << L") for: " << cmdLine << L"\n";
         return 1;
     } else {
-        std::wcout << L"bwrap.exe: Created process PID=" << pi.dwProcessId
+        if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Created process PID=" << pi.dwProcessId
                    << L" ProcessName=" << exe << std::endl;
     }
 
@@ -1110,7 +1138,7 @@ int wmain(int argc, wchar_t* argv[]) {
     // Assign to Job Object
     if (hJob) {
         if (!AssignProcessToJobObject(hJob, pi.hProcess))
-            std::wcerr << L"bwrap.exe: AssignProcessToJobObject failed ("
+            if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: AssignProcessToJobObject failed ("
                        << GetLastError() << L")" << std::endl;
     }
 

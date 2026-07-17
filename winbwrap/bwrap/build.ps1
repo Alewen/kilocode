@@ -75,4 +75,11 @@ Write-Host "==================== Building bwrap.exe ($Arch $Config) ============
 if ($LASTEXITCODE -ne 0) { throw "bwrap BUILD FAILED" }
 Get-Item "$Src\$Platform\$Config\bwrap.exe" | Select-Object LastWriteTime, Length, FullName
 
+$TargetDir = Join-Path $Src "..\..\packages\opencode\bin\winbwrap"
+if (Test-Path -LiteralPath $TargetDir) {
+    Copy-Item -LiteralPath "$Src\$Platform\$Config\bwrap.exe" -Destination (Join-Path $TargetDir "bwrap.exe") -Force
+    Copy-Item -LiteralPath "$Src\$Platform\$Config\KiloHook.dll" -Destination (Join-Path $TargetDir "KiloHook.dll") -Force
+    Write-Host "Copied to $TargetDir" -ForegroundColor Cyan
+}
+
 Write-Host "==================== Build successful ====================" -ForegroundColor Green

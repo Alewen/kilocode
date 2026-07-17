@@ -165,7 +165,9 @@ export function computeWritable(ctx: InstanceContext, extra?: readonly string[])
     ? [ctx.directory]
     : ctx.directory === ctx.worktree
       ? [ctx.directory]
-      : [ctx.worktree, ctx.directory]
+      : ctx.directory.toLowerCase().startsWith(ctx.worktree.toLowerCase() + path.sep)
+        ? [ctx.directory]
+        : [ctx.worktree, ctx.directory]
   return [
     ...project,
     path.join(Global.Path.data, "tool-output"),
