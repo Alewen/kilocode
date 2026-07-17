@@ -197,7 +197,7 @@ function fail(queue: Queue.Queue<string, PlatformError | Error | Cause.Done>, er
 }
 
 function filesArgs(input: FilesInput) {
-  const args = ["--no-config", "--files", "--glob=!.git/*"]
+  const args = ["--no-config", "--files", "--glob=!.git/*", "--glob=!.svn/*"]
   if (input.follow) args.push("--follow")
   if (input.hidden !== false) args.push("--hidden")
   if (input.hidden === false) args.push("--glob=!.*")
@@ -205,18 +205,21 @@ function filesArgs(input: FilesInput) {
   if (input.glob) {
     for (const glob of input.glob) args.push(`--glob=${glob}`)
   }
-  args.push(".")
+  // kilocode_change: pass absolute path so sandbox can enforce access control.
+  // "." would be silently redirected by bwrap's cwd override to the workspace.
+  args.push(input.cwd)
   return args
 }
 
 function searchArgs(input: SearchInput) {
-  const args = ["--no-config", "--json", "--hidden", "--glob=!.git/*", "--no-messages"]
+  const args = ["--no-config", "--json", "--hidden", "--glob=!.git/*", "--glob=!.svn/*", "--no-messages"]
   if (input.follow) args.push("--follow")
   if (input.glob) {
     for (const glob of input.glob) args.push(`--glob=${glob}`)
   }
   if (input.limit) args.push(`--max-count=${input.limit}`)
-  args.push("--", input.pattern, ...(input.file ?? ["."]))
+  // kilocode_change: pass absolute path so sandbox can enforce access control
+  args.push("--", input.pattern, ...(input.file ?? [input.cwd]))
   return args
 }
 
