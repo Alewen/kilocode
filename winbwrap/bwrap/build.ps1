@@ -23,8 +23,8 @@ How to build this project:
   .\build.ps1 -Clean                             # Clean Release x64 (default)
   .\build.ps1 -Config Debug -Arch Win32          # Build Debug Win32
   .\build.ps1 -Config Debug -Arch Win32 -Clean   # Clean Debug Win32
-  .\build.ps1 -C d -A w                          # Build Debug Win32 (shorthand)
-  .\build.ps1 -C r -A x                          # Build Release x64 (shorthand)
+  .\build.ps1 -Co d -A w                         # Build Debug Win32 (shorthand)
+  .\build.ps1 -Co r -A x                         # Build Release x64 (shorthand)
 
 "@
 

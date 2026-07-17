@@ -8,20 +8,6 @@
 #include <algorithm>
 
 // ---------------------------------------------------------------------------
-// Suppress all bwrap.exe diagnostic output when the wrapped command is rg/rg.exe
-// (ripgrep's --json stdout must not be contaminated by sandbox log lines)
-// ---------------------------------------------------------------------------
-static bool g_bNoStdOut = false;
-
-static bool IsRipgrepExe(const std::wstring& path) {
-    std::wstring name = path;
-    size_t pos = name.find_last_of(L"\\/");
-    if (pos != std::wstring::npos) name = name.substr(pos + 1);
-    std::transform(name.begin(), name.end(), name.begin(), ::towlower);
-    return name == L"rg.exe" || name == L"rg";
-}
-
-// ---------------------------------------------------------------------------
 // NT path → Win32 path conversion (e.g. \Device\HarddiskVolume3\foo → C:\foo)
 // ---------------------------------------------------------------------------
 static std::wstring NtPathToWin32(const std::wstring& ntPath)
@@ -162,8 +148,10 @@ typedef struct _KG_PORT_MESSAGE {
     ExitProcess(GetLastError() ? GetLastError() : 1);
 }
 
+static bool g_showConsole = false;
+
 static void Wprintln(const std::wstring& s) {
-    if (g_bNoStdOut) return;
+    if (!g_showConsole) return;
     HANDLE hCon = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hCon == INVALID_HANDLE_VALUE) return;
     DWORD w;
@@ -244,7 +232,9 @@ public:
     void AddPid(DWORD pid) {
         std::lock_guard<std::mutex> lock(m_pidMutex);
         m_pids.insert(pid);
-        if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Sandbox SID=" << m_sid << L" Create PID=" << pid << L" (initial)" << std::endl;
+        WCHAR buf[128];
+        int len = swprintf_s(buf, ARRAYSIZE(buf), L"bwrap.exe: Sandbox SID=%lu Create PID=%lu (initial)\n", m_sid, pid);
+        if (len > 0) Wprintln(buf);
     }
 
     void Open() {
@@ -344,7 +334,7 @@ public:
             &in, sizeof(in), &out, sizeof(out), &junk, NULL);
     }
 
-    void DrainDenyEvents(HANDLE hConsole) {
+    void DrainDenyEvents() {
         for (;;) {
             KG_QUERY_DENY_EVENTS_OUTPUT out = {};
             QueryDenyEvents(out);
@@ -352,23 +342,19 @@ public:
             for (ULONG i = 0; i < out.EventCount; i++) {
                 WCHAR line[512];
                 int len;
-                if (out.Events[i].Flags == 1) {
+                if (out.Events[i].Flags == 1)
                     len = swprintf_s(line, ARRAYSIZE(line),
                         L"bwrap.exe: DENY PID=%lu ProcessName=%s Net=%s\n",
                         out.Events[i].Pid,
                         out.Events[i].ProcessName,
                         out.Events[i].FilePath);
-                } else {
+                else
                     len = swprintf_s(line, ARRAYSIZE(line),
                         L"bwrap.exe: DENY PID=%lu ProcessName=%s File=%s\n",
                         out.Events[i].Pid,
                         out.Events[i].ProcessName,
                         out.Events[i].FilePath);
-                }
-                if (len > 0) {
-                    DWORD written;
-                    WriteConsoleW(hConsole, line, len, &written, NULL);
-                }
+                if (len > 0) Wprintln(line);
             }
         }
     }
@@ -440,13 +426,14 @@ public:
             L"\\KiloGuardPort", 0, &m_sid, sizeof(m_sid),
             NULL, &m_portHandle);
         if (FAILED(hr)) {
-            if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: Port connect failed ("
+            std::wcerr << L"bwrap.exe: Port connect failed ("
                        << std::hex << hr << std::dec << L")\n";
             m_portHandle = NULL;
             return;
         }
-        if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Notification port connected SID="
-                   << m_sid << std::endl;
+        WCHAR buf[128];
+        int len = swprintf_s(buf, ARRAYSIZE(buf), L"bwrap.exe: Notification port connected SID=%lu\n", m_sid);
+        if (len > 0) Wprintln(buf);
         m_portThread = CreateThread(NULL, 0, PortThreadProc, this, 0, NULL);
     }
 
@@ -469,7 +456,9 @@ public:
         BYTE buffer[sizeof(FILTER_MESSAGE_HEADER) + sizeof(KG_PORT_MESSAGE)];
         FILTER_MESSAGE_HEADER* hdr = (FILTER_MESSAGE_HEADER*)buffer;
 
-        if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Sandbox SID=" << self->m_sid << L" Port thread started" << std::endl;
+        WCHAR buf[128];
+        int len = swprintf_s(buf, ARRAYSIZE(buf), L"bwrap.exe: Sandbox SID=%lu Port thread started\n", self->m_sid);
+        if (len > 0) Wprintln(buf);
         while (true) {
             HRESULT hr = FilterGetMessage(self->m_portHandle, hdr,
                 sizeof(buffer), NULL);
@@ -481,9 +470,9 @@ public:
                 if (msg->MsgType == KG_PORT_MSG_PROCESS_CREATE) {
                     self->m_pids.insert(msg->Pid);
                     std::wstring winPath = NtPathToWin32(msg->ImageName);
-                    if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Sandbox SID=" << msg->SID
-                               << L" Create PID=" << msg->Pid
-                               << L" ProcName=" << winPath << std::endl;
+                    WCHAR buf[512];
+                    int blen = swprintf_s(buf, ARRAYSIZE(buf), L"bwrap.exe: Sandbox SID=%lu Create PID=%lu ProcName=%s\n", msg->SID, msg->Pid, winPath.c_str());
+                    if (blen > 0) Wprintln(buf);
 
                     if (!self->m_hookDllPath.empty()) {
                         std::wstring image(msg->ImageName);
@@ -491,7 +480,9 @@ public:
                         bool isPwsh = (image.find(L"pwsh.exe") != std::wstring::npos ||
                                        image.find(L"powershell.exe") != std::wstring::npos);
                         if (isPwsh) {
-                            if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Sandbox SID=" << self->m_sid << L" Inject PID=" << msg->Pid << std::endl;
+                            WCHAR ibuf[128];
+                            int ilen = swprintf_s(ibuf, ARRAYSIZE(ibuf), L"bwrap.exe: Sandbox SID=%lu Inject PID=%lu\n", self->m_sid, msg->Pid);
+                            if (ilen > 0) Wprintln(ibuf);
 
                             HANDLE hProc = OpenProcess(
                                 PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION |
@@ -516,13 +507,16 @@ public:
                                 }
                                 CloseHandle(hProc);
                             }
-                            if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Sandbox SID=" << self->m_sid << L" Inject Done PID=" << msg->Pid << std::endl;
+                            WCHAR dibuf[128];
+                            int dilen = swprintf_s(dibuf, ARRAYSIZE(dibuf), L"bwrap.exe: Sandbox SID=%lu Inject Done PID=%lu\n", self->m_sid, msg->Pid);
+                            if (dilen > 0) Wprintln(dibuf);
                         }
                     }
                 } else if (msg->MsgType == KG_PORT_MSG_PROCESS_EXIT) {
                     self->m_pids.erase(msg->Pid);
-                    if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Sandbox SID=" << msg->SID
-                               << L" Exit PID=" << msg->Pid << std::endl;
+                    WCHAR ebuf[128];
+                    int elen = swprintf_s(ebuf, ARRAYSIZE(ebuf), L"bwrap.exe: Sandbox SID=%lu Exit PID=%lu\n", msg->SID, msg->Pid);
+                    if (elen > 0) Wprintln(ebuf);
                 }
             }
         }
@@ -544,12 +538,11 @@ private:
 
     static DWORD WINAPI DenyThreadProc(LPVOID param) {
         DriverClient* self = (DriverClient*)param;
-        HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-        self->DrainDenyEvents(hConsole);
+        self->DrainDenyEvents();
         while (WaitForSingleObject(self->m_denyStopEvent, 100) == WAIT_TIMEOUT) {
-            self->DrainDenyEvents(hConsole);
+            self->DrainDenyEvents();
         }
-        self->DrainDenyEvents(hConsole);
+        self->DrainDenyEvents();
         return 0;
     }
 };
@@ -693,6 +686,88 @@ static std::wstring BuildCmdLine(const std::wstring& exe,
 }
 
 // ---------------------------------------------------------------------------
+// Log invocation to file when --ses is used
+// ---------------------------------------------------------------------------
+static void LogSession(const std::wstring& sid, int argc, wchar_t* argv[]) {
+    WCHAR profile[MAX_PATH];
+    if (FAILED(SHGetFolderPathW(NULL, CSIDL_PROFILE, NULL, 0, profile)))
+        return;
+    std::wstring dir = std::wstring(profile) + L"\\.local\\share\\kilo\\winbwrap";
+    SHCreateDirectoryExW(NULL, dir.c_str(), NULL);
+
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+
+    WCHAR ts[64];
+    swprintf_s(ts, ARRAYSIZE(ts), L"%04d-%02d-%02d %02d:%02d:%02d",
+               st.wYear, st.wMonth, st.wDay,
+               st.wHour, st.wMinute, st.wSecond);
+
+    WCHAR self[MAX_PATH];
+    GetModuleFileNameW(NULL, self, MAX_PATH);
+
+    std::wstring line;
+    line += L"======================\n";
+    line += ts;
+    line += L"\n======================\n";
+    line += L"& ";
+    line += self;
+    line += L" `\n";
+
+    int i = 1;
+    auto q = [](const std::wstring& v) {
+        if (v.find(L' ') != std::wstring::npos)
+            return L"'" + v + L"'";
+        return v;
+    };
+    for (; i < argc; i++) {
+        std::wstring a = argv[i];
+        if (a == L"--") {
+            i++;
+            break;
+        }
+        line += a;
+        bool first = true;
+        while (i + 1 < argc) {
+            std::wstring next = argv[i + 1];
+            if (next == L"--" || (next.size() >= 2 && next[0] == L'-' && next[1] == L'-'))
+                break;
+            i++;
+            if (!first) line += a;
+            line += L" " + q(argv[i]) + L" `\n";
+            first = false;
+        }
+        if (first) line += L" `\n";
+    }
+
+    if (i < argc) {
+        line += L"-- ";
+        line += q(argv[i]);
+        for (int j = i + 1; j < argc; j++) {
+            line += L" ";
+            line += q(argv[j]);
+        }
+    }
+    line += L"\n"; 
+
+    std::wstring path = dir + L"\\" + sid + L".log";
+    HANDLE h = CreateFileW(path.c_str(), FILE_APPEND_DATA,
+        FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+        OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (h != INVALID_HANDLE_VALUE) {
+        std::string utf8;
+        int ulen = WideCharToMultiByte(CP_UTF8, 0, line.c_str(), (int)line.size(),
+                                        NULL, 0, NULL, NULL);
+        utf8.resize(ulen);
+        WideCharToMultiByte(CP_UTF8, 0, line.c_str(), (int)line.size(),
+                             &utf8[0], ulen, NULL, NULL);
+        DWORD w;
+        WriteFile(h, utf8.c_str(), (DWORD)utf8.size(), &w, NULL);
+        CloseHandle(h);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Help
 // ---------------------------------------------------------------------------
 static void ShowHelp() {
@@ -708,6 +783,9 @@ static void ShowHelp() {
         << "  --alias <name> [name...]    Resolve App Execution Alias(es) (e.g. python3 wt\n"
         << "                              winget) and auto --ro-bind their real dirs.\n"
         << "                              pwsh is always resolved by default.\n"
+        << "  --showbox                 Print sandbox SID to stdout after creation\n"
+        << "  --showConsole             Enable diagnostic messages on the console\n"
+        << "  --ses <id>                Log invocation to session file for Agent Manager\n"
         << "  -h, --help          Show this help message\n"
         << "\n"
         << "Always denied (escape tools):\n"
@@ -744,21 +822,13 @@ int wmain(int argc, wchar_t* argv[]) {
         return 0;
     }
 
-    // Early scan: detect if the wrapped command is rg/rg.exe and suppress
-    // all bwrap.exe diagnostic output to avoid contaminating ripgrep's
-    // --json stdout stream.
-    for (int j = 1; j < argc; ++j) {
-        if (std::wstring(argv[j]) == L"--" && j + 1 < argc) {
-            g_bNoStdOut = IsRipgrepExe(argv[j + 1]);
-            break;
-        }
-    }
-
     std::vector<std::wstring> roList;
     std::vector<std::wstring> rwList;
     std::vector<std::wstring> denyList;
     std::vector<std::wstring> netAllowList;
     std::vector<std::wstring> aliasList;
+    bool showbox = false;
+    std::wstring ses;
 
     int i = 1;
     for (; i < argc; ++i) {
@@ -778,8 +848,8 @@ int wmain(int argc, wchar_t* argv[]) {
                 list.push_back(next);
             }
             if (list.empty()) {
-                if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: " << a << L" requires at least one path\n";
-                if (!g_bNoStdOut) std::wcerr << L"Try --help for usage.\n";
+                std::wcerr << L"bwrap.exe: " << a << L" requires at least one path\n";
+                std::wcerr << L"Try --help for usage.\n";
                 ExitProcess(1);
             }
         };
@@ -794,12 +864,25 @@ int wmain(int argc, wchar_t* argv[]) {
             drain(netAllowList);
         } else if (a == L"--alias") {
             drain(aliasList);
+        } else if (a == L"--showbox") {
+            showbox = true;
+        } else if (a == L"--showConsole") {
+            g_showConsole = true;
+        } else if (a == L"--ses") {
+            if (++i >= argc || std::wstring(argv[i]).find(L"--") == 0) {
+                std::wcerr << L"bwrap.exe: --ses requires a session ID\n";
+                ExitProcess(1);
+            }
+            ses = argv[i];
         } else {
-            if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: unknown flag: " << a << L"\n";
-            if (!g_bNoStdOut) std::wcerr << L"Try --help for usage.\n";
+            std::wcerr << L"bwrap.exe: unknown flag: " << a << L"\n";
+            std::wcerr << L"Try --help for usage.\n";
             return 1;
         }
     }
+
+    if (!ses.empty())
+        LogSession(ses, argc, argv);
 
     // -----------------------------------------------------------------------
     // Implicitly deny known escape tools (both 64-bit and 32-bit paths)
@@ -840,8 +923,8 @@ int wmain(int argc, wchar_t* argv[]) {
     }
 
     if (i >= argc) {
-        if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: missing '--' separator and command.\n";
-        if (!g_bNoStdOut) std::wcerr << L"Try --help for usage.\n";
+        std::wcerr << L"bwrap.exe: missing '--' separator and command.\n";
+        std::wcerr << L"Try --help for usage.\n";
         return 1;
     }
 
@@ -855,7 +938,7 @@ int wmain(int argc, wchar_t* argv[]) {
         for (auto& p : paths) {
             std::wstring nt;
             if (!Win32ToNtPath(p, nt)) {
-                if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: cannot resolve path: " << p << L"\n";
+                std::wcerr << L"bwrap.exe: cannot resolve path: " << p << L"\n";
                 ExitProcess(1);
             }
             out.push_back(nt);
@@ -905,8 +988,9 @@ int wmain(int argc, wchar_t* argv[]) {
         for (auto& name : effectiveAliases) {
             std::wstring dir = ResolveAliasTargetDir(name);
             if (dir.empty()) {
-                if (!g_bNoStdOut) std::wcout << L"bwrap.exe: alias " << name
-                           << L" not found in WindowsApps, skipped" << std::endl;
+                WCHAR nbuf[512];
+                int nlen = swprintf_s(nbuf, ARRAYSIZE(nbuf), L"bwrap.exe: alias %s not found in WindowsApps, skipped\n", name.c_str());
+                if (nlen > 0) Wprintln(nbuf);
                 continue;
             }
             if (std::find(roList.begin(), roList.end(), dir) == roList.end()) {
@@ -986,7 +1070,7 @@ int wmain(int argc, wchar_t* argv[]) {
         for (auto& p : netAllowList) {
             std::wstring nt;
             if (!Win32ToNtPath(p, nt)) {
-                if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: cannot resolve path: " << p << L"\n";
+                std::wcerr << L"bwrap.exe: cannot resolve path: " << p << L"\n";
                 ExitProcess(1);
             }
             netAllowNt.push_back(nt);
@@ -1000,8 +1084,12 @@ int wmain(int argc, wchar_t* argv[]) {
     // Subsequent CreateProcess will have bwrap as parent, which IS in PidMap,
     // so child processes automatically inherit sandbox via KiloProcessNotify.
     drv.AttachProcess(GetCurrentProcessId(), sid);
-    if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Attached own PID " << GetCurrentProcessId()
-               << L" to sandbox SID=" << sid << std::endl;
+    WCHAR abuf[128];
+    int alen = swprintf_s(abuf, ARRAYSIZE(abuf), L"bwrap.exe: Attached own PID %lu to sandbox SID=%lu\n", GetCurrentProcessId(), sid);
+    if (alen > 0) Wprintln(abuf);
+
+    if (showbox)
+        std::cout << "Enter Sandbox SID=" << sid << std::endl;
 
     // Set KiloHook.dll path from bwrap.exe's own directory for injection
     {
@@ -1014,8 +1102,11 @@ int wmain(int argc, wchar_t* argv[]) {
                 std::wstring dllPath = selfDir + L"\\KiloHook.dll";
                 if (GetFileAttributesW(dllPath.c_str()) != INVALID_FILE_ATTRIBUTES)
                     drv.SetHookDllPath(dllPath);
-                else
-                    if (!g_bNoStdOut) std::wcout << L"bwrap.exe: KiloHook.dll not found at " << dllPath << std::endl;
+                else {
+                    WCHAR dbuf[512];
+                    int dlen = swprintf_s(dbuf, ARRAYSIZE(dbuf), L"bwrap.exe: KiloHook.dll not found at %s\n", dllPath.c_str());
+                    if (dlen > 0) Wprintln(dbuf);
+                }
             }
         }
     }
@@ -1050,7 +1141,7 @@ int wmain(int argc, wchar_t* argv[]) {
                 else
                     Wprintln(L"bwrap.exe: Resolved from PATH: " + shortName + L" -> " + exe + L"\n");
             } else {
-                if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: command not found: "
+                std::wcerr << L"bwrap.exe: command not found: "
                            << shortName << L"\n";
                 return 1;
             }
@@ -1079,12 +1170,12 @@ int wmain(int argc, wchar_t* argv[]) {
         else if (KgFindTool(L"powershell.exe", shell))
             cmdLine = shell + L" -File " + cmdLine;
         else {
-            if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: cannot execute " << exe
+            std::wcerr << L"bwrap.exe: cannot execute " << exe
                        << L" — no pwsh.exe or powershell.exe found\n";
             return 1;
         }
     } else {
-        if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: cannot execute " << exe
+        std::wcerr << L"bwrap.exe: cannot execute " << exe
                    << L" — unsupported file extension\n";
         return 1;
     }
@@ -1124,12 +1215,13 @@ int wmain(int argc, wchar_t* argv[]) {
 
     if (!ok) {
         if (hJob) CloseHandle(hJob);
-        if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: CreateProcess failed ("
+        std::wcerr << L"bwrap.exe: CreateProcess failed ("
                    << GetLastError() << L") for: " << cmdLine << L"\n";
         return 1;
     } else {
-        if (!g_bNoStdOut) std::wcout << L"bwrap.exe: Created process PID=" << pi.dwProcessId
-                   << L" ProcessName=" << exe << std::endl;
+        WCHAR cbuf[512];
+        int clen = swprintf_s(cbuf, ARRAYSIZE(cbuf), L"bwrap.exe: Created process PID=%lu ProcessName=%s\n", pi.dwProcessId, exe.c_str());
+        if (clen > 0) Wprintln(cbuf);
     }
 
     // Child inherits sandbox automatically (KiloProcessNotify sees bwrap in PidMap)
@@ -1138,7 +1230,7 @@ int wmain(int argc, wchar_t* argv[]) {
     // Assign to Job Object
     if (hJob) {
         if (!AssignProcessToJobObject(hJob, pi.hProcess))
-            if (!g_bNoStdOut) std::wcerr << L"bwrap.exe: AssignProcessToJobObject failed ("
+            std::wcerr << L"bwrap.exe: AssignProcessToJobObject failed ("
                        << GetLastError() << L")" << std::endl;
     }
 
