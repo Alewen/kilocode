@@ -478,8 +478,10 @@ KiloImageLoadNotify(PUNICODE_STRING ImageName, HANDLE ProcessId, PIMAGE_INFO Ima
     UNREFERENCED_PARAMETER(ImageInfo);
     if (!ImageName || !ImageName->Buffer) return;
 
-    /* Log RPC/COM DLL loading by sandboxed processes */
-    if (KgIsPidInSandBox(ProcessId) != (ULONG)-1)
+    ULONG slot = KgIsPidInSandBox(ProcessId);
+    BOOLEAN isOleAut32 = FALSE;
+
+    if (slot != (ULONG)-1)
     {
         /* Extract filename from full path */
         PWCHAR p = ImageName->Buffer + (ImageName->Length / sizeof(WCHAR));
@@ -494,6 +496,8 @@ KiloImageLoadNotify(PUNICODE_STRING ImageName, HANDLE ProcessId, PIMAGE_INFO Ima
             if (_wcsicmp(p, rpcDlls[i]) == 0) {
                 KG_LOG("FileGuard: RPC_LOAD: PID=%lu DLL=%s ImageName=%wZ\n",
                          (ULONG)(ULONG_PTR)ProcessId, rpcDlls[i], ImageName);
+                if (_wcsicmp(p, L"oleaut32.dll") == 0)
+                    isOleAut32 = TRUE;
                 break;
             }
         }
@@ -505,6 +509,18 @@ KiloImageLoadNotify(PUNICODE_STRING ImageName, HANDLE ProcessId, PIMAGE_INFO Ima
     if (tracker) {
         InterlockedIncrement(&tracker->ImageCount);
         KgRecordDllLoad(tracker, ImageName);
+
+        if (isOleAut32 && slot != (ULONG)-1 && tracker->ImageName[0] != L'\0') {
+            PCWSTR name = tracker->ImageName;
+            USHORT len = (USHORT)wcslen(name);
+            if ((len >= 9  && _wcsicmp(name + len - 9,  L"\\pwsh.exe") == 0) ||
+                (len >= 16 && _wcsicmp(name + len - 16, L"\\powershell.exe") == 0)) {
+                KeReleaseSpinLock(&gTrackerLock, oldIrql);
+                KgSendProcessEvent(slot, (ULONG)(ULONG_PTR)ProcessId,
+                                   KG_PORT_MSG_READY_FOR_INJECT, NULL);
+                return;
+            }
+        }
     }
     KeReleaseSpinLock(&gTrackerLock, oldIrql);
 }

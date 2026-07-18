@@ -127,8 +127,9 @@ typedef struct {
 // ---------------------------------------------------------------------------
 // Process notification port message (must match Domain.h in KiloGuardEx)
 // ---------------------------------------------------------------------------
-#define KG_PORT_MSG_PROCESS_CREATE 1
-#define KG_PORT_MSG_PROCESS_EXIT   2
+#define KG_PORT_MSG_PROCESS_CREATE     1
+#define KG_PORT_MSG_PROCESS_EXIT       2
+#define KG_PORT_MSG_READY_FOR_INJECT   3
 
 #pragma pack(push, 1)
 typedef struct _KG_PORT_MESSAGE {
@@ -149,13 +150,12 @@ typedef struct _KG_PORT_MESSAGE {
 }
 
 static bool g_showConsole = false;
+static bool g_noInject = false;
 
 static void Wprintln(const std::wstring& s) {
     if (!g_showConsole) return;
-    HANDLE hCon = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hCon == INVALID_HANDLE_VALUE) return;
-    DWORD w;
-    WriteConsoleW(hCon, s.c_str(), (DWORD)s.size(), &w, NULL);
+    std::wcout << s;
+    std::wcout.flush();
 }
 
 // ---------------------------------------------------------------------------
@@ -474,14 +474,15 @@ public:
                     int blen = swprintf_s(buf, ARRAYSIZE(buf), L"bwrap.exe: Sandbox SID=%lu Create PID=%lu ProcName=%s\n", msg->SID, msg->Pid, winPath.c_str());
                     if (blen > 0) Wprintln(buf);
 
+                } else if (msg->MsgType == KG_PORT_MSG_READY_FOR_INJECT) {
                     if (!self->m_hookDllPath.empty()) {
-                        std::wstring image(msg->ImageName);
-                        std::transform(image.begin(), image.end(), image.begin(), ::towlower);
-                        bool isPwsh = (image.find(L"pwsh.exe") != std::wstring::npos ||
-                                       image.find(L"powershell.exe") != std::wstring::npos);
-                        if (isPwsh) {
+                        if (g_noInject) {
+                            WCHAR sbuf[128];
+                            int slen = swprintf_s(sbuf, ARRAYSIZE(sbuf), L"bwrap.exe: Sandbox SID=%lu Skip Inject PID=%lu (--no-inject)\n", self->m_sid, msg->Pid);
+                            if (slen > 0) Wprintln(sbuf);
+                        } else {
                             WCHAR ibuf[128];
-                            int ilen = swprintf_s(ibuf, ARRAYSIZE(ibuf), L"bwrap.exe: Sandbox SID=%lu Inject PID=%lu\n", self->m_sid, msg->Pid);
+                            int ilen = swprintf_s(ibuf, ARRAYSIZE(ibuf), L"bwrap.exe: Sandbox SID=%lu Inject PID=%lu (ready)\n", self->m_sid, msg->Pid);
                             if (ilen > 0) Wprintln(ibuf);
 
                             HANDLE hProc = OpenProcess(
@@ -785,6 +786,7 @@ static void ShowHelp() {
         << "                              pwsh is always resolved by default.\n"
         << "  --showbox                 Print sandbox SID to stdout after creation\n"
         << "  --showConsole             Enable diagnostic messages on the console\n"
+        << "  --no-inject               Skip KiloHook.dll injection into pwsh\n"
         << "  --ses <id>                Log invocation to session file for Agent Manager\n"
         << "  -h, --help          Show this help message\n"
         << "\n"
@@ -868,6 +870,8 @@ int wmain(int argc, wchar_t* argv[]) {
             showbox = true;
         } else if (a == L"--showConsole") {
             g_showConsole = true;
+        } else if (a == L"--no-inject") {
+            g_noInject = true;
         } else if (a == L"--ses") {
             if (++i >= argc || std::wstring(argv[i]).find(L"--") == 0) {
                 std::wcerr << L"bwrap.exe: --ses requires a session ID\n";

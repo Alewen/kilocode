@@ -661,6 +661,29 @@ static NTSTATUS KgDeviceIoControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
                 status = STATUS_NOT_FOUND;
                 break;
             }
+
+            // Remove all PIDs belonging to this sandbox from PidMap,
+            // gPidSlotFast, and gPidNetCache before deleting the domain.
+            KG_PID_MAP* newMap = KgClonePidMap(s->PidMap);
+            if (newMap) {
+                for (ULONG b = 0; b < KG_PID_BUCKETS; b++) {
+                    PLIST_ENTRY e = newMap->Buckets[b].Flink;
+                    while (e != &newMap->Buckets[b]) {
+                        KG_PID_ENTRY* entry = CONTAINING_RECORD(e, KG_PID_ENTRY, Link);
+                        PLIST_ENTRY next = e->Flink;
+                        if (entry->SlotIndex == slot) {
+                            HANDLE pid = entry->Pid;
+                            ULONG fastIdx = (ULONG)(ULONG_PTR)pid & 0xFFFF;
+                            RemoveEntryList(&entry->Link);
+                            ExFreePoolWithTag(entry, KG_POOL_TAG);
+                            gPidSlotFast[fastIdx] = KG_PID_SLOT_EMPTY;
+                            gPidNetCache[fastIdx] = KG_NET_ALLOW;
+                        }
+                        e = next;
+                    }
+                }
+            }
+
             KG_POLICY_DOMAIN* domain = &s->Domain[slot];
             KIRQL dIrql;
             KeAcquireSpinLock(&domain->Lock, &dIrql);
@@ -668,7 +691,17 @@ static NTSTATUS KgDeviceIoControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
             domain->Active = FALSE;
             InterlockedIncrement(&domain->RuleEpoch);
             KeReleaseSpinLock(&domain->Lock, dIrql);
+
+            KG_PID_MAP* oldMap = NULL;
+            if (newMap) {
+                oldMap = KgSwapPidMap(newMap);
+            }
+
             KeReleaseSpinLock(&gStateLock, oldIrql);
+
+            // Free old PidMap outside spinlock (ExWaitForRundownProtectionRelease may block)
+            KgFreeOldPidMap(oldMap);
+
             KgReleaseState(s);
             status = STATUS_SUCCESS;
         } else {
@@ -909,10 +942,8 @@ static BOOLEAN KgCheckFileAccess(PFLT_CALLBACK_DATA Data, KG_OPERATION_TYPE Op)
     if (!state) return TRUE;
 
     HANDLE pid = PsGetCurrentProcessId();
-    KG_SNAPSHOT snap;
-    KgCaptureSnapshot(state, pid, &snap);
-
-    if (!snap.IsSandboxed) {
+    ULONG slot = KgIsPidInSandBox(pid);
+    if (slot == (ULONG)-1) {
         KgReleaseState(state);
         return TRUE;
     }
@@ -923,7 +954,7 @@ static BOOLEAN KgCheckFileAccess(PFLT_CALLBACK_DATA Data, KG_OPERATION_TYPE Op)
         return TRUE;
     }
 
-    KG_POLICY_DOMAIN* domain = &state->Domain[snap.SlotIndex];
+    KG_POLICY_DOMAIN* domain = &state->Domain[slot];
     KG_SANDBOX_LEVEL level = KgFindPathRule(domain, &nameInfo->Name);
 
     PCSTR opStr = KgOpToString(Op);
@@ -1224,15 +1255,13 @@ KgCheckEnumVisibility(HANDLE pid, PUNICODE_STRING path)
     KG_SYSTEM_STATE* state = KgAcquireState();
     if (!state) return TRUE;
 
-    KG_SNAPSHOT snap;
-    KgCaptureSnapshot(state, pid, &snap);
-
-    if (!snap.IsSandboxed) {
+    ULONG slot = KgIsPidInSandBox(pid);
+    if (slot == (ULONG)-1) {
         KgReleaseState(state);
         return TRUE;
     }
 
-    KG_POLICY_DOMAIN* domain = &state->Domain[snap.SlotIndex];
+    KG_POLICY_DOMAIN* domain = &state->Domain[slot];
     KG_SANDBOX_LEVEL level = 0;
     USHORT bestLen = 0;
 
@@ -1284,10 +1313,8 @@ PreCreate(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Comp
         if (KgNormalizePath(Data, &nameInfo)) {
             KG_SYSTEM_STATE* state = KgAcquireState();
             if (state) {
-                HANDLE pid = PsGetCurrentProcessId();
-                KG_SNAPSHOT snap;
-                KgCaptureSnapshot(state, pid, &snap);
-                if (snap.IsSandboxed && KgIsTraversalAllowed(state, snap.SlotIndex, &nameInfo->Name)) {
+                ULONG slot = KgIsPidInSandBox(PsGetCurrentProcessId());
+                if (slot != (ULONG)-1 && KgIsTraversalAllowed(state, slot, &nameInfo->Name)) {
                     KgReleaseState(state);
                     FltReleaseFileNameInformation(nameInfo);
                     return FLT_PREOP_SUCCESS_NO_CALLBACK;
@@ -1323,14 +1350,13 @@ PreCreate(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Comp
     }
 
     HANDLE pid = PsGetCurrentProcessId();
-    KG_SNAPSHOT snap;
-    KgCaptureSnapshot(state, pid, &snap);
+    ULONG slot = KgIsPidInSandBox(pid);
+    BOOLEAN isSandboxed = (slot != (ULONG)-1);
 
     KG_SANDBOX_LEVEL level = 0;
-    BOOLEAN isSandboxed = snap.IsSandboxed;
 
     if (isSandboxed) {
-        KG_POLICY_DOMAIN* domain = &state->Domain[snap.SlotIndex];
+        KG_POLICY_DOMAIN* domain = &state->Domain[slot];
         KIRQL dIrql;
         KeAcquireSpinLock(&domain->Lock, &dIrql);
         level = KgFindPathRule(domain, &nameInfo->Name);
@@ -1354,7 +1380,7 @@ PreCreate(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Comp
 
     // 沙箱进程 + 路径是绑定根祖先目录 → 放行（需先遍历到子目录）
     if (isSandboxed && level == 0) {
-        if (KgIsTraversalAllowed(state, snap.SlotIndex, &nameInfo->Name)) {
+        if (KgIsTraversalAllowed(state, slot, &nameInfo->Name)) {
             level = 1;  // 授予遍历级别的权限
         }
     }
@@ -1393,7 +1419,7 @@ PreCreate(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Comp
                     KIRQL dIrql;
                     KG_SANDBOX_LEVEL openedLevel = 0;
                     if (isSandboxed) {
-                        KG_POLICY_DOMAIN* domain = &state->Domain[snap.SlotIndex];
+                        KG_POLICY_DOMAIN* domain = &state->Domain[slot];
                         KeAcquireSpinLock(&domain->Lock, &dIrql);
                         openedLevel = KgFindPathRule(domain, &openedInfo->Name);
                         KeReleaseSpinLock(&domain->Lock, dIrql);
@@ -1406,7 +1432,7 @@ PreCreate(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Comp
                     }
                     // opened 路径也没匹配到规则 → 同主路径一样检查遍历祖先
                     if (openedLevel == 0 && isSandboxed) {
-                        if (KgIsTraversalAllowed(state, snap.SlotIndex, &openedInfo->Name)) {
+                        if (KgIsTraversalAllowed(state, slot, &openedInfo->Name)) {
                             openedLevel = 1;
                         }
                     }
@@ -1441,7 +1467,7 @@ PreCreate(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Comp
     if (!allowed) {
         DbgPrint("FileGuard: DENY PID=%lu Level=%hhu Op=%s File=%wZ\n",
                  (ULONG)(ULONG_PTR)pid, level, denyOp, &nameInfo->Name);
-        KgPushDenyEvent(&state->Domain[snap.IsSandboxed ? snap.SlotIndex : 0], pid, &nameInfo->Name);
+        KgPushDenyEvent(&state->Domain[isSandboxed ? slot : 0], pid, &nameInfo->Name);
     }
 
     KgReleaseState(state);
@@ -1492,14 +1518,13 @@ PreWrite(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Compl
     }
 
     HANDLE pid = PsGetCurrentProcessId();
-    KG_SNAPSHOT snap;
-    KgCaptureSnapshot(state, pid, &snap);
+    ULONG slot = KgIsPidInSandBox(pid);
+    BOOLEAN isSandboxed = (slot != (ULONG)-1);
 
     KG_SANDBOX_LEVEL level = 0;
-    BOOLEAN isSandboxed = snap.IsSandboxed;
 
     if (isSandboxed) {
-        KG_POLICY_DOMAIN* domain = &state->Domain[snap.SlotIndex];
+        KG_POLICY_DOMAIN* domain = &state->Domain[slot];
         KIRQL dIrql;
         KeAcquireSpinLock(&domain->Lock, &dIrql);
         level = KgFindPathRule(domain, &nameInfo->Name);
@@ -1533,7 +1558,7 @@ PreWrite(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Compl
                     KIRQL dIrql;
                     KG_SANDBOX_LEVEL openedLevel = 0;
                     if (isSandboxed) {
-                        KG_POLICY_DOMAIN* domain = &state->Domain[snap.SlotIndex];
+                        KG_POLICY_DOMAIN* domain = &state->Domain[slot];
                         KeAcquireSpinLock(&domain->Lock, &dIrql);
                         openedLevel = KgFindPathRule(domain, &openedInfo->Name);
                         KeReleaseSpinLock(&domain->Lock, dIrql);
@@ -1557,7 +1582,7 @@ PreWrite(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Compl
     if (!allowed) {
         DbgPrint("FileGuard: DENY PID=%lu Level=%hhu Op=Write File=%wZ\n",
                  (ULONG)(ULONG_PTR)pid, level, &nameInfo->Name);
-        KgPushDenyEvent(&state->Domain[snap.IsSandboxed ? snap.SlotIndex : 0], pid, &nameInfo->Name);
+        KgPushDenyEvent(&state->Domain[isSandboxed ? slot : 0], pid, &nameInfo->Name);
     }
 
     KgReleaseState(state);
@@ -1598,14 +1623,13 @@ PreSetInfo(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
     }
 
     HANDLE pid = PsGetCurrentProcessId();
-    KG_SNAPSHOT snap;
-    KgCaptureSnapshot(state, pid, &snap);
+    ULONG slot = KgIsPidInSandBox(pid);
+    BOOLEAN isSandboxed = (slot != (ULONG)-1);
 
     KG_SANDBOX_LEVEL level = 0;
-    BOOLEAN isSandboxed = snap.IsSandboxed;
 
     if (isSandboxed) {
-        KG_POLICY_DOMAIN* domain = &state->Domain[snap.SlotIndex];
+        KG_POLICY_DOMAIN* domain = &state->Domain[slot];
         KIRQL dIrql;
         KeAcquireSpinLock(&domain->Lock, &dIrql);
         level = KgFindPathRule(domain, &nameInfo->Name);
@@ -1646,7 +1670,7 @@ PreSetInfo(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
                 tgtPath.Length = (USHORT)fnameByteLen;
                 tgtPath.MaximumLength = (USHORT)fnameByteLen;
                 if (isSandboxed) {
-                    KG_POLICY_DOMAIN* domain = &state->Domain[snap.SlotIndex];
+                    KG_POLICY_DOMAIN* domain = &state->Domain[slot];
                     KIRQL dIrql;
                     KeAcquireSpinLock(&domain->Lock, &dIrql);
                     targetLevel = KgFindPathRule(domain, &tgtPath);
@@ -1661,7 +1685,7 @@ PreSetInfo(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
                 }
                 hasTarget = TRUE;
                 KG_LOG("DomainID=%lu PID=%lu RenameTarget=%wZ | L%hhu\n",
-                         state->Domain[snap.IsSandboxed ? snap.SlotIndex : 0].Id,
+                         state->Domain[isSandboxed ? slot : 0].Id,
                          (ULONG)(ULONG_PTR)pid,
                          &tgtPath,
                          targetLevel);
@@ -1698,7 +1722,7 @@ PreSetInfo(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
                     KIRQL dIrql;
                     KG_SANDBOX_LEVEL openedLevel = 0;
                     if (isSandboxed) {
-                        KG_POLICY_DOMAIN* domain = &state->Domain[snap.SlotIndex];
+                        KG_POLICY_DOMAIN* domain = &state->Domain[slot];
                         KeAcquireSpinLock(&domain->Lock, &dIrql);
                         openedLevel = KgFindPathRule(domain, &openedInfo->Name);
                         KeReleaseSpinLock(&domain->Lock, dIrql);
@@ -1736,7 +1760,7 @@ PreSetInfo(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
         DbgPrint("FileGuard: DENY PID=%lu Level=%hhu Op=%s File=%wZ\n",
                  (ULONG)(ULONG_PTR)pid, level, denyOp, &nameInfo->Name);
         }
-        KgPushDenyEvent(&state->Domain[snap.IsSandboxed ? snap.SlotIndex : 0], pid, &nameInfo->Name);
+        KgPushDenyEvent(&state->Domain[isSandboxed ? slot : 0], pid, &nameInfo->Name);
     }
 
     KgReleaseState(state);
@@ -1787,12 +1811,12 @@ PreCleanup(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
     }
 
     HANDLE pid = PsGetCurrentProcessId();
-    KG_SNAPSHOT snap;
-    KgCaptureSnapshot(state, pid, &snap);
+    ULONG slot = KgIsPidInSandBox(pid);
+    BOOLEAN isSandboxed = (slot != (ULONG)-1);
 
     KG_SANDBOX_LEVEL level = 0;
-    if (snap.IsSandboxed) {
-        KG_POLICY_DOMAIN* domain = &state->Domain[snap.SlotIndex];
+    if (isSandboxed) {
+        KG_POLICY_DOMAIN* domain = &state->Domain[slot];
         KIRQL dIrql;
         KeAcquireSpinLock(&domain->Lock, &dIrql);
         level = KgFindPathRule(domain, &nameInfo->Name);
@@ -1811,7 +1835,7 @@ PreCleanup(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
     // 判断该进程对当前文件是否具备删除权限。删除需要 level >= 2（L2）。
     // 若有权删除，则无需干预，放行让文件系统在关闭句柄时完成删除操作。
     BOOLEAN allowed = TRUE;
-    if (snap.IsSandboxed || level != 0)
+    if (isSandboxed || level != 0)
         allowed = (level >= 2);
 
     if (allowed) {
@@ -1824,8 +1848,8 @@ PreCleanup(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
                 if (RtlCompareUnicodeString(&nameInfo->Name, &openedInfo->Name, TRUE) != 0) {
                     KIRQL dIrql;
                     KG_SANDBOX_LEVEL openedLevel = 0;
-                    if (snap.IsSandboxed) {
-                        KG_POLICY_DOMAIN* domain = &state->Domain[snap.SlotIndex];
+                    if (isSandboxed) {
+                        KG_POLICY_DOMAIN* domain = &state->Domain[slot];
                         KeAcquireSpinLock(&domain->Lock, &dIrql);
                         openedLevel = KgFindPathRule(domain, &openedInfo->Name);
                         KeReleaseSpinLock(&domain->Lock, dIrql);
@@ -1836,7 +1860,7 @@ PreCleanup(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
                         openedLevel = KgFindPathRule(global, &openedInfo->Name);
                         KeReleaseSpinLock(&global->Lock, dIrql);
                     }
-                    if (snap.IsSandboxed || openedLevel != 0)
+                    if (isSandboxed || openedLevel != 0)
                         allowed = (openedLevel >= 2);
                 }
             }
@@ -1850,7 +1874,7 @@ PreCleanup(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
     if (!allowed) {
         DbgPrint("FileGuard: DENY PID=%lu Level=%hhu Op=DeleteCleanup File=%wZ\n",
                  (ULONG)(ULONG_PTR)pid, level, &nameInfo->Name);
-        KgPushDenyEvent(&state->Domain[snap.IsSandboxed ? snap.SlotIndex : 0], pid, &nameInfo->Name);
+        KgPushDenyEvent(&state->Domain[isSandboxed ? slot : 0], pid, &nameInfo->Name);
         fileObj->Flags &= ~FO_DELETE_ON_CLOSE;
     }
 
@@ -1877,9 +1901,7 @@ PreDirCtrl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
     KG_SYSTEM_STATE* s = KgAcquireState();
     BOOLEAN isSandboxed = FALSE;
     if (s) {
-        KG_SNAPSHOT snap;
-        KgCaptureSnapshot(s, pid, &snap);
-        isSandboxed = snap.IsSandboxed;
+        isSandboxed = (KgIsPidInSandBox(pid) != (ULONG)-1);
         KgReleaseState(s);
     }
     if (!isSandboxed)
@@ -2071,11 +2093,10 @@ PreQueryInformation(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, P
     if (!state) return FLT_PREOP_SUCCESS_NO_CALLBACK;
 
     HANDLE pid = PsGetCurrentProcessId();
-    KG_SNAPSHOT snap;
-    KgCaptureSnapshot(state, pid, &snap);
+    ULONG slot = KgIsPidInSandBox(pid);
 
     // 非沙箱进程 → 直接放行，跳过路径解析和规则查找
-    if (!snap.IsSandboxed) {
+    if (slot == (ULONG)-1) {
         KgReleaseState(state);
         return FLT_PREOP_SUCCESS_NO_CALLBACK;
     }
@@ -2086,7 +2107,7 @@ PreQueryInformation(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, P
         return FLT_PREOP_SUCCESS_NO_CALLBACK;
     }
 
-    KG_POLICY_DOMAIN* domain = &state->Domain[snap.SlotIndex];
+    KG_POLICY_DOMAIN* domain = &state->Domain[slot];
     KIRQL dIrql;
     KeAcquireSpinLock(&domain->Lock, &dIrql);
     KG_SANDBOX_LEVEL level = KgFindPathRule(domain, &nameInfo->Name);
@@ -2100,7 +2121,7 @@ PreQueryInformation(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, P
     }
 
     // 祖先目录遍历放行：路径是绑定根目录的父目录 → 直接放行（与 PreCreate 一致）
-    if (level == 0 && KgIsTraversalAllowed(state, snap.SlotIndex, &nameInfo->Name)) {
+    if (level == 0 && KgIsTraversalAllowed(state, slot, &nameInfo->Name)) {
         KgReleaseState(state);
         FltReleaseFileNameInformation(nameInfo);
         return FLT_PREOP_SUCCESS_NO_CALLBACK;
@@ -2109,12 +2130,12 @@ PreQueryInformation(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, P
     // L0 路径 → 返回"文件不存在"，与真正不存在的路径结果一致
     if (level == 0) {
         KG_LOG("FileGuard: DomainID=%lu PID=%lu FileName=%wZ | QueryInfo | L0 DENY\n",
-                 state->Domain[snap.SlotIndex].Id,
+                 state->Domain[slot].Id,
                  (ULONG)(ULONG_PTR)pid,
                  &nameInfo->Name);
         DbgPrint("FileGuard: DENY PID=%lu Level=0 Op=QueryInfo File=%wZ\n",
                  (ULONG)(ULONG_PTR)pid, &nameInfo->Name);
-        KgPushDenyEvent(&state->Domain[snap.SlotIndex], pid, &nameInfo->Name);
+        KgPushDenyEvent(&state->Domain[slot], pid, &nameInfo->Name);
         KgReleaseState(state);
         FltReleaseFileNameInformation(nameInfo);
         Data->IoStatus.Status = STATUS_OBJECT_NAME_NOT_FOUND;
@@ -2241,9 +2262,7 @@ KiloPostDirectoryControl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjec
     KG_SYSTEM_STATE* state = KgAcquireState();
     ULONG slotIndex = (ULONG)-1;
     if (state) {
-        KG_SNAPSHOT snap;
-        KgCaptureSnapshot(state, childPid, &snap);
-        slotIndex = snap.SlotIndex;
+        slotIndex = KgIsPidInSandBox(childPid);
         KgReleaseState(state);
     }
 
