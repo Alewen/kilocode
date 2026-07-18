@@ -1448,7 +1448,7 @@ PreCreate(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Comp
     FltReleaseFileNameInformation(nameInfo);
 
     if (!allowed) {
-        Data->IoStatus.Status = STATUS_ACCESS_DENIED;
+        Data->IoStatus.Status = (op == KgOpCreate) ? STATUS_OBJECT_NAME_NOT_FOUND : STATUS_ACCESS_DENIED;
         Data->IoStatus.Information = 0;
         return FLT_PREOP_COMPLETE;
     }
@@ -2052,20 +2052,78 @@ PreRead(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Comple
 
 ////////////////////////////////////////////////////////////////////////////////
 // 功能：文件信息查询前置回调（IRP_MJ_QUERY_INFORMATION）
-//       当前不处理，直接放行所有文件属性查询操作
+//       对沙箱内进程，检查目标路径的权限等级。
+//       L0 路径返回 STATUS_OBJECT_NAME_NOT_FOUND，使 Test-Path 等探测
+//       工具无法区分"路径不存在"和"路径存在但无权访问"，防止信息泄露。
 // 参数：
 //   Data              - 回调数据
 //   FltObjects        - 相关对象
 //   CompletionContext - 完成上下文
-// 返回值：FLT_PREOP_SUCCESS_NO_CALLBACK
+// 返回值：FLT_PREOP_SUCCESS_NO_CALLBACK 或 FLT_PREOP_COMPLETE（拒绝时）
 ////////////////////////////////////////////////////////////////////////////////
 static FLT_PREOP_CALLBACK_STATUS
 PreQueryInformation(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
 {
-    //UNREFERENCED_PARAMETER(Data);
     UNREFERENCED_PARAMETER(FltObjects);
     UNREFERENCED_PARAMETER(CompletionContext);
-    KgCheckFileAccess(Data, KgOpRead);
+
+    KG_SYSTEM_STATE* state = KgAcquireState();
+    if (!state) return FLT_PREOP_SUCCESS_NO_CALLBACK;
+
+    HANDLE pid = PsGetCurrentProcessId();
+    KG_SNAPSHOT snap;
+    KgCaptureSnapshot(state, pid, &snap);
+
+    // 非沙箱进程 → 直接放行，跳过路径解析和规则查找
+    if (!snap.IsSandboxed) {
+        KgReleaseState(state);
+        return FLT_PREOP_SUCCESS_NO_CALLBACK;
+    }
+
+    PFLT_FILE_NAME_INFORMATION nameInfo;
+    if (!KgNormalizePath(Data, &nameInfo)) {
+        KgReleaseState(state);
+        return FLT_PREOP_SUCCESS_NO_CALLBACK;
+    }
+
+    KG_POLICY_DOMAIN* domain = &state->Domain[snap.SlotIndex];
+    KIRQL dIrql;
+    KeAcquireSpinLock(&domain->Lock, &dIrql);
+    KG_SANDBOX_LEVEL level = KgFindPathRule(domain, &nameInfo->Name);
+    KeReleaseSpinLock(&domain->Lock, dIrql);
+
+    if (level == 0) {
+        KG_POLICY_DOMAIN* global = &state->Domain[0];
+        KeAcquireSpinLock(&global->Lock, &dIrql);
+        level = KgFindPathRule(global, &nameInfo->Name);
+        KeReleaseSpinLock(&global->Lock, dIrql);
+    }
+
+    // 祖先目录遍历放行：路径是绑定根目录的父目录 → 直接放行（与 PreCreate 一致）
+    if (level == 0 && KgIsTraversalAllowed(state, snap.SlotIndex, &nameInfo->Name)) {
+        KgReleaseState(state);
+        FltReleaseFileNameInformation(nameInfo);
+        return FLT_PREOP_SUCCESS_NO_CALLBACK;
+    }
+
+    // L0 路径 → 返回"文件不存在"，与真正不存在的路径结果一致
+    if (level == 0) {
+        KG_LOG("FileGuard: DomainID=%lu PID=%lu FileName=%wZ | QueryInfo | L0 DENY\n",
+                 state->Domain[snap.SlotIndex].Id,
+                 (ULONG)(ULONG_PTR)pid,
+                 &nameInfo->Name);
+        DbgPrint("FileGuard: DENY PID=%lu Level=0 Op=QueryInfo File=%wZ\n",
+                 (ULONG)(ULONG_PTR)pid, &nameInfo->Name);
+        KgPushDenyEvent(&state->Domain[snap.SlotIndex], pid, &nameInfo->Name);
+        KgReleaseState(state);
+        FltReleaseFileNameInformation(nameInfo);
+        Data->IoStatus.Status = STATUS_OBJECT_NAME_NOT_FOUND;
+        Data->IoStatus.Information = 0;
+        return FLT_PREOP_COMPLETE;
+    }
+
+    KgReleaseState(state);
+    FltReleaseFileNameInformation(nameInfo);
     return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
 
