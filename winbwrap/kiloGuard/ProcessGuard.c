@@ -429,6 +429,31 @@ KiloProcessNotify(PEPROCESS Process, HANDLE ProcessId, PPS_CREATE_NOTIFY_INFO Cr
 
         ULONG exitSlot = KgLookupSlotByPid(state->PidMap, ProcessId);
 
+        {
+            USHORT fidx = (USHORT)((ULONG_PTR)ProcessId & 0xFFFF);
+            if (exitSlot != (ULONG)-1 && gBwrapFast[fidx]) {
+                gBwrapFast[fidx] = 0;
+                KgFreePathRules(&state->Domain[exitSlot]);
+                state->Domain[exitSlot].Active = FALSE;
+                for (ULONG b = 0; b < KG_PID_BUCKETS; b++) {
+                    PLIST_ENTRY e = newMap->Buckets[b].Flink;
+                    while (e != &newMap->Buckets[b]) {
+                        KG_PID_ENTRY* entry = CONTAINING_RECORD(e, KG_PID_ENTRY, Link);
+                        PLIST_ENTRY next = e->Flink;
+                        if (entry->SlotIndex == exitSlot) {
+                            HANDLE ep = entry->Pid;
+                            ULONG efi = (ULONG)(ULONG_PTR)ep & 0xFFFF;
+                            RemoveEntryList(&entry->Link);
+                            ExFreePoolWithTag(entry, KG_POOL_TAG);
+                            gPidSlotFast[efi] = KG_PID_SLOT_EMPTY;
+                            gPidNetCache[efi] = KG_NET_ALLOW;
+                        }
+                        e = next;
+                    }
+                }
+            }
+        }
+
         KgRemoveTrustedPid(ProcessId);
         KgRemovePid(newMap, ProcessId);
         KgSetPidNetCache(ProcessId, KG_NET_ALLOW);

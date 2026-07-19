@@ -607,6 +607,7 @@ static NTSTATUS KgDeviceIoControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
             KgFreeOldPidMap(oldMap);
 
             if (!in->Detach && attachedSlot != (ULONG)-1) {
+                gBwrapFast[(ULONG)(ULONG_PTR)in->Pid & 0xFFFF] = 1;
                 PEPROCESS process = NULL;
                 if (NT_SUCCESS(PsLookupProcessByProcessId(in->Pid, &process))) {
                     PUNICODE_STRING imageName = NULL;
@@ -678,6 +679,7 @@ static NTSTATUS KgDeviceIoControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
                             ExFreePoolWithTag(entry, KG_POOL_TAG);
                             gPidSlotFast[fastIdx] = KG_PID_SLOT_EMPTY;
                             gPidNetCache[fastIdx] = KG_NET_ALLOW;
+                            gBwrapFast[fastIdx] = 0;
                         }
                         e = next;
                     }

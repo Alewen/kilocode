@@ -3,6 +3,7 @@
 #include "PidPortMap.h"
 
 USHORT gPidSlotFast[65536];
+UCHAR gBwrapFast[65536];
 volatile LONG gPidMapEpoch = 0;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -209,5 +210,6 @@ VOID KgPidMapInit(VOID)
     for (ULONG i = 0; i < 65536; i++) {
         gPidSlotFast[i] = KG_PID_SLOT_EMPTY;
         gPidNetCache[i] = KG_NET_ALLOW;
+        gBwrapFast[i] = 0;
     }
 }

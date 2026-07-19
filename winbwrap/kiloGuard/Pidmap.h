@@ -30,6 +30,7 @@ typedef struct _KG_PID_MAP {
 } KG_PID_MAP;
 
 extern USHORT gPidSlotFast[65536];
+extern UCHAR gBwrapFast[65536];
 
 ////////////////////////////////////////////////////////////////////////////////
 // 全局唯一，任意一个沙箱内进程发生变更，数量就 +1
