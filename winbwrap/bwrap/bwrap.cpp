@@ -622,24 +622,29 @@ static void KgAutoProtectVcs(std::vector<std::wstring>& roList,
     };
 
     auto processPaths = [&](const std::vector<std::wstring>& paths) {
+        std::vector<std::wstring> found;
         for (auto& p : paths) {
             if (hasSvn) {
                 std::wstring svnDir = findVcsMeta(p, L".svn");
                 if (!svnDir.empty() &&
-                    std::find(roList.begin(), roList.end(), svnDir) == roList.end()) {
-                    roList.push_back(svnDir);
+                    std::find(roList.begin(), roList.end(), svnDir) == roList.end() &&
+                    std::find(found.begin(), found.end(), svnDir) == found.end()) {
+                    found.push_back(svnDir);
                     Wprintln(L"bwrap.exe: Auto-protected " + svnDir + L" (read-only)\n");
                 }
             }
             if (hasGit) {
                 std::wstring gitDir = findVcsMeta(p, L".git");
                 if (!gitDir.empty() &&
-                    std::find(roList.begin(), roList.end(), gitDir) == roList.end()) {
-                    roList.push_back(gitDir);
+                    std::find(roList.begin(), roList.end(), gitDir) == roList.end() &&
+                    std::find(found.begin(), found.end(), gitDir) == found.end()) {
+                    found.push_back(gitDir);
                     Wprintln(L"bwrap.exe: Auto-protected " + gitDir + L" (read-only)\n");
                 }
             }
         }
+        for (auto& f : found)
+            roList.push_back(f);
     };
 
     processPaths(roList);
