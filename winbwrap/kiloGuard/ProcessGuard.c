@@ -481,6 +481,7 @@ KiloImageLoadNotify(PUNICODE_STRING ImageName, HANDLE ProcessId, PIMAGE_INFO Ima
     ULONG slot = KgIsPidInSandBox(ProcessId);
     BOOLEAN isOleAut32 = FALSE;
 
+    /* Log RPC/COM DLL loading by sandboxed processes */
     if (slot != (ULONG)-1)
     {
         /* Extract filename from full path */

@@ -342,19 +342,22 @@ public:
             for (ULONG i = 0; i < out.EventCount; i++) {
                 WCHAR line[512];
                 int len;
-                if (out.Events[i].Flags == 1)
+                if (out.Events[i].Flags == 1) {
                     len = swprintf_s(line, ARRAYSIZE(line),
                         L"bwrap.exe: DENY PID=%lu ProcessName=%s Net=%s\n",
                         out.Events[i].Pid,
                         out.Events[i].ProcessName,
                         out.Events[i].FilePath);
-                else
+                } else {
                     len = swprintf_s(line, ARRAYSIZE(line),
                         L"bwrap.exe: DENY PID=%lu ProcessName=%s File=%s\n",
                         out.Events[i].Pid,
                         out.Events[i].ProcessName,
                         out.Events[i].FilePath);
-                if (len > 0) Wprintln(line);
+                }
+                if (len > 0) {
+                  Wprintln(line);
+                }
             }
         }
     }
