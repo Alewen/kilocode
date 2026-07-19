@@ -1,0 +1,10 @@
+%LOCALAPPDATA%\Microsoft\WindowsApps		bwrap.cpp:855-866	App Execution Alias 的 0 字节桩文件目录
+pwsh 的 AppExec 目标目录				bwrap.cpp:868-886	pwsh 别名始终解析，无论是否传 --alias
+C:\ProgramData\Microsoft\Windows\AppRepository	bwrap.cpp:889-898	AppExecutionAlias.dll 运行时解析别名需要
+
+bwrap.exe 自身所在目录				bwrap.cpp:833-846	为 KiloHook.dll 注入提供访问
+所有绑定路径的祖先 .git 目录				bwrap.cpp:900-901	递归向上查找，保护 git 仓库元数据
+所有绑定路径的祖先 .svn 目录				bwrap.cpp:900-901	同上，SVN 元数据
+%APPDATA%\Subversion				bwrap.cpp:629-639	仅当系统存在 svn.exe 时
+
+C:\Windows 整个目录				bwrap.cpp:940-949	确保系统 DLL 可访问

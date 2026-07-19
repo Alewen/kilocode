@@ -132,9 +132,12 @@
   <ItemGroup>
     <ClCompile Include="bwrap.cpp" />
     <ClCompile Include="AppX.cpp" />
+    <ClCompile Include="DriverClient.cpp" />
+    <ClCompile Include="framework.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h" />
+    <ClInclude Include="DriverClient.h" />
     <ClInclude Include="bwrap_secret.h" />
     <ClInclude Include="AppX.h" />
   </ItemGroup>
