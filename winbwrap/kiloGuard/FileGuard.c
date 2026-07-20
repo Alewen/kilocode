@@ -1946,9 +1946,7 @@ PreDirCtrl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
     ctx->DirectoryPath.Length = pathByteLen;
     ctx->DirectoryPath.MaximumLength = pathByteLen + sizeof(WCHAR);
     ctx->RequestorProcess = FltGetRequestorProcess(Data);
-
     *CompletionContext = ctx;
-
     FltReleaseFileNameInformation(nameInfo);
     return FLT_PREOP_SUCCESS_WITH_CALLBACK;
 }

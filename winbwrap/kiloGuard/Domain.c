@@ -79,6 +79,9 @@ KG_SANDBOX_LEVEL KgFindPathRule(KG_POLICY_DOMAIN* domain, PUNICODE_STRING path)
         KG_PATH_RULE* rule = CONTAINING_RECORD(e, KG_PATH_RULE, Link);
         if (RtlPrefixUnicodeString(&rule->PathPrefix, path, TRUE) && rule->PathPrefix.Length > bestLen)
         {
+            if (rule->PathPrefix.Length < path->Length &&
+                path->Buffer[rule->PathPrefix.Length / sizeof(WCHAR)] != L'\\')
+                continue;
             level = rule->Level;
             bestLen = rule->PathPrefix.Length;
         }
