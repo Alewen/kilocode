@@ -45,49 +45,57 @@ typedef UCHAR KG_SANDBOX_LEVEL;
 
 /* Must match KiloGuard.c _KG_POLICY_RULE_ENTRY layout:
    Sid(4) + Level(1) + pad(3) + Path(2048) = 2056 bytes */
-typedef struct {
+typedef struct
+{
     KG_SANDBOX_ID Sid;
     KG_SANDBOX_LEVEL Level;
     WCHAR Path[1024];
 } KG_POLICY_RULE_ENTRY;
 
-typedef struct {
+typedef struct
+{
     ULONG RuleCount;
     KG_POLICY_RULE_ENTRY Rules[1];
 } KG_POLICY_BATCH_INPUT;
 
-typedef struct {
+typedef struct
+{
     HANDLE Pid;
     KG_SANDBOX_ID Sid;
     BOOLEAN Detach;
 } KG_ATTACH_PROCESS_INPUT;
 
-typedef struct {
+typedef struct
+{
     BOOLEAN Destroy;
     KG_SANDBOX_ID Sid;
 } KG_CONTROL_SANDBOX;
 
-typedef struct {
+typedef struct
+{
     ULONG Pid;
     WCHAR ImageName[256];
     WCHAR DllPath[256];
     LARGE_INTEGER Timestamp;
 } KG_FAILURE_EVENT;
 
-typedef struct {
+typedef struct
+{
     KG_SANDBOX_ID Sid;
 } KG_QUERY_EVENTS_INPUT;
 
 #define KG_EVENT_BATCH_SIZE 32
 
-typedef struct {
+typedef struct
+{
     ULONG EventCount;
     KG_FAILURE_EVENT Events[KG_EVENT_BATCH_SIZE];
 } KG_QUERY_EVENTS_OUTPUT;
 
 #define KG_DENY_EVENT_BATCH_SIZE 32
 
-typedef struct {
+typedef struct
+{
     ULONG Pid;
     WCHAR ProcessName[32];
     WCHAR FilePath[260];
@@ -95,12 +103,14 @@ typedef struct {
     ULONG Flags;    // 0=file deny, 1=net deny
 } KG_DENY_EVENT;
 
-typedef struct {
+typedef struct
+{
     ULONG EventCount;
     KG_DENY_EVENT Events[KG_DENY_EVENT_BATCH_SIZE];
 } KG_QUERY_DENY_EVENTS_OUTPUT;
 
-typedef struct {
+typedef struct
+{
     KG_SANDBOX_ID Sid;
     ULONG Count;
     WCHAR Paths[KG_MAX_NET_EXE][260];
@@ -114,7 +124,8 @@ typedef struct {
 #define KG_PORT_MSG_READY_FOR_INJECT   3
 
 #pragma pack(push, 1)
-typedef struct _KG_PORT_MESSAGE {
+typedef struct _KG_PORT_MESSAGE
+{
     ULONG MsgType;
     ULONG Pid;
     ULONG SID;

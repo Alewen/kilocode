@@ -1,5 +1,4 @@
 ﻿#include "AppX.h"
-
 #include <windows.h>
 #include <cstdio>
 #include <cwchar>
@@ -15,10 +14,10 @@ static std::vector<std::wstring> FindExeInPath(const std::wstring& exeName)
     std::wstring cmd = L"cmd.exe /c where " + exeName + L" 2>nul";
 
     HANDLE hRead, hWrite;
-    SECURITY_ATTRIBUTES sa = { sizeof(sa), NULL, TRUE };
+    SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
     if (!CreatePipe(&hRead, &hWrite, &sa, 4096)) return results;
 
-    STARTUPINFOW si = { sizeof(si) };
+    STARTUPINFOW si = {sizeof(si)};
     si.dwFlags = STARTF_USESTDHANDLES;
     si.hStdOutput = hWrite;
     si.hStdError = NULL;
@@ -28,7 +27,8 @@ static std::vector<std::wstring> FindExeInPath(const std::wstring& exeName)
 
     PROCESS_INFORMATION pi = {};
     if (!CreateProcessW(NULL, cmdbuf.data(), NULL, NULL, TRUE,
-                        CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+        CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+    {
         CloseHandle(hRead); CloseHandle(hWrite);
         return results;
     }
@@ -51,11 +51,13 @@ static std::vector<std::wstring> FindExeInPath(const std::wstring& exeName)
 
     wchar_t* line = wbuf.data();
     wchar_t* end = wbuf.data() + wlen;
-    while (line < end) {
+    while (line < end)
+    {
         while (line < end && (*line == L'\r' || *line == L'\n')) line++;
         wchar_t* start = line;
         while (line < end && *line != L'\r' && *line != L'\n') line++;
-        if (line > start) {
+        if (line > start)
+        {
             std::wstring path(start, line - start);
             results.push_back(path);
         }
@@ -90,7 +92,8 @@ static std::wstring GetAppExecTarget(const std::wstring& aliasPath)
     BYTE buf[4096] = {};
     DWORD bytesRet = 0;
     if (!DeviceIoControl(h, FSCTL_GET_REPARSE_POINT,
-                         NULL, 0, buf, sizeof(buf), &bytesRet, NULL)) {
+        NULL, 0, buf, sizeof(buf), &bytesRet, NULL))
+    {
         CloseHandle(h);
         return L"";
     }
@@ -112,7 +115,8 @@ static std::wstring GetAppExecTarget(const std::wstring& aliasPath)
     const wchar_t* end = (const wchar_t*)(buf + bytesRet);
 
     int strIndex = 0;
-    while (p < end) {
+    while (p < end)
+    {
         size_t len = wcslen(p);
         if (len == 0) break;
         if (strIndex == 2) return std::wstring(p, len);
@@ -137,7 +141,8 @@ std::wstring ResolveAliasTargetDir(const std::wstring& name)
     // Normalize: append ".exe" if the name has no ".exe" suffix (case-insensitive)
     std::wstring exeName = name;
     bool hasExe = false;
-    if (exeName.size() >= 4) {
+    if (exeName.size() >= 4)
+    {
         std::wstring tail = exeName.substr(exeName.size() - 4);
         for (auto& c : tail) c = towlower(c);
         hasExe = (tail == L".exe");

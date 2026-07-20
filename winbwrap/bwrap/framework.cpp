@@ -102,18 +102,24 @@ bool KgFindTool(const wchar_t* tool, std::wstring& outPath)
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
 
-    wchar_t pathBuf[1024] = {};
+    char ansiBuf[1024] = {};
     DWORD read = 0;
-    ReadFile(hRead, pathBuf, (DWORD)sizeof(pathBuf) - sizeof(wchar_t), &read, NULL);
+    ReadFile(hRead, ansiBuf, sizeof(ansiBuf) - 1, &read, NULL);
     CloseHandle(hRead);
 
     if (read > 0) {
-        while (read > 0 && (pathBuf[read / sizeof(wchar_t) - 1] == L'\r' ||
-                            pathBuf[read / sizeof(wchar_t) - 1] == L'\n'))
-            read -= sizeof(wchar_t);
-        pathBuf[read / sizeof(wchar_t)] = L'\0';
-        outPath = pathBuf;
-        return true;
+        int wlen = MultiByteToWideChar(CP_ACP, 0, ansiBuf, (int)read, NULL, 0);
+        if (wlen > 0) {
+            std::vector<wchar_t> wbuf(wlen + 1);
+            MultiByteToWideChar(CP_ACP, 0, ansiBuf, (int)read, wbuf.data(), wlen);
+            wbuf[wlen] = L'\0';
+            // Take only the first line (before first \r or \n)
+            wchar_t* nl = wcschr(wbuf.data(), L'\r');
+            if (!nl) nl = wcschr(wbuf.data(), L'\n');
+            if (nl) *nl = L'\0';
+            outPath = wbuf.data();
+            return true;
+        }
     }
     return false;
 }
@@ -169,7 +175,6 @@ void KgAutoProtectVcs(std::vector<std::wstring>& roList, const std::vector<std::
             roList.push_back(f);
     };
 
-    processPaths(roList);
     processPaths(rwList);
 
     if (hasSvn) {

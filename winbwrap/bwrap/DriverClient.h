@@ -40,47 +40,48 @@ public:
     KG_SANDBOX_ID CreateSandbox();
 
     void DestroySandbox();
-    
+
 
     void SetNetExeList(const std::vector<std::wstring>& ntPaths);
-    
+
 
     void AddRules(const std::vector<KG_POLICY_RULE_ENTRY>& rules);
-    
+
 
     void AttachProcess(DWORD pid, KG_SANDBOX_ID sid);
-    
+
 
     void QueryDenyEvents(KG_QUERY_DENY_EVENTS_OUTPUT& out);
-    
+
 
     void DrainDenyEvents();
-    
+
 
     void StartDenyThread();
-    
+
 
     void StopDenyThread();
-    
+
 
     void QueryEvents(KG_QUERY_EVENTS_OUTPUT& out);
 
     void DrainEvents();
-    
+
 
     void StartNotifyThread();
-    
+
 
     void StopNotifyThread();
-    
+
 
     void ConnectNotificationPort();
-    
+
 
     void DisconnectPort();
-    
 
-    static DWORD WINAPI PortThreadProc(LPVOID param) {
+
+    static DWORD WINAPI PortThreadProc(LPVOID param)
+    {
         DriverClient* self = (DriverClient*)param;
         if (!self->m_portHandle) return 0;
 
@@ -90,7 +91,8 @@ public:
         WCHAR buf[128];
         int len = swprintf_s(buf, ARRAYSIZE(buf), L"bwrap.exe: Sandbox SID=%lu Port thread started\n", self->m_sid);
         if (len > 0) Wprintln(buf);
-        while (true) {
+        while (true)
+        {
             HRESULT hr = FilterGetMessage(self->m_portHandle, hdr,
                 sizeof(buffer), NULL);
             if (FAILED(hr)) break;
@@ -98,20 +100,27 @@ public:
             KG_PORT_MESSAGE* msg = (KG_PORT_MESSAGE*)(hdr + 1);
             {
                 std::lock_guard<std::mutex> lock(self->m_pidMutex);
-                if (msg->MsgType == KG_PORT_MSG_PROCESS_CREATE) {
+                if (msg->MsgType == KG_PORT_MSG_PROCESS_CREATE)
+                {
                     self->m_pids.insert(msg->Pid);
                     std::wstring winPath = NtPathToWin32(msg->ImageName);
                     WCHAR buf[512];
                     int blen = swprintf_s(buf, ARRAYSIZE(buf), L"bwrap.exe: Sandbox SID=%lu Create PID=%lu ProcName=%s\n", msg->SID, msg->Pid, winPath.c_str());
                     if (blen > 0) Wprintln(buf);
 
-                } else if (msg->MsgType == KG_PORT_MSG_READY_FOR_INJECT) {
-                    if (!self->m_hookDllPath.empty()) {
-                        if (g_noInject) {
+                }
+                else if (msg->MsgType == KG_PORT_MSG_READY_FOR_INJECT)
+                {
+                    if (!self->m_hookDllPath.empty())
+                    {
+                        if (g_noInject)
+                        {
                             WCHAR sbuf[128];
                             int slen = swprintf_s(sbuf, ARRAYSIZE(sbuf), L"bwrap.exe: Sandbox SID=%lu Skip Inject PID=%lu (--no-inject)\n", self->m_sid, msg->Pid);
                             if (slen > 0) Wprintln(sbuf);
-                        } else {
+                        }
+                        else
+                        {
                             WCHAR ibuf[128];
                             int ilen = swprintf_s(ibuf, ARRAYSIZE(ibuf), L"bwrap.exe: Sandbox SID=%lu Inject PID=%lu (ready)\n", self->m_sid, msg->Pid);
                             if (ilen > 0) Wprintln(ibuf);
@@ -120,18 +129,21 @@ public:
                                 PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION |
                                 PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ,
                                 FALSE, msg->Pid);
-                            if (hProc) {
+                            if (hProc)
+                            {
                                 size_t cbBuf = (self->m_hookDllPath.size() + 1) * sizeof(WCHAR);
                                 LPVOID pRemote = VirtualAllocEx(hProc, NULL, cbBuf,
                                     MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-                                if (pRemote) {
+                                if (pRemote)
+                                {
                                     WriteProcessMemory(hProc, pRemote,
                                         self->m_hookDllPath.c_str(), cbBuf, NULL);
                                     HANDLE hTh = CreateRemoteThread(hProc, NULL, 0,
                                         (LPTHREAD_START_ROUTINE)GetProcAddress(
                                             GetModuleHandleW(L"kernel32.dll"), "LoadLibraryW"),
                                         pRemote, 0, NULL);
-                                    if (hTh) {
+                                    if (hTh)
+                                    {
                                         WaitForSingleObject(hTh, 5000);
                                         CloseHandle(hTh);
                                     }
@@ -144,7 +156,9 @@ public:
                             if (dilen > 0) Wprintln(dibuf);
                         }
                     }
-                } else if (msg->MsgType == KG_PORT_MSG_PROCESS_EXIT) {
+                }
+                else if (msg->MsgType == KG_PORT_MSG_PROCESS_EXIT)
+                {
                     self->m_pids.erase(msg->Pid);
                     WCHAR ebuf[128];
                     int elen = swprintf_s(ebuf, ARRAYSIZE(ebuf), L"bwrap.exe: Sandbox SID=%lu Exit PID=%lu\n", msg->SID, msg->Pid);
@@ -159,19 +173,23 @@ private:
     HANDLE m_denyThread;
     HANDLE m_denyStopEvent;
 
-    static DWORD WINAPI NotifyThreadProc(LPVOID param) {
+    static DWORD WINAPI NotifyThreadProc(LPVOID param)
+    {
         DriverClient* self = (DriverClient*)param;
         self->DrainEvents();
-        while (WaitForSingleObject(self->m_stopEvent, 500) == WAIT_TIMEOUT) {
+        while (WaitForSingleObject(self->m_stopEvent, 500) == WAIT_TIMEOUT)
+        {
             self->DrainEvents();
         }
         return 0;
     }
 
-    static DWORD WINAPI DenyThreadProc(LPVOID param) {
+    static DWORD WINAPI DenyThreadProc(LPVOID param)
+    {
         DriverClient* self = (DriverClient*)param;
         self->DrainDenyEvents();
-        while (WaitForSingleObject(self->m_denyStopEvent, 100) == WAIT_TIMEOUT) {
+        while (WaitForSingleObject(self->m_denyStopEvent, 100) == WAIT_TIMEOUT)
+        {
             self->DrainDenyEvents();
         }
         self->DrainDenyEvents();
