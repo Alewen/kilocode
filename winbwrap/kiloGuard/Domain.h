@@ -6,16 +6,6 @@
 #include "PidPortMap.h"
 
 /* =========================
-   Debug logging — variadic, DEBUG only, captured by DebugView
-   ========================= */
-
-#ifdef DEBUG
-#define KG_LOG(fmt, ...) DbgPrint(fmt, __VA_ARGS__)
-#else
-#define KG_LOG(fmt, ...) ((VOID)0)
-#endif
-
-/* =========================
    Sandbox Domain Management — types, globals, API
    ========================= */
 

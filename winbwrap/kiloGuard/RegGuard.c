@@ -1,4 +1,6 @@
-﻿#include "RegGuard.h"
+﻿
+#include "KiloGuard.h"
+#include "RegGuard.h"
 #include "Domain.h"
 
 static LARGE_INTEGER gRegCookie = { 0 };
@@ -226,9 +228,9 @@ NTSTATUS KgRegisterRegCallbacks(VOID)
     );
 
     if (NT_SUCCESS(status)) {
-        DbgPrint("RegGuard: Callback registered\n");
+        KG_LOG("RegGuard: Callback registered\n");
     } else {
-        DbgPrint("RegGuard: FAILED (status=%08lX)\n", status);
+        KG_LOG("RegGuard: FAILED (status=%08lX)\n", status);
     }
 
     return status;
@@ -238,7 +240,7 @@ VOID KgUnregisterRegCallbacks(VOID)
 {
     if (gRegCookie.QuadPart != 0) {
         CmUnRegisterCallback(gRegCookie);
-        DbgPrint("RegGuard: Callback unregistered\n");
+        KG_LOG("RegGuard: Callback unregistered\n");
         gRegCookie.QuadPart = 0;
     }
 }

@@ -1,5 +1,8 @@
-﻿#include <fltKernel.h>
+﻿
+#include <fltKernel.h>
 #include <wdmsec.h>
+
+#include "KiloGuard.h"
 #include "KiloGuardSecret.h"
 #include "Domain.h"
 #include "ProcessGuard.h"
@@ -1467,7 +1470,7 @@ PreCreate(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Comp
                    (op == KgOpDelete) ? "Delete" :
                    (op == KgOpExecute) ? "Execute" : "?";
     if (!allowed) {
-        DbgPrint("FileGuard: DENY PID=%lu Level=%hhu Op=%s File=%wZ\n",
+        KG_LOG("FileGuard: DENY PID=%lu Level=%hhu Op=%s File=%wZ\n",
                  (ULONG)(ULONG_PTR)pid, level, denyOp, &nameInfo->Name);
         KgPushDenyEvent(&state->Domain[isSandboxed ? slot : 0], pid, &nameInfo->Name);
     }
@@ -1582,7 +1585,7 @@ PreWrite(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Compl
     }
 
     if (!allowed) {
-        DbgPrint("FileGuard: DENY PID=%lu Level=%hhu Op=Write File=%wZ\n",
+        KG_LOG("FileGuard: DENY PID=%lu Level=%hhu Op=Write File=%wZ\n",
                  (ULONG)(ULONG_PTR)pid, level, &nameInfo->Name);
         KgPushDenyEvent(&state->Domain[isSandboxed ? slot : 0], pid, &nameInfo->Name);
     }
@@ -1686,7 +1689,7 @@ PreSetInfo(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
                     KeReleaseSpinLock(&global->Lock, dIrql);
                 }
                 hasTarget = TRUE;
-                KG_LOG("DomainID=%lu PID=%lu RenameTarget=%wZ | L%hhu\n",
+                KG_LOG("FileGuard: DomainID=%lu PID=%lu RenameTarget=%wZ | L%hhu\n",
                          state->Domain[isSandboxed ? slot : 0].Id,
                          (ULONG)(ULONG_PTR)pid,
                          &tgtPath,
@@ -1756,10 +1759,10 @@ PreSetInfo(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
         PCSTR denyOp = (op == KgOpDelete) ? "Delete" :
                        (op == KgOpRename) ? "Rename" : "SetInfo";
         if (hasTarget) {
-            DbgPrint("FileGuard: DENY PID=%lu Level=%hhu TargetLevel=%hhu Op=%s File=%wZ\n",
+            KG_LOG("FileGuard: DENY PID=%lu Level=%hhu TargetLevel=%hhu Op=%s File=%wZ\n",
                      (ULONG)(ULONG_PTR)pid, level, targetLevel, denyOp, &nameInfo->Name);
         } else {
-        DbgPrint("FileGuard: DENY PID=%lu Level=%hhu Op=%s File=%wZ\n",
+        KG_LOG("FileGuard: DENY PID=%lu Level=%hhu Op=%s File=%wZ\n",
                  (ULONG)(ULONG_PTR)pid, level, denyOp, &nameInfo->Name);
         }
         KgPushDenyEvent(&state->Domain[isSandboxed ? slot : 0], pid, &nameInfo->Name);
@@ -1874,7 +1877,7 @@ PreCleanup(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
     // 这样文件系统在后续处理 Cleanup IRP 时不会执行删除动作，
     // 文件被保留。句柄本身正常关闭，调用者收到成功的返回值。
     if (!allowed) {
-        DbgPrint("FileGuard: DENY PID=%lu Level=%hhu Op=DeleteCleanup File=%wZ\n",
+        KG_LOG("FileGuard: DENY PID=%lu Level=%hhu Op=DeleteCleanup File=%wZ\n",
                  (ULONG)(ULONG_PTR)pid, level, &nameInfo->Name);
         KgPushDenyEvent(&state->Domain[isSandboxed ? slot : 0], pid, &nameInfo->Name);
         fileObj->Flags &= ~FO_DELETE_ON_CLOSE;
@@ -2133,7 +2136,7 @@ PreQueryInformation(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, P
                  state->Domain[slot].Id,
                  (ULONG)(ULONG_PTR)pid,
                  &nameInfo->Name);
-        DbgPrint("FileGuard: DENY PID=%lu Level=0 Op=QueryInfo File=%wZ\n",
+        KG_LOG("FileGuard: DENY PID=%lu Level=0 Op=QueryInfo File=%wZ\n",
                  (ULONG)(ULONG_PTR)pid, &nameInfo->Name);
         KgPushDenyEvent(&state->Domain[slot], pid, &nameInfo->Name);
         KgReleaseState(state);

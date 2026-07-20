@@ -1,4 +1,6 @@
-﻿#include "ProcessGuard.h"
+﻿
+#include "KiloGuard.h"
+#include "ProcessGuard.h"
 #include "FileGuard.h"
 #include "Domain.h"
 #include "Pidmap.h"

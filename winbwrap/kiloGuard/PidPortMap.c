@@ -1,5 +1,7 @@
-﻿#include <ntddk.h>
+﻿
+#include <ntddk.h>
 #include <fwpmk.h>
+#include "KiloGuard.h"
 #include "PidPortMap.h"
 
 #define FWPS_CLASSIFY_OUT_FLAG_ABSORB 0x00000001
@@ -25,22 +27,22 @@ typedef struct _FWPS_CALLOUT3{GUID calloutKey;UINT32 flags;void*classifyFn;void*
 NTSTATUS FwpsCalloutRegister3(PDEVICE_OBJECT,const FWPS_CALLOUT3*,UINT32*);
 NTSTATUS FwpsCalloutUnregisterById0(UINT32);
 
-#define FWPS_LAYER_ALE_RESOURCE_ASSIGNMENT_V4 38
-#define FWPS_LAYER_ALE_RESOURCE_ASSIGNMENT_V6 39
-#define FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V4 44
-#define FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6 46
-#define FWPS_LAYER_ALE_AUTH_CONNECT_V4 48
-#define FWPS_LAYER_ALE_AUTH_CONNECT_V6 50
-#define FWPS_LAYER_OUTBOUND_TRANSPORT_V4 16
-#define FWPS_LAYER_OUTBOUND_TRANSPORT_V6 17
+#define FWPS_LAYER_ALE_RESOURCE_ASSIGNMENT_V4       36 // 38
+#define FWPS_LAYER_ALE_RESOURCE_ASSIGNMENT_V6       38 // 39
+#define FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V4          44
+#define FWPS_LAYER_ALE_AUTH_RECV_ACCEPT_V6          46
+#define FWPS_LAYER_ALE_AUTH_CONNECT_V4              48
+#define FWPS_LAYER_ALE_AUTH_CONNECT_V6              50
+#define FWPS_LAYER_OUTBOUND_TRANSPORT_V4            16
+#define FWPS_LAYER_OUTBOUND_TRANSPORT_V6            18 // 17
 
-#define FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS 6
-#define FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_LOCAL_PORT 4
-#define FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_REMOTE_ADDRESS 6
-#define FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_LOCAL_PORT 4
-#define FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_LOCAL_PORT 4
-#define FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_REMOTE_ADDRESS 3
-#define FWPS_FIELD_OUTBOUND_TRANSPORT_V6_IP_REMOTE_ADDRESS 3
+#define FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS    6
+#define FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_LOCAL_PORT        4
+#define FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_REMOTE_ADDRESS    6
+#define FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_LOCAL_PORT        4
+#define FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_LOCAL_PORT      4
+#define FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_REMOTE_ADDRESS  3
+#define FWPS_FIELD_OUTBOUND_TRANSPORT_V6_IP_REMOTE_ADDRESS  3
 
 #define RPC_C_AUTHN_WINNT 10
 
@@ -64,77 +66,219 @@ DEFINE_GUID(KG_CALLOUT_V6_TRANS,0xbc3a6b29,0x7d0e,0x8f1a,0x2b,0x3c,0x4d,0x5e,0x6
 #undef INITGUID
 
 UCHAR gPidNetCache[65536];
-static USHORT gPortPidMap[65536];
-static UINT32 gCalloutV4Connect=0,gCalloutV6Connect=0,gCalloutV4Res=0,gCalloutV6Res=0,gCalloutV4Trans=0,gCalloutV6Trans=0;
-static UINT64 gFilterV4Connect=0,gFilterV6Connect=0,gFilterV4Res=0,gFilterV6Res=0,gFilterV4Trans=0,gFilterV6Trans=0;
+
+static UINT32 gCalloutV4Connect=0;
+static UINT32 gCalloutV6Connect=0;
+static UINT32 gCalloutV4Res=0;
+static UINT32 gCalloutV6Res=0;
+static UINT32 gCalloutV4Trans=0;
+static UINT32 gCalloutV6Trans=0;
+static UINT64 gFilterV4Connect=0;
+static UINT64 gFilterV6Connect=0;
+static UINT64 gFilterV4Res=0;
+static UINT64 gFilterV6Res=0;
+static UINT64 gFilterV4Trans=0;
+static UINT64 gFilterV6Trans=0;
 static PDEVICE_OBJECT gNetDeviceObject=NULL;
 static HANDLE gEngineHandle=NULL;
 
+static USHORT gPortPidMap[65536];
+
+static PCSTR KgLyrToStr(UINT16 lyr)
+{
+    switch (lyr)
+    {
+    case  0: return "INBOUND_IPPACKET_V4";              // 入站 IP 包（IPv4）
+    case  1: return "INBOUND_IPPACKET_V4_DISCARD";      // 入站 IP 包丢弃（IPv4）
+    case  2: return "INBOUND_IPPACKET_V6";              // 入站 IP 包（IPv6）
+    case  3: return "INBOUND_IPPACKET_V6_DISCARD";      // 入站 IP 包丢弃（IPv6）
+    case  4: return "OUTBOUND_IPPACKET_V4";             // 出站 IP 包（IPv4）
+    case  5: return "OUTBOUND_IPPACKET_V4_DISCARD";     // 出站 IP 包丢弃（IPv4）
+    case  6: return "OUTBOUND_IPPACKET_V6";             // 出站 IP 包（IPv6）
+    case  7: return "OUTBOUND_IPPACKET_V6_DISCARD";     // 出站 IP 包丢弃（IPv6）
+    case  8: return "IPFORWARD_V4";                     // IP 转发（IPv4）
+    case  9: return "IPFORWARD_V4_DISCARD";             // IP 转发丢弃（IPv4）
+    case 10: return "IPFORWARD_V6";                     // IP 转发（IPv6）
+    case 11: return "IPFORWARD_V6_DISCARD";             // IP 转发丢弃（IPv6）
+    case 12: return "INBOUND_TRANSPORT_V4";             // 入站传输层（TCP/UDP，IPv4）
+    case 13: return "INBOUND_TRANSPORT_V4_DISCARD";     // 入站传输层丢弃（IPv4）
+    case 14: return "INBOUND_TRANSPORT_V6";             // 入站传输层（TCP/UDP，IPv6）
+    case 15: return "INBOUND_TRANSPORT_V6_DISCARD";     // 入站传输层丢弃（IPv6）
+    case 16: return "OUTBOUND_TRANSPORT_V4";            // 出站传输层（TCP/UDP，IPv4）
+    case 17: return "OUTBOUND_TRANSPORT_V4_DISCARD";    // 出站传输层丢弃（IPv4）
+    case 18: return "OUTBOUND_TRANSPORT_V6";            // 出站传输层（TCP/UDP，IPv6）
+    case 19: return "OUTBOUND_TRANSPORT_V6_DISCARD";    // 出站传输层丢弃（IPv6）
+    case 20: return "STREAM_V4";                        // 流层（TCP 数据流，IPv4）
+    case 21: return "STREAM_V4_DISCARD";                // 流层丢弃（IPv4）
+    case 22: return "STREAM_V6";                        // 流层（TCP 数据流，IPv6）
+    case 23: return "STREAM_V6_DISCARD";                // 流层丢弃（IPv6）
+    case 24: return "DATAGRAM_DATA_V4";                 // 数据报（UDP，IPv4）
+    case 25: return "DATAGRAM_DATA_V4_DISCARD";         // 数据报丢弃（IPv4）
+    case 26: return "DATAGRAM_DATA_V6";                 // 数据报（UDP，IPv6）
+    case 27: return "DATAGRAM_DATA_V6_DISCARD";         // 数据报丢弃（IPv6）
+    case 28: return "INBOUND_ICMP_ERROR_V4";            // 入站 ICMP 错误（IPv4）
+    case 29: return "INBOUND_ICMP_ERROR_V4_DISCARD";    // 入站 ICMP 错误丢弃（IPv4）
+    case 30: return "INBOUND_ICMP_ERROR_V6";            // 入站 ICMP 错误（IPv6）
+    case 31: return "INBOUND_ICMP_ERROR_V6_DISCARD";    // 入站 ICMP 错误丢弃（IPv6）
+    case 32: return "OUTBOUND_ICMP_ERROR_V4";           // 出站 ICMP 错误（IPv4）
+    case 33: return "OUTBOUND_ICMP_ERROR_V4_DISCARD";   // 出站 ICMP 错误丢弃（IPv4）
+    case 34: return "OUTBOUND_ICMP_ERROR_V6";           // 出站 ICMP 错误（IPv6）
+    case 35: return "OUTBOUND_ICMP_ERROR_V6_DISCARD";   // 出站 ICMP 错误丢弃（IPv6）
+    case 36: return "RESOURCE_ASSIGNMENT_V4";           // 绑定本地端口/地址（bind，IPv4）
+    case 37: return "RESOURCE_ASSIGNMENT_V4_DISCARD";   // 绑定端口丢弃（IPv4）
+    case 38: return "RESOURCE_ASSIGNMENT_V6";           // 绑定本地端口/地址（bind，IPv6）
+    case 39: return "RESOURCE_ASSIGNMENT_V6_DISCARD";   // 绑定端口丢弃（IPv6）
+    case 40: return "AUTH_LISTEN_V4";                   // 监听（listen，IPv4）
+    case 41: return "AUTH_LISTEN_V4_DISCARD";           // 监听丢弃（IPv4）
+    case 42: return "AUTH_LISTEN_V6";                   // 监听（listen，IPv6）
+    case 43: return "AUTH_LISTEN_V6_DISCARD";           // 监听丢弃（IPv6）
+    case 44: return "AUTH_RECV_ACCEPT_V4";              // 接收/接受连接（accept，IPv4）
+    case 45: return "AUTH_RECV_ACCEPT_V4_DISCARD";      // 接受连接丢弃（IPv4）
+    case 46: return "AUTH_RECV_ACCEPT_V6";              // 接收/接受连接（accept，IPv6）
+    case 47: return "AUTH_RECV_ACCEPT_V6_DISCARD";      // 接受连接丢弃（IPv6）
+    case 48: return "AUTH_CONNECT_V4";                  // 发起出站连接（connect，IPv4）
+    case 49: return "AUTH_CONNECT_V4_DISCARD";          // 出站连接丢弃（IPv4）
+    case 50: return "AUTH_CONNECT_V6";                  // 发起出站连接（connect，IPv6）
+    case 51: return "AUTH_CONNECT_V6_DISCARD";          // 出站连接丢弃（IPv6）
+    case 52: return "FLOW_ESTABLISHED_V4";              // 连接已建立（IPv4）
+    case 53: return "FLOW_ESTABLISHED_V4_DISCARD";      // 连接建立丢弃（IPv4）
+    case 54: return "FLOW_ESTABLISHED_V6";              // 连接已建立（IPv6）
+    case 55: return "FLOW_ESTABLISHED_V6_DISCARD";      // 连接建立丢弃（IPv6）
+    default: return "?";
+    }
+}
+
 static VOID KgNetClassify(const FWPS_INCOMING_VALUES0*in,const FWPS_INCOMING_METADATA_VALUES0*im,PVOID ld,const VOID*cc,const FWPS_FILTER3*f,UINT64 fc,FWPS_CLASSIFY_OUT0*co)
 {
-    (void)ld;(void)cc;(void)f;(void)fc;co->actionType=FWP_ACTION_PERMIT;
-    UINT64 pid=im->processId;if(!pid)return;
+    (void)ld;
+    (void)cc;
+    (void)f;
+    (void)fc;
+    co->actionType=FWP_ACTION_PERMIT;
+    UINT64 pid=im->processId;
+    if(!pid) {
+      return;
+    }
+    
     UINT16 lyr=in->layerId;
     UCHAR st=gPidNetCache[pid&0xFFFF];
 
     /* Trace: layer, PID from metadata, cache status */
-    if(lyr==FWPS_LAYER_ALE_AUTH_CONNECT_V4){
+    if(lyr==FWPS_LAYER_ALE_AUTH_CONNECT_V4)
+    {
         UINT32 ra=in->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS].value.uint32;
         UINT32 lp=in->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_LOCAL_PORT].value.uint16;
         USHORT origPid=gPortPidMap[lp&0xFFFF];
-        DbgPrint("KiloGuard: TRACE_AC V4 pid=%I64u localPort=%u remoteIP=%d.%d.%d.%d cache=%u origPid=%u\n",
+        KG_LOG("KiloGuard: Net V4 Pid=%I64u localPort=%u remoteIP=%d.%d.%d.%d NetBlock=%u origPid=%u\n",
             pid,lp,(ra>>24)&0xFF,(ra>>16)&0xFF,(ra>>8)&0xFF,ra&0xFF,st,origPid);
     }
-    else if(lyr==FWPS_LAYER_ALE_AUTH_CONNECT_V6){
+    else if(lyr==FWPS_LAYER_ALE_AUTH_CONNECT_V6)
+    {
         UINT16 lp6=in->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_LOCAL_PORT].value.uint16;
-        DbgPrint("KiloGuard: TRACE_AC V6 pid=%I64u localPort=%u cache=%u\n",pid,lp6,st);
+        KG_LOG("KiloGuard: Net V6 Pid=%I64u localPort=%u NetBlock=%u\n", pid, lp6, st);
     }
 
-    if(st!=KG_NET_BLOCK)return;
-    if(lyr==FWPS_LAYER_ALE_AUTH_CONNECT_V4){UINT32 a=in->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS].value.uint32;if((a&0xFF000000)==0x7F000000)return;}
-    else if(lyr==FWPS_LAYER_ALE_AUTH_CONNECT_V6){UINT16*a6=(UINT16*)in->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_REMOTE_ADDRESS].value.byteArray16;if(a6&&a6[0]==0&&a6[1]==0&&a6[2]==0&&a6[3]==0&&a6[4]==0&&a6[5]==0&&a6[6]==0&&a6[7]==0x0100)return;}
-    {ULONG s=KgIsPidInSandBox((HANDLE)(ULONG_PTR)pid);if(s!=-1){WCHAR b[48];if(lyr==FWPS_LAYER_ALE_AUTH_CONNECT_V4){ULONG a=in->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS].value.uint32;KgFormatIpV4(b,a);}else if(lyr==FWPS_LAYER_ALE_AUTH_CONNECT_V6){UINT16*a6=(UINT16*)in->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_REMOTE_ADDRESS].value.byteArray16;if(a6){KgFormatIpV6(b,a6);}else b[0]=0;}UNICODE_STRING u;RtlInitUnicodeString(&u,b);KgPushNetDenyEvent(s,(HANDLE)(ULONG_PTR)pid,&u);}}
+    if (st!=KG_NET_BLOCK) {
+        return;
+    }
+    if(lyr==FWPS_LAYER_ALE_AUTH_CONNECT_V4) {
+        UINT32 a=in->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS].value.uint32;
+        if((a&0xFF000000)==0x7F000000)
+            return;
+    }
+    else if(lyr==FWPS_LAYER_ALE_AUTH_CONNECT_V6) {
+        UINT16*a6=(UINT16*)in->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_REMOTE_ADDRESS].value.byteArray16;
+        if(a6&&a6[0]==0&&a6[1]==0&&a6[2]==0&&a6[3]==0&&a6[4]==0&&a6[5]==0&&a6[6]==0&&a6[7]==0x0100)
+            return;
+    }
+    {
+        ULONG s=KgIsPidInSandBox((HANDLE)(ULONG_PTR)pid);
+        if(s!=-1) {
+            WCHAR b[48];
+            if(lyr==FWPS_LAYER_ALE_AUTH_CONNECT_V4) {
+                ULONG a=in->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS].value.uint32;
+                KgFormatIpV4(b,a);
+            } else if (lyr==FWPS_LAYER_ALE_AUTH_CONNECT_V6) {
+                UINT16*a6=(UINT16*)in->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_REMOTE_ADDRESS].value.byteArray16;
+                if(a6) {
+                    KgFormatIpV6(b,a6);
+                } else
+                    b[0]=0;
+            }
+            UNICODE_STRING u;
+            RtlInitUnicodeString(&u,b);
+            KgPushNetDenyEvent(s,(HANDLE)(ULONG_PTR)pid,&u);
+        }
+    }
     // ALE 层，告诉引擎丢弃此包
     co->rights=0;
     co->actionType=FWP_ACTION_BLOCK;
 }
 
-static NTSTATUS KgNetNotify(UINT32 nt,const GUID*fk,FWPS_FILTER3*f){(void)nt;(void)fk;(void)f;return STATUS_SUCCESS;}
+static NTSTATUS KgNetNotify(UINT32 nt,const GUID*fk,FWPS_FILTER3*f)
+{
+    (void)nt;
+    (void)fk;
+    (void)f;
+    return STATUS_SUCCESS;
+}
 
 static VOID KgNetResClassify(const FWPS_INCOMING_VALUES0*in,const FWPS_INCOMING_METADATA_VALUES0*im,PVOID ld,const VOID*cc,const FWPS_FILTER3*f,UINT64 fc,FWPS_CLASSIFY_OUT0*co)
 {
-    (void)ld;(void)cc;(void)f;(void)fc;co->actionType=FWP_ACTION_PERMIT;
-    UINT64 pid=im->processId;if(!pid)return;
+    (void)ld;
+    (void)cc;
+    (void)f;
+    (void)fc;
+    co->actionType=FWP_ACTION_PERMIT;
+    UINT64 pid=im->processId;
+    if(!pid)
+        return;
     UINT16 lyr=in->layerId;
     UINT32 p=in->incomingValue[4].value.uint16;
-    DbgPrint("KiloGuard: TRACE_RES lyr=%u PID=%I64u val4_port=%u\n",lyr,pid,p);
-    if(p&&p<65536)gPortPidMap[p]=(USHORT)(pid&0xFFFF);
+    KG_LOG("KiloGuard: Net PID=%I64u val4_port=%u TRACE INFO: %s(%u)\n", pid, p, KgLyrToStr(lyr), lyr);
+    if (p && p < 65536)
+        gPortPidMap[p] = (USHORT)(pid & 0xFFFF);
 }
 
 static VOID KgNetTransClassify(const FWPS_INCOMING_VALUES0*in,const FWPS_INCOMING_METADATA_VALUES0*im,PVOID ld,const VOID*cc,const FWPS_FILTER3*f,UINT64 fc,FWPS_CLASSIFY_OUT0*co)
 {
-    (void)ld;(void)cc;(void)f;(void)fc;co->actionType=FWP_ACTION_PERMIT;
+    (void)ld;
+    (void)cc;
+    (void)f;
+    (void)fc;
+    co->actionType=FWP_ACTION_PERMIT;
     UINT16 lyr=in->layerId;
-    UINT32 p=in->incomingValue[FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_LOCAL_PORT].value.uint16;if(!p||p>=65536)return;
-    USHORT pid=gPortPidMap[p];if(!pid)return;
+    // 出站数据包的本地源端口号
+    UINT32 p=in->incomingValue[FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_LOCAL_PORT].value.uint16;
+    if(!p || p >= 65536) // 端口无效，直接跳过
+        return;
+    USHORT pid=gPortPidMap[p];
+    if(!pid) // 该端口无绑定进程，跳过
+      return;
     UCHAR st=gPidNetCache[pid];
-    if(st!=KG_NET_BLOCK)return;
-    DbgPrint("KiloGuard: TRACE_TRANS srcPort=%u gPortPidMap=%u st=%u\n",p,pid,st);
-    if(lyr==FWPS_LAYER_OUTBOUND_TRANSPORT_V4){
+    if(st!=KG_NET_BLOCK) // 该进程未被标记拦截，跳过
+      return;
+    KG_LOG("KiloGuard: Net srcPort=%u Pid=%u NetBlock=%u\n",p,pid,st);
+    if (lyr==FWPS_LAYER_OUTBOUND_TRANSPORT_V4) {
         UINT32 ra=in->incomingValue[FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_REMOTE_ADDRESS].value.uint32;
-        if((ra&0xFF000000)==0x7F000000)return;
-        DbgPrint("KiloGuard: TRANS_BLOCK port=%u pid=%u dst=%d.%d.%d.%d\n",p,pid,(ra>>24)&0xFF,(ra>>16)&0xFF,(ra>>8)&0xFF,ra&0xFF);
-    }else{
+        if((ra&0xFF000000)==0x7F000000)
+            return;
+        KG_LOG("KiloGuard: NetBLOCK_V4 port=%u pid=%u dst=%d.%d.%d.%d\n",p,pid,(ra>>24)&0xFF,(ra>>16)&0xFF,(ra>>8)&0xFF,ra&0xFF);
+    } else {
         UINT16*a6=(UINT16*)in->incomingValue[FWPS_FIELD_OUTBOUND_TRANSPORT_V6_IP_REMOTE_ADDRESS].value.byteArray16;
-        if(a6&&a6[0]==0&&a6[1]==0&&a6[2]==0&&a6[3]==0&&a6[4]==0&&a6[5]==0&&a6[6]==0&&a6[7]==0x0100)return;
-        DbgPrint("KiloGuard: TRANS_BLOCK_V6 port=%u pid=%u\n",p,pid);
+        if(a6&&a6[0]==0&&a6[1]==0&&a6[2]==0&&a6[3]==0&&a6[4]==0&&a6[5]==0&&a6[6]==0&&a6[7]==0x0100)
+            return;
+        KG_LOG("KiloGuard: NetBLOCK_V6 port=%u pid=%u\n",p,pid);
     }
     // 传输层，告诉引擎丢弃此包
     co->rights=0;
-    co->actionType=FWP_ACTION_BLOCK;
+    co->actionType=FWP_ACTION_BLOCK; // 真正执行
 }
 
-VOID KgSetPidNetCache(HANDLE pid,UCHAR s){gPidNetCache[(ULONG)(ULONG_PTR)pid&0xFFFF]=s;}
+VOID KgSetPidNetCache(HANDLE pid,UCHAR s)
+{
+    gPidNetCache[(ULONG)(ULONG_PTR)pid & 0xFFFF] = s;
+}
 
 static NTSTATUS KgNetAddCalloutAndFilter(PDEVICE_OBJECT d,HANDLE e,const GUID*cg,const GUID*lg,void*fn,PCWSTR ds,UINT32*ci,UINT64*fi)
 {

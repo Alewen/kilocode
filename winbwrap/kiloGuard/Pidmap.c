@@ -1,4 +1,6 @@
-﻿#include "Pidmap.h"
+﻿
+#include "KiloGuard.h"
+#include "Pidmap.h"
 #include "Domain.h"
 #include "PidPortMap.h"
 
