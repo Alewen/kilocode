@@ -75,6 +75,7 @@ export const GrepTool = Tool.define(
             glob: params.include ? [params.include] : undefined,
             file,
             signal: ctx.abort,
+            sessionID: ctx.sessionID, // kilocode_change
           })
           if (result.items.length === 0) return empty
 

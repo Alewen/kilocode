@@ -116,6 +116,7 @@ export interface FilesInput {
   follow?: boolean
   maxDepth?: number
   signal?: AbortSignal
+  sessionID?: string // kilocode_change
 }
 
 export interface SearchInput {
@@ -126,6 +127,7 @@ export interface SearchInput {
   follow?: boolean
   file?: string[]
   signal?: AbortSignal
+  sessionID?: string // kilocode_change
 }
 
 export interface TreeInput {
@@ -346,11 +348,17 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | ChildPro
         )
       })
 
-      const command = Effect.fnUntraced(function* (cwd: string, args: string[]) {
+      const command = Effect.fnUntraced(function* (cwd: string, args: string[], sessionID?: string) {
         const binary = yield* filepath
+        const e = env()
+        // kilocode_change start
+        if (sessionID) {
+          e.KILO_SESSION_ID = sessionID
+        }
+        // kilocode_change end
         return ChildProcess.make(binary, args, {
           cwd,
-          env: env(),
+          env: e,
           extendEnv: true,
           stdin: "ignore",
         })
@@ -362,7 +370,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | ChildPro
             yield* Effect.forkScoped(
               Effect.gen(function* () {
                 yield* check(input.cwd)
-                const handle = yield* spawner.spawn(yield* command(input.cwd, filesArgs(input)))
+                const handle = yield* spawner.spawn(yield* command(input.cwd, filesArgs(input), input.sessionID)) // kilocode_change
                 const stderr = yield* Stream.mkString(Stream.decodeText(handle.stderr)).pipe(Effect.forkScoped)
                 const stdout = yield* Stream.decodeText(handle.stdout).pipe(
                   Stream.splitLines,
@@ -394,7 +402,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | ChildPro
 
         const program = Effect.scoped(
           Effect.gen(function* () {
-            const handle = yield* spawner.spawn(yield* command(input.cwd, searchArgs(input)))
+            const handle = yield* spawner.spawn(yield* command(input.cwd, searchArgs(input), input.sessionID)) // kilocode_change
 
             const [items, stderr, code] = yield* Effect.all(
               [

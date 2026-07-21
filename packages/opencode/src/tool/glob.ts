@@ -76,7 +76,7 @@ export const GlobTool = Tool.define(
           let truncated = false
           // kilocode_change start
           const files = yield* rg
-            .files({ cwd: search, glob: [absolute?.pattern ?? params.pattern], signal: ctx.abort })
+            .files({ cwd: search, glob: [absolute?.pattern ?? params.pattern], signal: ctx.abort, sessionID: ctx.sessionID }) // kilocode_change
             .pipe(
               Stream.mapEffect((file) =>
                 Effect.gen(function* () {
