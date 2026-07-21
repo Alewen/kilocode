@@ -50,6 +50,9 @@ export function generate(profile: Profile, launch: Launch, exe: string): Launch 
   entries.sort((a, b) => a.depth - b.depth)
 
   const args = entries.flatMap((e) => e.args)
+  if (launch.cwd) args.push("--cwd", launch.cwd)
+  const ses = launch.environment?.KILO_SESSION_ID
+  if (ses) args.push("--ses", ses)
   args.push("--", ...command(launch))
 
   return {

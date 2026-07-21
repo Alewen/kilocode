@@ -206,17 +206,35 @@ std::wstring BuildCmdLine(const std::wstring& exe, wchar_t* const* args, int arg
     for (int i = 0; i < argCount; ++i) {
         std::wstring a = args[i];
         line += L" ";
-        if (a.find(L' ') != std::wstring::npos ||
-            a.find(L'\t') != std::wstring::npos) {
-            size_t pos = 0;
-            while ((pos = a.find(L'"', pos)) != std::wstring::npos) {
-                a.insert(pos, 1, L'"');
-                pos += 2;
-            }
-            line += L"\"" + a + L"\"";
-        } else {
+        bool hasSpace = (a.find(L' ') != std::wstring::npos ||
+                         a.find(L'\t') != std::wstring::npos);
+        bool hasQuote = (a.find(L'"') != std::wstring::npos);
+        if (!hasSpace && !hasQuote) {
             line += a;
+            continue;
         }
+        line += L'"';
+        size_t j = 0;
+        while (j < a.size()) {
+            size_t backs = 0;
+            while (j < a.size() && a[j] == L'\\') {
+                backs++;
+                j++;
+            }
+            if (j >= a.size()) {
+                line.append(backs * 2, L'\\');
+                break;
+            }
+            if (a[j] == L'"') {
+                line.append(backs * 2 + 1, L'\\');
+                line += L'"';
+            } else {
+                line.append(backs, L'\\');
+                line += a[j];
+            }
+            j++;
+        }
+        line += L'"';
     }
     return line;
 }
