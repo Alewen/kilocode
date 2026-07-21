@@ -12431,14 +12431,12 @@ export type KilocodeSessionImportPartResponse =
 
 export type TaskStatusData = {
   body?: never
-  path: {
-    sessionID: string
-  }
+  path?: never
   query?: {
     directory?: string
     workspace?: string
   }
-  url: "/session/{sessionID}/task"
+  url: "/task"
 }
 
 export type TaskStatusErrors = {
@@ -12446,17 +12444,13 @@ export type TaskStatusErrors = {
    * Bad request
    */
   400: BadRequestError
-  /**
-   * NotFoundError
-   */
-  404: NotFoundError
 }
 
 export type TaskStatusError = TaskStatusErrors[keyof TaskStatusErrors]
 
 export type TaskStatusResponses = {
   /**
-   * Session task status
+   * Task status
    */
   200: {
     directory: string
@@ -12469,14 +12463,12 @@ export type TaskStatusResponse = TaskStatusResponses[keyof TaskStatusResponses]
 
 export type TaskToggleData = {
   body?: never
-  path: {
-    sessionID: string
-  }
+  path?: never
   query?: {
     directory?: string
     workspace?: string
   }
-  url: "/session/{sessionID}/task/toggle"
+  url: "/task/toggle"
 }
 
 export type TaskToggleErrors = {
@@ -12484,17 +12476,13 @@ export type TaskToggleErrors = {
    * Bad request
    */
   400: BadRequestError
-  /**
-   * NotFoundError
-   */
-  404: NotFoundError
 }
 
 export type TaskToggleError = TaskToggleErrors[keyof TaskToggleErrors]
 
 export type TaskToggleResponses = {
   /**
-   * Updated session task status
+   * Toggled task status
    */
   200: {
     directory: string

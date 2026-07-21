@@ -8399,13 +8399,12 @@ export class Sandbox extends HeyApiClient {
 
 export class Task extends HeyApiClient {
   /**
-   * Get session task status
+   * Get task status
    *
-   * Get the task enabled state for one session.
+   * Get the task enabled state for a workspace directory.
    */
   public status<ThrowOnError extends boolean = false>(
-    parameters: {
-      sessionID: string
+    parameters?: {
       directory?: string
       workspace?: string
     },
@@ -8416,7 +8415,6 @@ export class Task extends HeyApiClient {
       [
         {
           args: [
-            { in: "path", key: "sessionID" },
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
           ],
@@ -8424,20 +8422,19 @@ export class Task extends HeyApiClient {
       ],
     )
     return (options?.client ?? this.client).get<TaskStatusResponses, TaskStatusErrors, ThrowOnError>({
-      url: "/session/{sessionID}/task",
+      url: "/task",
       ...options,
       ...params,
     })
   }
 
   /**
-   * Toggle session task
+   * Toggle task
    *
-   * Toggle the task enabled state for one session.
+   * Toggle the task enabled state for a workspace directory.
    */
   public toggle<ThrowOnError extends boolean = false>(
-    parameters: {
-      sessionID: string
+    parameters?: {
       directory?: string
       workspace?: string
     },
@@ -8448,7 +8445,6 @@ export class Task extends HeyApiClient {
       [
         {
           args: [
-            { in: "path", key: "sessionID" },
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
           ],
@@ -8456,7 +8452,7 @@ export class Task extends HeyApiClient {
       ],
     )
     return (options?.client ?? this.client).post<TaskToggleResponses, TaskToggleErrors, ThrowOnError>({
-      url: "/session/{sessionID}/task/toggle",
+      url: "/task/toggle",
       ...options,
       ...params,
     })

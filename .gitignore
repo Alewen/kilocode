@@ -68,3 +68,8 @@ tsconfig.tsbuildinfo
 # Test Artifacts
 packages/app/.artifacts/
 packages/opencode/.artifacts/
+
+# windows bwrap
+winbwrap/bwrap/x64/
+winbwrap/kiloGuard/*.obj
+winbwrap/kiloGuard/KiloGuard.pdb

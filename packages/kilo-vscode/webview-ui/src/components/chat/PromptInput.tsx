@@ -704,8 +704,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       }
     }
   })
-  const currentSid = sid()
-  if (currentSid) vscode.postMessage({ type: "requestTaskEnabledState", sessionID: currentSid })
+  vscode.postMessage({ type: "requestTaskEnabledState" })
   vscode.postMessage({ type: "requestAutoApproveState" })
 
   onCleanup(() => {
@@ -1391,11 +1390,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               variant="ghost"
               size="small"
               onClick={() => {
-                const s = sid()
-                if (s) {
-                  console.log("[Task] toggle click", { sessionID: s, from: taskEnabled() })
-                  vscode.postMessage({ type: "toggleTaskEnabled", sessionID: s })
-                }
+                console.log("[Task] toggle click", { from: taskEnabled() })
+                vscode.postMessage({ type: "toggleTaskEnabled" })
               }}
               aria-label={taskEnabled() ? "Disable task" : "Enable task"}
               aria-pressed={taskEnabled()}

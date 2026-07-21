@@ -1202,10 +1202,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.handleCostAlertResponse(message.sessionID, message.limit, message.response)
           break
         case "requestTaskEnabledState":
-          await this.handleRequestTaskStatus(message.sessionID)
+          await this.handleRequestTaskStatus()
           break
         case "toggleTaskEnabled":
-          await this.handleToggleTask(message.sessionID)
+          await this.handleToggleTask()
           break
         case "requestSandboxStatus":
           await this.fetchAndSendSandboxStatus(message.sessionID)
@@ -2704,27 +2704,31 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private async handleRequestTaskStatus(sessionID: string): Promise<void> {
+  private async handleRequestTaskStatus(): Promise<void> {
     const client = this.client
-    const task = client?.task
-    if (!task?.status || this.connectionState !== "connected") {
+    if (!client || this.connectionState !== "connected") {
       this.postMessage({ type: "taskEnabledState", enabled: true })
       return
     }
     try {
-      const { data } = await task.status({ sessionID }, { throwOnError: true })
+      const { data } = await (client as any).client.get({
+        url: "/task",
+        query: { directory: this.getContextDirectory() },
+      })
       this.postMessage({ type: "taskEnabledState", enabled: data.enabled })
     } catch {
       this.postMessage({ type: "taskEnabledState", enabled: true })
     }
   }
 
-  private async handleToggleTask(sessionID: string): Promise<void> {
+  private async handleToggleTask(): Promise<void> {
     const client = this.client
-    const task = client?.task
-    if (!task?.toggle || this.connectionState !== "connected") return
+    if (!client || this.connectionState !== "connected") return
     try {
-      const { data } = await task.toggle({ sessionID }, { throwOnError: true })
+      const { data } = await (client as any).client.post({
+        url: "/task/toggle",
+        query: { directory: this.getContextDirectory() },
+      })
       this.postMessage({ type: "taskEnabledState", enabled: data.enabled })
     } catch {
       // ignore

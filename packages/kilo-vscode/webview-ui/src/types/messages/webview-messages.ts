@@ -971,12 +971,10 @@ export interface AgentManagerOpenSessionsMessage {
 
 export interface RequestTaskEnabledStateMessage {
   type: "requestTaskEnabledState"
-  sessionID: string
 }
 
 export interface ToggleTaskEnabledMessage {
   type: "toggleTaskEnabled"
-  sessionID: string
 }
 
 export interface RequestAutoApproveStateMessage {
