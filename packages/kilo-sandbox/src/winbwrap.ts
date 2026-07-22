@@ -3,6 +3,7 @@ import path from "node:path"
 import { Effect, PlatformError } from "effect"
 import type { Backend, Launch, Support } from "./backend"
 import type { Profile } from "./profile"
+import { computeProtectedPaths } from "./bubblewrap"
 
 function executable(): string | undefined {
   if (process.env.KILO_BWRAP_PATH) return process.env.KILO_BWRAP_PATH
@@ -45,6 +46,10 @@ export function generate(profile: Profile, launch: Launch, exe: string): Launch 
 
   for (const rule of profile.filesystem.denyWrite) {
     entries.push({ depth: depth(rule.path), args: ["--ro-bind", rule.path] })
+  }
+
+  for (const target of computeProtectedPaths(profile, profile.filesystem.allowWrite)) {
+    entries.push({ depth: depth(target), args: ["--ro-bind", target] })
   }
 
   entries.sort((a, b) => a.depth - b.depth)

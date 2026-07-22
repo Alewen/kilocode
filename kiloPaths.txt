@@ -1,0 +1,59 @@
+profile.filesystem
+
+denyPaths       string[]    --tmpfs     完全隐藏（空 tmpfs 覆盖）
+    来自配置文件 deny_paths 
+    Global.Path.data        C:\Users\shaoke\.local\share\kilo
+    Global.Path.cache       C:\Users\shaoke\.cache\kilo
+    Global.Path.config      C:\Users\shaoke\.config\kilo
+
+readonlyPaths   string[]    --ro-bind   只读挂载
+    来自配置文件 readonly_paths
+    kiloBinDir              kilo 可执行文件所在目录
+    6 SQLite dbfiles        kilo.db         // Global.Path.data
+                            kilo.db-shm     // C:\Users\shaoke\.local\share\kilo
+                            kilo.db-wal
+                            session-export.db
+                            session-export.db-shm
+                            session-export.db-wal
+
+allowWrite      PathRule[]  --bind      读写挂载
+    来自配置文件 writable_paths 
+    Global.Path.data + "/tool-output"   C:\Users\shaoke\.local\share\kilo\tool-output
+    Global.Path.state                   C:\Users\shaoke\.local\state\kilo
+    Global.Path.tmp                     C:\Users\shaoke\AppData\Local\Temp\kilo
+
+protectedPaths  string[]    --ro-bind   仅 Linux bubblewrap.ts 使用
+    异步扫描线程会写日志
+    C:\Users\shaoke\.local\share\kilo\log\20260721T2337.log
+
+denyNames       string[]    不直接      供 protectedPaths() 扫描用
+    硬编码，只包含 .git / .svn 两个值，当 JS 希望写入该目录，直接拒绝
+    同时供 protectedPaths() 扫描用
+
+denyWrite       PathRule[]  --ro-bind   只读挂载（policy.ts 设为 []，实际未用）
+    原本是对沙箱做持久化保存的，放弃之后，就没有使用了
+    ~/.local/state/kilo-sandbox-policy（SandboxStore）
+    ~/.local/state/kilo-sandbox-preference（SandboxPreference）
+    C:\Users\shaoke\.local\state\kilo-sandbox-policy
+    C:\Users\shaoke\.local\state\kilo-sandbox-preference
+
+===============================================================================
+& C:\Users\shaoke\.vscode\extensions\kilocode.kilo-code-7.4.5\bin\bwrap.exe `
+--tmpfs   C:\Users\shaoke\.local\share\kilo `
+--ro-bind C:\Users\shaoke\.local\share\kilo\kilo.db `
+--ro-bind C:\Users\shaoke\.local\share\kilo\kilo.db-shm `
+--ro-bind C:\Users\shaoke\.local\share\kilo\kilo.db-wal `
+--ro-bind C:\Users\shaoke\.local\share\kilo\session-export.db `
+--ro-bind C:\Users\shaoke\.local\share\kilo\session-export.db-shm `
+--ro-bind C:\Users\shaoke\.local\share\kilo\session-export.db-wal `
+--bind    C:\Users\shaoke\.local\share\kilo\tool-output `
+
+--tmpfs C:\Users\shaoke\.cache\kilo `
+--tmpfs C:\Users\shaoke\.config\kilo `
+
+--ro-bind 'C:\Program Files\Git' `
+--bind C:\tmp\kilocode `
+
+--bind C:\Users\shaoke\.local\state\kilo `
+--bind C:\Users\shaoke\AppData\Local\Temp\kilo `
+--ro-bind C:\Users\shaoke\.vscode\extensions\kilocode.kilo-code-7.4.5\bin `

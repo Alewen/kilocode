@@ -1395,7 +1395,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               }}
               aria-label={taskEnabled() ? "Disable task" : "Enable task"}
               aria-pressed={taskEnabled()}
-              class={`prompt-status-button ${taskEnabled() ? "prompt-status-button--active" : ""}`}
+              class={`prompt-status-button ${taskEnabled() ? "" : "prompt-status-button--active"}`}
             >
               <Icon name="task" size="small" />
             </Button>
