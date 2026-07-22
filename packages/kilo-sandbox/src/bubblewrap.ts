@@ -169,8 +169,8 @@ export function protectedPaths(profile: Profile, allow: ReadonlyArray<PathRule>,
   return [...found].sort((a, b) => a.length - b.length)
 }
 
-export function computeProtectedPaths(profile: Profile, allow: ReadonlyArray<PathRule>) {
-  return profile.filesystem.protectedPaths ?? protectedPaths(profile, allow)
+export function computeProtectedPaths(profile: Profile, _allow: ReadonlyArray<PathRule>) {
+  return profile.filesystem.protectedPaths ?? []
 }
 
 export function generate(

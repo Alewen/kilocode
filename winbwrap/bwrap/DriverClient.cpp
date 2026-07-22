@@ -126,17 +126,22 @@ void DriverClient::SetNetExeList(const std::vector<std::wstring>& ntPaths)
 void DriverClient::AddRules(const std::vector<KG_POLICY_RULE_ENTRY>& rules)
 {
     if (rules.empty()) return;
-    size_t bufSize = sizeof(KG_POLICY_BATCH_INPUT) +
-        (rules.size() - 1) * sizeof(KG_POLICY_RULE_ENTRY);
-    auto buf = std::make_unique<char[]>(bufSize);
-    auto batch = reinterpret_cast<KG_POLICY_BATCH_INPUT*>(buf.get());
-    batch->RuleCount = (ULONG)rules.size();
-    for (size_t i = 0; i < rules.size(); i++)
-        batch->Rules[i] = rules[i];
-    DWORD junk;
-    if (!DeviceIoControl(m_h, IOCTL_KG_SET_POLICY_BATCH,
-        batch, (DWORD)bufSize, NULL, 0, &junk, NULL))
-        Die("IOCTL_KG_SET_POLICY_BATCH failed");
+    const size_t BATCH_MAX = 30;
+    for (size_t offset = 0; offset < rules.size(); offset += BATCH_MAX)
+    {
+        size_t count = std::min(BATCH_MAX, rules.size() - offset);
+        size_t bufSize = sizeof(KG_POLICY_BATCH_INPUT) +
+            (count - 1) * sizeof(KG_POLICY_RULE_ENTRY);
+        auto buf = std::make_unique<char[]>(bufSize);
+        auto batch = reinterpret_cast<KG_POLICY_BATCH_INPUT*>(buf.get());
+        batch->RuleCount = (ULONG)count;
+        for (size_t i = 0; i < count; i++)
+            batch->Rules[i] = rules[offset + i];
+        DWORD junk;
+        if (!DeviceIoControl(m_h, IOCTL_KG_SET_POLICY_BATCH,
+            batch, (DWORD)bufSize, NULL, 0, &junk, NULL))
+            Die("IOCTL_KG_SET_POLICY_BATCH failed");
+    }
 }
 
 void DriverClient::AttachProcess(DWORD pid, KG_SANDBOX_ID sid)

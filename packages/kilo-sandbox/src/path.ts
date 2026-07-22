@@ -81,6 +81,7 @@ export function normalize(profile: Profile): Effect.Effect<Profile, PlatformErro
         readonlyPaths: profile.filesystem.readonlyPaths,
         denyPaths: profile.filesystem.denyPaths,
         symlinkPaths: profile.filesystem.symlinkPaths,
+        protectedPaths: profile.filesystem.protectedPaths,
         ...(temporaryDirectory === undefined ? {} : { temporaryDirectory }),
       },
     }

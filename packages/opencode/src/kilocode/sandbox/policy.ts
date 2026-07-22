@@ -4,7 +4,7 @@ import path from "node:path"
 import { Effect, Semaphore } from "effect"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
-import { backendSupport, run as runSandbox, unrestricted, protectedPaths, protectedPathsAsync, type Profile } from "@kilocode/sandbox"
+import { backendSupport, run as runSandbox, unrestricted, protectedPathsAsync, type Profile } from "@kilocode/sandbox"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
@@ -91,13 +91,11 @@ function isolated(ctx: InstanceContext) {
 }
 
 type ScanEntry = {
+  signal: { aborted: boolean }
   result: string[] | null
   promise: Promise<string[]> | null
 }
 const scans = new Map<string, ScanEntry>()
-let epoch = 0
-let activeKey = ""
-let activeSignal: { aborted: boolean } = { aborted: false }
 const scanLog = Log.create({ service: "sandbox.scan" })
 
 function scanTargets(writable: string[], readonlyPaths?: string[], denyPaths?: string[]): string[] {
@@ -105,53 +103,53 @@ function scanTargets(writable: string[], readonlyPaths?: string[], denyPaths?: s
   return writable.filter((p) => !blocked.includes(p))
 }
 
-function scanKey(targets: string[]): string {
-  return [...new Set(targets)].sort().join("\x00")
+function scanKey(directory: string, writablePaths: readonly string[]): string {
+  return directory + "\x00" + [...writablePaths].sort().join("\x00")
 }
 
-export function isScanning(): boolean {
-  if (!activeKey) return false
-  const entry = scans.get(activeKey)
-  return entry?.result === null
+function displayKey(key: string): string {
+  return key.replaceAll("\x00", " | ")
+}
+
+export function isScanning(directory?: string): boolean {
+  for (const [key, entry] of scans) {
+    if (entry.result !== null) continue
+    if (!directory || key.startsWith(directory + "\x00")) return true
+  }
+  return false
 }
 
 export function scheduleProtectedPathScan(
-  writablePaths: string[],
-  readonlyPaths?: string[],
-  denyPaths?: string[],
+  directory: string,
+  writablePaths: readonly string[],
+  readonlyPaths?: readonly string[],
+  denyPaths?: readonly string[],
 ): string {
-  const targets = scanTargets(writablePaths, readonlyPaths, denyPaths)
+  const key = scanKey(directory, writablePaths)
+  const existing = scans.get(key)
+  if (existing) return key
+
+  const targets = scanTargets(scanWritable(directory, writablePaths), readonlyPaths, denyPaths)
   if (targets.length === 0) return ""
-  const key = scanKey(targets)
-  if (key === activeKey && scans.has(key)) return key
 
-  if (key !== activeKey) {
-    if (activeKey) scanLog.info("aborting previous scan", { key: activeKey })
-    activeSignal.aborted = true
-    epoch++
-    scans.clear()
-    activeKey = key
-    activeSignal = { aborted: false }
-    scanLog.info("starting protected path scan", { key, targets: targets.length })
-  }
-
-  const current = epoch
-  const signal = activeSignal
+  const signal = { aborted: false }
   const rules = targets.map((p) => ({ path: p, kind: "subtree" as const }))
   const profileLike = { filesystem: { denyWrite: [], denyNames: [".git"] } }
 
+  scanLog.info("starting protected path scan", { key: displayKey(key), targets: targets.length })
+
   const promise = (async () => {
     const result = await protectedPathsAsync(profileLike as Profile, rules, signal)
-    if (signal.aborted || epoch !== current) {
-      scanLog.info("scan aborted", { key })
+    if (signal.aborted) {
+      scanLog.info("scan aborted", { key: displayKey(key) })
       return []
     }
-    scanLog.info("scan completed", { key, found: result.length, paths: result })
-    scans.set(key, { promise: null, result })
+    scanLog.info("scan completed", { key: displayKey(key), found: result.length, paths: result })
+    scans.set(key, { signal, promise: null, result })
     return result
   })()
 
-  scans.set(key, { promise, result: null })
+  scans.set(key, { signal, promise, result: null })
   return key
 }
 
@@ -160,6 +158,16 @@ export async function ensureProtectedScan(key: string): Promise<string[]> {
   if (!entry) return []
   if (entry.result !== null) return entry.result
   return entry.promise ?? []
+}
+
+function scanWritable(directory: string, extra?: readonly string[]): string[] {
+  return [
+    directory,
+    path.join(Global.Path.data, "tool-output"),
+    Global.Path.state,
+    Global.Path.tmp,
+    ...(extra ?? []),
+  ]
 }
 
 export function computeWritable(ctx: InstanceContext, extra?: readonly string[]) {
@@ -187,8 +195,8 @@ export function profile(
   denyPaths?: readonly string[],
 ): Profile {
   const raw = computeWritable(ctx, extraWritable)
-  const key = scanKey(scanTargets(raw, readonlyPaths as string[] | undefined, denyPaths as string[] | undefined))
-  const entry = key ? scans.get(key) : undefined
+  const key = scanKey(ctx.directory, extraWritable ?? [])
+  const entry = scans.get(key)
   const preScanned = entry?.result ?? undefined
   const writable = raw.map(root)
   const dbFiles = [
@@ -381,31 +389,22 @@ function execute<A, E, R>(sessionID: SessionID, effect: Effect.Effect<A, E, R>) 
     const enabled = current.state.enabled
     const mode = cfg.sandbox?.network ?? "deny"
     const support = backendSupport({ mode, allowedHosts: [] })
-    const extraWritable = current.state.writablePaths.map((p) =>
+    const extraWritable = (cfg.sandbox?.writable_paths ?? []).map((p) =>
       p.startsWith("~") ? path.join(os.homedir(), p.slice(1)) : p,
     )
+    const readonlyPaths = cfg.sandbox?.readonly_paths
+    const denyPaths = cfg.sandbox?.deny_paths
 
     if (!enabled || !support.available) return yield* unrestricted(effect)
 
     const ctx = yield* InstanceState.context
-    const raw = computeWritable(ctx, extraWritable)
-    const key = scanKey(scanTargets(
-      raw,
-      current.state.readonlyPaths as string[] | undefined,
-      current.state.denyPaths as string[] | undefined,
-    ))
+    const key = scanKey(ctx.directory, extraWritable)
     if (key) {
       yield* Effect.promise(() => ensureProtectedScan(key))
     }
 
     return yield* runSandbox(
-      profile(
-        ctx,
-        mode,
-        extraWritable,
-        current.state.readonlyPaths,
-        current.state.denyPaths,
-      ),
+      profile(ctx, mode, extraWritable, readonlyPaths, denyPaths),
       effect,
     )
   })

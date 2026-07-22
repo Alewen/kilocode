@@ -1171,8 +1171,7 @@ export const layer = Layer.effect(
         const deny = result.sandbox?.deny_paths?.map(expand)
         yield* Effect.promise(() =>
           import("@/kilocode/sandbox/policy").then((p) => {
-            const raw = p.computeWritable(ctx, extra)
-            p.scheduleProtectedPathScan(raw, ro, deny)
+            p.scheduleProtectedPathScan(ctx.directory, extra, ro, deny)
           }),
         )
       }

@@ -1,13 +1,13 @@
 
-C:\Windows 整个目录				--ro-bind 无条件
-bwrap.exe 自身所在目录				--ro-bind 无条件
-C:\Users\shaoke\AppData\Local\Temp\			--bind 无条件
+C:\Windows 整个目录                         --ro-bind 无条件
+bwrap.exe 自身所在目录                      --ro-bind 无条件
+C:\Users\shaoke\AppData\Local\Temp\         --bind 无条件
 
-%LOCALAPPDATA%\Microsoft\WindowsApps		--ro-bind 存在则添加
-C:\ProgramData\Microsoft\Windows\AppRepository	--ro-bind 存在则添加
-%APPDATA%\Subversion				--ro-bind 系统存在 svn.exe 时添加
+%LOCALAPPDATA%\Microsoft\WindowsApps            --ro-bind 存在则添加
+C:\ProgramData\Microsoft\Windows\AppRepository  --ro-bind 存在则添加
+%APPDATA%\Subversion                            --ro-bind 系统存在 svn.exe 时添加
 
-pwsh 的真身所在目录				等同于 --alias pwsh 解析
+pwsh 的真身所在目录                                 等同于 --alias pwsh 解析
 
-所有绑定路径的祖先 .git 目录				递归向上查找，保护 git 仓库元数据
-所有绑定路径的祖先 .svn 目录				同上，SVN 元数据
+所有绑定路径的祖先 .git 目录                        递归向上查找，保护 git 仓库元数据
+所有绑定路径的祖先 .svn 目录                        同上，SVN 元数据
