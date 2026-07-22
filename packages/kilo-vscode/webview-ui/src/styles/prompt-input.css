@@ -313,6 +313,14 @@
   border-style: dashed;
 }
 
+.prompt-input-container--scanning {
+  border-color: var(--vscode-errorForeground, #f48771);
+}
+
+.prompt-input-container--scanning:focus-within {
+  border-color: var(--vscode-errorForeground, #f48771);
+}
+
 .prompt-input-wrapper {
   display: flex;
   gap: 8px;

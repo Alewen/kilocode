@@ -4,7 +4,7 @@ import path from "node:path"
 import { Effect, Semaphore } from "effect"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
-import { backendSupport, run as runSandbox, unrestricted, protectedPaths, type Profile } from "@kilocode/sandbox"
+import { backendSupport, run as runSandbox, unrestricted, protectedPaths, protectedPathsAsync, type Profile } from "@kilocode/sandbox"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
@@ -109,6 +109,12 @@ function scanKey(targets: string[]): string {
   return [...new Set(targets)].sort().join("\x00")
 }
 
+export function isScanning(): boolean {
+  if (!activeKey) return false
+  const entry = scans.get(activeKey)
+  return entry?.result === null
+}
+
 export function scheduleProtectedPathScan(
   writablePaths: string[],
   readonlyPaths?: string[],
@@ -134,12 +140,8 @@ export function scheduleProtectedPathScan(
   const rules = targets.map((p) => ({ path: p, kind: "subtree" as const }))
   const profileLike = { filesystem: { denyWrite: [], denyNames: [".git"] } }
 
-  const promise = new Promise<string[]>((resolve) => {
-    setTimeout(() => {
-      const result = protectedPaths(profileLike as Profile, rules, signal)
-      resolve(result)
-    }, 0)
-  }).then((result) => {
+  const promise = (async () => {
+    const result = await protectedPathsAsync(profileLike as Profile, rules, signal)
     if (signal.aborted || epoch !== current) {
       scanLog.info("scan aborted", { key })
       return []
@@ -147,7 +149,7 @@ export function scheduleProtectedPathScan(
     scanLog.info("scan completed", { key, found: result.length, paths: result })
     scans.set(key, { promise: null, result })
     return result
-  })
+  })()
 
   scans.set(key, { promise, result: null })
   return key

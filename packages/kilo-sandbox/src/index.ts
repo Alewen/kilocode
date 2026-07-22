@@ -5,4 +5,4 @@ export { assertNetwork, decorateHttpClient, httpLayer as networkHttpLayer } from
 export { batchMutations, mutate, withRunner, type Runner as MutationRunner } from "./mutation"
 export type { Request as MutationRequest } from "./mutation-protocol"
 export { backendSupport, prepareCommand } from "./backend"
-export { computeProtectedPaths, protectedPaths } from "./bubblewrap"
+export { computeProtectedPaths, protectedPaths, protectedPathsAsync } from "./bubblewrap"

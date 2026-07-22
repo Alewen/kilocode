@@ -169,6 +169,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const [sandboxes, setSandboxes] = createSignal<Record<string, SandboxState>>({})
   const [sandboxDefault, setSandboxDefault] = createSignal<SandboxDefaultState>()
   const [sandboxRequests, setSandboxRequests] = createSignal<Record<string, string>>({})
+  const [scanning, setScanning] = createSignal(false)
   let sandboxRetry: ReturnType<typeof setTimeout> | undefined
   let sandboxAttempts = 0
   const sandboxID = () => {
@@ -530,6 +531,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
 
   const handleSandboxMessage = (message: ExtensionMessage) => {
+    if (message.type === "scanStatus") {
+      setScanning(message.scanning)
+      return true
+    }
     if (message.type === "sandboxDefaultStatus") {
       const matching = message.requestID !== undefined && message.requestID === sandboxRequest(undefined)
       if (sandboxID() && !matching) return false
@@ -1098,7 +1103,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   return (
     <div
       class="prompt-input-container"
-      classList={{ "prompt-input-container--dragging": imageAttach.dragging() }}
+      classList={{
+        "prompt-input-container--dragging": imageAttach.dragging(),
+        "prompt-input-container--scanning": scanning(),
+      }}
       onDragOver={imageAttach.handleDragOver}
       onDragLeave={imageAttach.handleDragLeave}
       onDrop={imageAttach.handleDrop}
@@ -1287,7 +1295,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             onKeyUp={syncGhost}
             onPaste={handlePaste}
             onClick={syncGhost}
-            onFocus={syncGhost}
+            onFocus={() => {
+              syncGhost()
+              if (server.isConnected()) vscode.postMessage({ type: "requestScanStatus" })
+            }}
             onBlur={syncGhost}
             onSelect={() => {
               syncGhost()

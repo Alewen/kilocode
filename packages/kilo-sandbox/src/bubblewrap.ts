@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process"
 import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs"
+import { readdir, stat } from "node:fs/promises"
 import path from "node:path"
 import { Effect, PlatformError } from "effect"
 import type { Backend, Launch, Support } from "./backend"
@@ -108,6 +109,52 @@ function scan(root: string, names: ReadonlySet<string>, found: Set<string>, sign
       if (entry.isDirectory()) pending.push(target)
     }
   }
+}
+
+async function scanAsync(root: string, names: ReadonlySet<string>, found: Set<string>, signal?: { aborted: boolean }) {
+  if (names.has(path.basename(root))) {
+    found.add(root)
+    return
+  }
+  try {
+    const s = await stat(root)
+    if (!s.isDirectory()) return
+  } catch {
+    return
+  }
+
+  const pending = [root]
+  while (pending.length > 0) {
+    if (signal?.aborted) return
+    const dir = pending.pop()
+    if (!dir) continue
+    let entries
+    try {
+      entries = await readdir(dir, { withFileTypes: true })
+    } catch {
+      continue
+    }
+    for (const entry of entries) {
+      const target = path.join(dir, entry.name)
+      if (names.has(entry.name)) {
+        found.add(target)
+        continue
+      }
+      if (entry.isDirectory()) pending.push(target)
+    }
+  }
+}
+
+export async function protectedPathsAsync(profile: Profile, allow: ReadonlyArray<PathRule>, signal?: { aborted: boolean }) {
+  const found = new Set(profile.filesystem.denyWrite.filter((rule) => existsSync(rule.path)).map((rule) => rule.path))
+  if (profile.filesystem.denyNames.length === 0) return [...found]
+
+  const names = new Set(profile.filesystem.denyNames)
+  for (const rule of allow) {
+    if (signal?.aborted) break
+    if (rule.kind === "subtree") await scanAsync(rule.path, names, found, signal)
+  }
+  return [...found].sort((a, b) => a.length - b.length)
 }
 
 export function protectedPaths(profile: Profile, allow: ReadonlyArray<PathRule>, signal?: { aborted: boolean }) {

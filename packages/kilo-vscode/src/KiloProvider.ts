@@ -1210,6 +1210,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestSandboxStatus":
           await this.fetchAndSendSandboxStatus(message.sessionID)
           break
+        case "requestScanStatus":
+          await this.fetchAndSendScanStatus()
+          break
         case "requestSandboxDefault":
           await this.fetchAndSendSandboxDefault(message.contextDirectory, message.requestID)
           break
@@ -2803,6 +2806,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (this.connectionState !== "connected" || this.connectionGeneration !== generation || this.client !== client)
         return
       this.postSandboxError(sessionID, error, revision, requestID)
+    }
+  }
+
+  private async fetchAndSendScanStatus(): Promise<void> {
+    const client = this.client
+    const sandbox = client?.sandbox
+    if (!sandbox?.scanStatus) {
+      console.warn("[Kilo] scanStatus method not available on sandbox client")
+      return
+    }
+    if (this.connectionState !== "connected") return
+    try {
+      const directory = this.getWorkspaceDirectory()
+      const { data } = await sandbox.scanStatus({ directory }, { throwOnError: true })
+      if (this.connectionState !== "connected" || this.client !== client) return
+      console.log("[Kilo] scanStatus response:", data)
+      this.postMessage({ type: "scanStatus", scanning: data.scanning })
+    } catch (err) {
+      console.warn("[Kilo] scanStatus error:", err)
     }
   }
 

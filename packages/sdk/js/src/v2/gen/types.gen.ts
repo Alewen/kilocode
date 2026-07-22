@@ -12045,6 +12045,36 @@ export type SandboxSupportResponses = {
 
 export type SandboxSupportResponse = SandboxSupportResponses[keyof SandboxSupportResponses]
 
+export type SandboxScanStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/sandbox/scan-status"
+}
+
+export type SandboxScanStatusErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type SandboxScanStatusError = SandboxScanStatusErrors[keyof SandboxScanStatusErrors]
+
+export type SandboxScanStatusResponses = {
+  /**
+   * Protected path scan status
+   */
+  200: {
+    scanning: boolean
+  }
+}
+
+export type SandboxScanStatusResponse = SandboxScanStatusResponses[keyof SandboxScanStatusResponses]
+
 export type SandboxStatusData = {
   body?: never
   path: {

@@ -25,6 +25,10 @@ export const SandboxSupport = Schema.Struct({
   reason: Schema.optional(Schema.String),
 })
 
+export const ScanStatus = Schema.Struct({
+  scanning: Schema.Boolean,
+})
+
 export const SandboxApi = HttpApi.make("sandbox")
   .add(
     HttpApiGroup.make("sandbox")
@@ -37,6 +41,16 @@ export const SandboxApi = HttpApi.make("sandbox")
             identifier: "sandbox.support",
             summary: "Get sandbox backend support",
             description: "Get sandbox backend availability without creating a session.",
+          }),
+        ),
+        HttpApiEndpoint.get("scan-status", "/sandbox/scan-status", {
+          query: WorkspaceRoutingQuery,
+          success: described(ScanStatus, "Protected path scan status"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "sandbox.scan-status",
+            summary: "Get protected path scan status",
+            description: "Returns whether the sandbox protected path scan is still running.",
           }),
         ),
         HttpApiEndpoint.get("status", root, {

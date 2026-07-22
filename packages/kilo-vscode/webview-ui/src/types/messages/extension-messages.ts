@@ -729,6 +729,11 @@ export interface SandboxStatusErrorMessage {
   requestID?: string
 }
 
+export interface ScanStatusMessage {
+  type: "scanStatus"
+  scanning: boolean
+}
+
 // Multi-version creation progress (extension → webview)
 export interface AgentManagerMultiVersionProgressMessage {
   type: "agentManager.multiVersionProgress"
@@ -1159,6 +1164,7 @@ export type ExtensionMessage =
   | SandboxStatusMessage
   | SandboxDefaultStatusMessage
   | SandboxStatusErrorMessage
+  | ScanStatusMessage
   | AgentManagerMultiVersionProgressMessage
   | AgentManagerSetSessionModelMessage
   | AgentManagerSendInitialMessage

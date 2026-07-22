@@ -990,6 +990,10 @@ export interface RequestSandboxStatusMessage {
   sessionID: string
 }
 
+export interface RequestScanStatusMessage {
+  type: "requestScanStatus"
+}
+
 export interface RequestSandboxDefaultMessage {
   type: "requestSandboxDefault"
   requestID?: string
@@ -1366,6 +1370,7 @@ export type WebviewMessage =
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
   | RequestSandboxStatusMessage
+  | RequestScanStatusMessage
   | RequestSandboxDefaultMessage
   | SetSandboxDefaultMessage
   | ToggleSandboxMessage

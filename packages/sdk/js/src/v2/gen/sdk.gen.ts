@@ -314,6 +314,8 @@ import type {
   RemoteEnableResponses,
   RemoteStatusErrors,
   RemoteStatusResponses,
+  SandboxScanStatusErrors,
+  SandboxScanStatusResponses,
   SandboxStatusErrors,
   SandboxStatusResponses,
   SandboxSupportErrors,
@@ -8327,6 +8329,36 @@ export class Sandbox extends HeyApiClient {
     )
     return (options?.client ?? this.client).get<SandboxSupportResponses, SandboxSupportErrors, ThrowOnError>({
       url: "/sandbox/support",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get protected path scan status
+   *
+   * Returns whether the sandbox protected path scan is still running.
+   */
+  public scanStatus<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<SandboxScanStatusResponses, SandboxScanStatusErrors, ThrowOnError>({
+      url: "/sandbox/scan-status",
       ...options,
       ...params,
     })
