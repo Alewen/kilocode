@@ -1902,7 +1902,8 @@ PreDirCtrl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
 {
     UNREFERENCED_PARAMETER(FltObjects);
 
-    HANDLE pid = PsGetCurrentProcessId();
+    PEPROCESS requestor = FltGetRequestorProcess(Data);
+    HANDLE pid = requestor ? PsGetProcessId(requestor) : PsGetCurrentProcessId();
     KG_SYSTEM_STATE* s = KgAcquireState();
     BOOLEAN isSandboxed = FALSE;
     if (s) {
@@ -2339,7 +2340,11 @@ KiloPostDirectoryControl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjec
     if (prevEntry)
         *(ULONG*)prevEntry = 0;
 
+    RtlZeroMemory(writePtr, (SIZE_T)(buf + bufLen - writePtr));
     Data->IoStatus.Information = (ULONG)(writePtr - buf);
+    if (writePtr == buf && Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName
+        && Data->Iopb->Parameters.DirectoryControl.QueryDirectory.FileName->Length > 0)
+        Data->IoStatus.Status = STATUS_NO_SUCH_FILE;
 
 done:
     ExFreePoolWithTag(ctx, KG_POOL_TAG);
