@@ -2302,13 +2302,17 @@ KiloPostDirectoryControl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjec
         } else if (fnLen == 2 * sizeof(WCHAR) && fn[0] == L'.' && fn[1] == L'.') {
         } else {
             UNICODE_STRING childPath;
-            childPath.Length = (USHORT)(ctx->DirectoryPath.Length + sizeof(WCHAR) + fnLen);
+            BOOLEAN dirHasTrailingSlash = (ctx->DirectoryPath.Length >= sizeof(WCHAR) &&
+                ctx->DirectoryPath.Buffer[ctx->DirectoryPath.Length / sizeof(WCHAR) - 1] == L'\\');
+            USHORT sepLen = dirHasTrailingSlash ? 0 : sizeof(WCHAR);
+            childPath.Length = (USHORT)(ctx->DirectoryPath.Length + sepLen + fnLen);
             childPath.MaximumLength = (USHORT)(childPath.Length + sizeof(WCHAR));
             childPath.Buffer = (WCHAR*)ExAllocatePool2(POOL_FLAG_NON_PAGED, childPath.MaximumLength, KG_POOL_TAG);
             if (childPath.Buffer) {
                 RtlCopyMemory(childPath.Buffer, ctx->DirectoryPath.Buffer, ctx->DirectoryPath.Length);
-                childPath.Buffer[ctx->DirectoryPath.Length / sizeof(WCHAR)] = L'\\';
-                RtlCopyMemory(childPath.Buffer + ctx->DirectoryPath.Length / sizeof(WCHAR) + 1, fn, fnLen);
+                if (!dirHasTrailingSlash)
+                    childPath.Buffer[ctx->DirectoryPath.Length / sizeof(WCHAR)] = L'\\';
+                RtlCopyMemory(childPath.Buffer + ctx->DirectoryPath.Length / sizeof(WCHAR) + (dirHasTrailingSlash ? 0 : 1), fn, fnLen);
                 childPath.Buffer[childPath.Length / sizeof(WCHAR)] = L'\0';
 
                 state = KgAcquireState();
