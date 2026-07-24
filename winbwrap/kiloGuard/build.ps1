@@ -42,6 +42,8 @@ $CERT_NAME = "CN=KiloGuard Test Cert"
 $CERT_PASS = "test"
 $PFX       = "$Src\KiloGuardTest.pfx"
 $outName   = "KiloGuard.sys"
+$OutDir    = "$Src\x64"
+if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Path $OutDir | Out-Null }
 
 $env:Path    = "$MSVC\bin\Hostx64\x64;$env:Path"
 $env:INCLUDE = "$WDK\Include\$WDK_VER\km;$WDK\Include\$WDK_VER\shared;$WDK\Include\$WDK_VER\um;$WDK\Include\$WDK_VER\ucrt;$MSVC\include"
@@ -70,26 +72,26 @@ $lflags = @(
 
 Write-Host "=== Building $outName ($(if ($Debug) {'Debug'} else {'Release'})) ==="
 
-& cl.exe @cflags /Fo"$Src\FileGuard.obj" "$Src\FileGuard.c"
+& cl.exe @cflags /Fo"$OutDir\FileGuard.obj" "$Src\FileGuard.c"
 if ($LASTEXITCODE -ne 0) { throw "COMPILE FAILED" }
 
-& cl.exe @cflags /Fo"$Src\Pidmap.obj" "$Src\Pidmap.c"
+& cl.exe @cflags /Fo"$OutDir\Pidmap.obj" "$Src\Pidmap.c"
 if ($LASTEXITCODE -ne 0) { throw "COMPILE FAILED" }
 
-& cl.exe @cflags /Fo"$Src\Domain.obj" "$Src\Domain.c"
+& cl.exe @cflags /Fo"$OutDir\Domain.obj" "$Src\Domain.c"
 if ($LASTEXITCODE -ne 0) { throw "COMPILE FAILED" }
 
-& cl.exe @cflags /Fo"$Src\ProcessGuard.obj" "$Src\ProcessGuard.c"
+& cl.exe @cflags /Fo"$OutDir\ProcessGuard.obj" "$Src\ProcessGuard.c"
 if ($LASTEXITCODE -ne 0) { throw "COMPILE FAILED" }
 
-& cl.exe @cflags /Fo"$Src\PidPortMap.obj" "$Src\PidPortMap.c"
+& cl.exe @cflags /Fo"$OutDir\PidPortMap.obj" "$Src\PidPortMap.c"
 if ($LASTEXITCODE -ne 0) { throw "COMPILE FAILED" }
 
-& cl.exe @cflags /Fo"$Src\RegGuard.obj" "$Src\RegGuard.c"
+& cl.exe @cflags /Fo"$OutDir\RegGuard.obj" "$Src\RegGuard.c"
 if ($LASTEXITCODE -ne 0) { throw "COMPILE FAILED" }
 
 Write-Host "=== Linking KiloGuard.sys ==="
-& link.exe @lflags fltMgr.lib fwpkclnt.lib ntoskrnl.lib hal.lib wdmsec.lib BufferOverflowK.lib /out:"$Src\$outName" "$Src\FileGuard.obj" "$Src\Pidmap.obj" "$Src\Domain.obj" "$Src\ProcessGuard.obj" "$Src\PidPortMap.obj" "$Src\RegGuard.obj"
+& link.exe @lflags fltMgr.lib fwpkclnt.lib ntoskrnl.lib hal.lib wdmsec.lib BufferOverflowK.lib /out:"$OutDir\$outName" "$OutDir\FileGuard.obj" "$OutDir\Pidmap.obj" "$OutDir\Domain.obj" "$OutDir\ProcessGuard.obj" "$OutDir\PidPortMap.obj" "$OutDir\RegGuard.obj"
 if ($LASTEXITCODE -ne 0) { throw "LINK FAILED" }
 
 Write-Host "=== [1] Build successful OK ==="
@@ -106,8 +108,8 @@ if (Test-Path $PFX) {
 Write-Host "=== [2] certificate OK ==="
 
 Write-Host "=== [3] Signing drivers ==="
-$r = & $SIGNTOOL sign /f $PFX /p $CERT_PASS /fd sha256 "$Src\$outName" 2>&1
+$r = & $SIGNTOOL sign /f $PFX /p $CERT_PASS /fd sha256 "$OutDir\$outName" 2>&1
 if ($LASTEXITCODE -ne 0) { throw "FAILED: Sign KiloGuard error" }
 Write-Host "=== [3] Signing driver OK ==="
 
-Get-Item "$Src\$outName" | Select-Object Name, Length, LastWriteTime
+Get-Item "$OutDir\$outName" | Select-Object Name, Length, LastWriteTime

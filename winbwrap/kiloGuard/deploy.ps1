@@ -4,7 +4,7 @@ param(
     [double]$Altitude = 360000
     )
 
-$sysFile   = "$Src\KiloGuard.sys"
+$sysFile   = "$Src\x64\KiloGuard.sys"
 $SYS       = "$env:SystemRoot\System32\drivers\KiloGuard.sys"
 $CERT_PASS = "test"
 $PFX       = "$Src\KiloGuardTest.pfx"
