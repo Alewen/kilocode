@@ -10,9 +10,36 @@ ULONG KgIsPidInSandBox(HANDLE pid);
 VOID KgPushNetDenyEvent(ULONG slotIndex, HANDLE pid, PCUNICODE_STRING infoStr);
 
 static WCHAR* KgUlongToWchar(ULONG val, WCHAR* end)
-{ WCHAR t[12];ULONG i=0;if(val==0){*end++=L'0';return end;}while(val>0){t[i++]=(WCHAR)(L'0'+(val%10));val/=10;}while(i>0)*end++=t[--i];return end;}
+{
+    WCHAR t[12];
+    ULONG i=0;
+    if (val == 0)
+    {
+        *end++=L'0';
+        return end;
+    }
+    while(val>0)
+    {
+        t[i++]=(WCHAR)(L'0'+(val%10));
+        val/=10;
+    }
+    while(i>0)
+        *end++=t[--i];
+    return end;
+}
+
 static void KgFormatIpV4(WCHAR* b,ULONG a)
-{b=KgUlongToWchar((a>>24)&0xFF,b);*b++=L'.';b=KgUlongToWchar((a>>16)&0xFF,b);*b++=L'.';b=KgUlongToWchar((a>>8)&0xFF,b);*b++=L'.';b=KgUlongToWchar(a&0xFF,b);*b=0;}
+{
+    b=KgUlongToWchar((a>>24)&0xFF,b);
+    *b++=L'.';
+    b=KgUlongToWchar((a>>16)&0xFF,b);
+    *b++=L'.';
+    b=KgUlongToWchar((a>>8)&0xFF,b);
+    *b++=L'.';
+    b=KgUlongToWchar(a&0xFF,b);
+    *b=0;
+}
+
 static void KgFormatIpV6(WCHAR* b,const UINT16*a6)
 {const WCHAR h[]=L"0123456789abcdef";for(int i=0;i<7;i++){*b++=h[(a6[i]>>12)&0xF];*b++=h[(a6[i]>>8)&0xF];*b++=h[(a6[i]>>4)&0xF];*b++=h[a6[i]&0xF];*b++=L':';}*b++=h[(a6[7]>>12)&0xF];*b++=h[(a6[7]>>8)&0xF];*b++=h[(a6[7]>>4)&0xF];*b=h[a6[7]&0xF];}
 
@@ -181,12 +208,14 @@ static VOID KgNetClassify(const FWPS_INCOMING_VALUES0*in,const FWPS_INCOMING_MET
     if (st!=KG_NET_BLOCK) {
         return;
     }
-    if(lyr==FWPS_LAYER_ALE_AUTH_CONNECT_V4) {
+    if(lyr==FWPS_LAYER_ALE_AUTH_CONNECT_V4)
+    {
         UINT32 a=in->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V4_IP_REMOTE_ADDRESS].value.uint32;
         if((a&0xFF000000)==0x7F000000)
             return;
     }
-    else if(lyr==FWPS_LAYER_ALE_AUTH_CONNECT_V6) {
+    else if(lyr==FWPS_LAYER_ALE_AUTH_CONNECT_V6)
+    {
         UINT16*a6=(UINT16*)in->incomingValue[FWPS_FIELD_ALE_AUTH_CONNECT_V6_IP_REMOTE_ADDRESS].value.byteArray16;
         if(a6&&a6[0]==0&&a6[1]==0&&a6[2]==0&&a6[3]==0&&a6[4]==0&&a6[5]==0&&a6[6]==0&&a6[7]==0x0100)
             return;
@@ -260,12 +289,15 @@ static VOID KgNetTransClassify(const FWPS_INCOMING_VALUES0*in,const FWPS_INCOMIN
     if(st!=KG_NET_BLOCK) // 该进程未被标记拦截，跳过
       return;
     KG_LOG("KiloGuard: Net srcPort=%u Pid=%u NetBlock=%u\n",p,pid,st);
-    if (lyr==FWPS_LAYER_OUTBOUND_TRANSPORT_V4) {
+    if (lyr==FWPS_LAYER_OUTBOUND_TRANSPORT_V4)
+    {
         UINT32 ra=in->incomingValue[FWPS_FIELD_OUTBOUND_TRANSPORT_V4_IP_REMOTE_ADDRESS].value.uint32;
         if((ra&0xFF000000)==0x7F000000)
             return;
         KG_LOG("KiloGuard: NetBLOCK_V4 port=%u pid=%u dst=%d.%d.%d.%d\n",p,pid,(ra>>24)&0xFF,(ra>>16)&0xFF,(ra>>8)&0xFF,ra&0xFF);
-    } else {
+    }
+    else
+    {
         UINT16*a6=(UINT16*)in->incomingValue[FWPS_FIELD_OUTBOUND_TRANSPORT_V6_IP_REMOTE_ADDRESS].value.byteArray16;
         if(a6&&a6[0]==0&&a6[1]==0&&a6[2]==0&&a6[3]==0&&a6[4]==0&&a6[5]==0&&a6[6]==0&&a6[7]==0x0100)
             return;
@@ -283,8 +315,17 @@ VOID KgSetPidNetCache(HANDLE pid,UCHAR s)
 
 static NTSTATUS KgNetAddCalloutAndFilter(PDEVICE_OBJECT d,HANDLE e,const GUID*cg,const GUID*lg,void*fn,PCWSTR ds,UINT32*ci,UINT64*fi)
 {
-    FWPS_CALLOUT3 co;RtlZeroMemory(&co,sizeof(co));co.calloutKey=*cg;co.flags=0;co.classifyFn=fn;co.notifyFn=(void*)KgNetNotify;co.flowDeleteFn=NULL;
-    NTSTATUS s=FwpsCalloutRegister3(d,&co,ci);if(!NT_SUCCESS(s))return s;
+    FWPS_CALLOUT3 co;
+    RtlZeroMemory(&co,sizeof(co));
+    co.calloutKey=*cg;
+    co.flags=0;
+    co.classifyFn=fn;
+    co.notifyFn=(void*)KgNetNotify;
+    co.flowDeleteFn=NULL;
+
+    NTSTATUS s=FwpsCalloutRegister3(d,&co,ci);
+    if(!NT_SUCCESS(s))
+        return s;
     FWPM_CALLOUT0 mc;RtlZeroMemory(&mc,sizeof(mc));mc.calloutKey=*cg;mc.displayData.name=(WCHAR*)L"KG net callout";mc.applicableLayer=*lg;mc.flags=0;
     s=FwpmCalloutAdd0(e,&mc,NULL,NULL);if(!NT_SUCCESS(s)){FwpsCalloutUnregisterById0(*ci);*ci=0;return s;}
     FWPM_FILTER0 ft;RtlZeroMemory(&ft,sizeof(ft));ft.layerKey=*lg;ft.subLayerKey=KG_SUBLAYER;ft.displayData.name=(WCHAR*)ds;ft.displayData.description=(WCHAR*)ds;
@@ -326,6 +367,11 @@ VOID KgUnregisterNetCallbacks(VOID)
     KG_UC(gCalloutV4Res,gFilterV4Res,&KG_CALLOUT_V4_RES);
     KG_UC(gCalloutV6Connect,gFilterV6Connect,&KG_CALLOUT_V6_CONNECT);
     KG_UC(gCalloutV4Connect,gFilterV4Connect,&KG_CALLOUT_V4_CONNECT);
-    if(gEngineHandle){FwpmSubLayerDeleteByKey0(gEngineHandle,&KG_SUBLAYER);FwpmEngineClose0(gEngineHandle);gEngineHandle=NULL;}
+    if (gEngineHandle)
+    {
+        FwpmSubLayerDeleteByKey0(gEngineHandle,&KG_SUBLAYER);
+        FwpmEngineClose0(gEngineHandle);
+        gEngineHandle=NULL;
+    }
     gNetDeviceObject=NULL;
 }

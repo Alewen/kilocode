@@ -28,57 +28,27 @@ public:
     ~DriverClient();
 
     bool IsPidInSandbox(DWORD pid);
-
     void AddPid(DWORD pid);
-
     void Open();
-
     void Authenticate();
-
     void Deauthenticate();
-
     KG_SANDBOX_ID CreateSandbox();
 
     void DestroySandbox();
-
-
     void SetNetExeList(const std::vector<std::wstring>& ntPaths);
-
-
+    void SetDenyLogEnabled(KG_SANDBOX_ID sid, BOOLEAN enabled);
     void AddRules(const std::vector<KG_POLICY_RULE_ENTRY>& rules);
-
-
     void AttachProcess(DWORD pid, KG_SANDBOX_ID sid);
-
-
     void QueryDenyEvents(KG_QUERY_DENY_EVENTS_OUTPUT& out);
-
-
     void DrainDenyEvents();
-
-
     void StartDenyThread();
-
-
     void StopDenyThread();
-
-
     void QueryEvents(KG_QUERY_EVENTS_OUTPUT& out);
-
     void DrainEvents();
-
-
     void StartNotifyThread();
-
-
     void StopNotifyThread();
-
-
     void ConnectNotificationPort();
-
-
     void DisconnectPort();
-
 
     static DWORD WINAPI PortThreadProc(LPVOID param)
     {

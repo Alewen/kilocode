@@ -9,9 +9,9 @@
    Sandbox Domain Management — types, globals, API
    ========================= */
 
-#define KG_POOL_TAG 'GKiK'
-#define KG_MAX_DOMAIN 1024
-#define KG_MAX_RULES_PER_DOMAIN 256
+#define KG_POOL_TAG                 'GKiK'
+#define KG_MAX_DOMAIN               1024
+#define KG_MAX_RULES_PER_DOMAIN     256
 
 ////////////////////////////////////////////////////////////////////////////////
 // 沙箱域 ID 类型（ULONG，全局唯一，递增分配）
@@ -29,9 +29,9 @@ typedef struct _KG_PATH_RULE {
     KG_SANDBOX_LEVEL Level;    // 该路径前缀对应的沙箱级别（0/1/2）
 } KG_PATH_RULE;
 
-#define KG_EVENT_RING_SIZE 256
-#define KG_EVENT_BATCH_SIZE 32
-#define KG_TRACKER_SIZE 256
+#define KG_EVENT_RING_SIZE      256
+#define KG_EVENT_BATCH_SIZE     32
+#define KG_TRACKER_SIZE         256
 
 ////////////////////////////////////////////////////////////////////////////////
 // 进程启动失败事件
@@ -60,8 +60,8 @@ typedef struct _KG_EVENT_RING {
 // 记录文件访问被拒绝时的发起进程 PID、进程名、目标文件路径
 ////////////////////////////////////////////////////////////////////////////////
 
-#define KG_DENY_RING_SIZE 256
-#define KG_DENY_EVENT_BATCH_SIZE 32
+#define KG_DENY_RING_SIZE               256
+#define KG_DENY_EVENT_BATCH_SIZE        32
 
 typedef struct _KG_DENY_EVENT {
     ULONG Pid;
@@ -95,23 +95,24 @@ typedef struct _KG_PENDING_TRACKER {
 } KG_PENDING_TRACKER;
 
 typedef struct _KG_POLICY_DOMAIN {
-    KG_SANDBOX_ID Id;          // 沙箱域唯一 ID（递增分配）
-    BOOLEAN Active;            // 域是否已激活（TRUE=启用）
-    KSPIN_LOCK Lock;           // 保护规则链表的自旋锁
-    LIST_ENTRY RuleList;       // 路径规则链表头（KG_PATH_RULE 节点）
-    ULONG RuleCount;           // 当前规则数量（上限 KG_MAX_RULES_PER_DOMAIN=256）
-    volatile LONG RuleEpoch;   // 规则版本号，每次增删规则时递增
-    KG_EVENT_RING EventRing;       // 该域内进程启动失败事件环形缓冲区
-    KG_DENY_EVENT_RING DenyRing;   // 该域内文件访问拒绝事件环形缓冲区
-    WCHAR NetExeList[KG_MAX_NET_EXE][260]; // 网络例外进程 NT 路径列表
-    ULONG NetExeCount;                     // 网络例外列表中的条目数
-    BOOLEAN NetBlockEnabled;               // 是否启用网络拦截
+    KG_SANDBOX_ID Id;                       // 沙箱域唯一 ID（递增分配）
+    BOOLEAN Active;                         // 域是否已激活（TRUE=启用）
+    KSPIN_LOCK Lock;                        // 保护规则链表的自旋锁
+    LIST_ENTRY RuleList;                    // 路径规则链表头（KG_PATH_RULE 节点）
+    ULONG RuleCount;                        // 当前规则数量（上限 KG_MAX_RULES_PER_DOMAIN=256）
+    volatile LONG RuleEpoch;                // 规则版本号，每次增删规则时递增
+    KG_EVENT_RING EventRing;                // 该域内进程启动失败事件环形缓冲区
+    KG_DENY_EVENT_RING DenyRing;            // 该域内文件访问拒绝事件环形缓冲区
+    WCHAR NetExeList[KG_MAX_NET_EXE][260];  // 网络例外进程 NT 路径列表
+    ULONG NetExeCount;                      // 网络例外列表中的条目数
+    BOOLEAN NetBlockEnabled;                // 是否启用网络拦截
+    BOOLEAN DenyLogEnabled;                 // 是否向缓冲写入 DENY 日志
 } KG_POLICY_DOMAIN;
 
 typedef struct _KG_POLICY_STATE {
-    BOOLEAN FileAccessEnabled;            // 文件访问控制开关（默认打开）
-    BOOLEAN HandleProtectionEnabled;       // 句柄权限保护开关
-    BOOLEAN ProcessInheritanceEnabled;     // 进程继承开关（子进程自动入沙箱）
+    BOOLEAN FileAccessEnabled;              // 文件访问控制开关（默认打开）
+    BOOLEAN HandleProtectionEnabled;        // 句柄权限保护开关
+    BOOLEAN ProcessInheritanceEnabled;      // 进程继承开关（子进程自动入沙箱）
 } KG_POLICY_STATE;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -324,6 +325,14 @@ typedef struct _KG_NET_EXE_LIST_INPUT {
     ULONG Count;
     WCHAR Paths[KG_MAX_NET_EXE][260];
 } KG_NET_EXE_LIST_INPUT;
+
+#define IOCTL_KG_SET_DENY_LOG \
+    CTL_CODE(FILE_DEVICE_UNKNOWN, 0x80A, METHOD_BUFFERED, FILE_WRITE_DATA)
+
+typedef struct _KG_SET_DENY_LOG_INPUT {
+    KG_SANDBOX_ID Sid;
+    BOOLEAN Enabled;
+} KG_SET_DENY_LOG_INPUT;
 
 #define KG_PORT_MSG_PROCESS_CREATE     1
 #define KG_PORT_MSG_PROCESS_EXIT       2

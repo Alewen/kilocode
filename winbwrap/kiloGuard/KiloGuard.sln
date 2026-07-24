@@ -7,21 +7,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "KiloGuard", "KiloGuard.vcxp
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|ARM64 = Debug|ARM64
 		Debug|x64 = Debug|x64
-		Release|ARM64 = Release|ARM64
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{69EA1C35-7F72-FEC6-367F-FD25C9A14817}.Debug|ARM64.ActiveCfg = Debug|ARM64
-		{69EA1C35-7F72-FEC6-367F-FD25C9A14817}.Debug|ARM64.Build.0 = Debug|ARM64
-		{69EA1C35-7F72-FEC6-367F-FD25C9A14817}.Debug|ARM64.Deploy.0 = Debug|ARM64
 		{69EA1C35-7F72-FEC6-367F-FD25C9A14817}.Debug|x64.ActiveCfg = Debug|x64
 		{69EA1C35-7F72-FEC6-367F-FD25C9A14817}.Debug|x64.Build.0 = Debug|x64
 		{69EA1C35-7F72-FEC6-367F-FD25C9A14817}.Debug|x64.Deploy.0 = Debug|x64
-		{69EA1C35-7F72-FEC6-367F-FD25C9A14817}.Release|ARM64.ActiveCfg = Release|ARM64
-		{69EA1C35-7F72-FEC6-367F-FD25C9A14817}.Release|ARM64.Build.0 = Release|ARM64
-		{69EA1C35-7F72-FEC6-367F-FD25C9A14817}.Release|ARM64.Deploy.0 = Release|ARM64
 		{69EA1C35-7F72-FEC6-367F-FD25C9A14817}.Release|x64.ActiveCfg = Release|x64
 		{69EA1C35-7F72-FEC6-367F-FD25C9A14817}.Release|x64.Build.0 = Release|x64
 		{69EA1C35-7F72-FEC6-367F-FD25C9A14817}.Release|x64.Deploy.0 = Release|x64

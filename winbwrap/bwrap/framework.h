@@ -37,6 +37,7 @@
 #define IOCTL_KG_QUERY_EVENTS       IOCTL_CODE(IOCTL_DEVICE_TYPE, 0x807, IOCTL_METHOD_BUFFERED, IOCTL_FILE_READ | IOCTL_FILE_WRITE)
 #define IOCTL_KG_QUERY_DENY_EVENTS  IOCTL_CODE(IOCTL_DEVICE_TYPE, 0x808, IOCTL_METHOD_BUFFERED, IOCTL_FILE_READ)
 #define IOCTL_KG_SET_NET_EXE_LIST   IOCTL_CODE(IOCTL_DEVICE_TYPE, 0x809, IOCTL_METHOD_BUFFERED, IOCTL_FILE_WRITE)
+#define IOCTL_KG_SET_DENY_LOG       IOCTL_CODE(IOCTL_DEVICE_TYPE, 0x80A, IOCTL_METHOD_BUFFERED, IOCTL_FILE_WRITE)
 
 #define KG_MAX_NET_EXE  64
 
@@ -115,6 +116,12 @@ typedef struct
     ULONG Count;
     WCHAR Paths[KG_MAX_NET_EXE][260];
 } KG_NET_EXE_LIST_INPUT;
+
+typedef struct
+{
+    KG_SANDBOX_ID Sid;
+    BOOLEAN Enabled;
+} KG_SET_DENY_LOG_INPUT;
 
 // ---------------------------------------------------------------------------
 // Process notification port message (must match Domain.h in KiloGuardEx)

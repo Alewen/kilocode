@@ -398,6 +398,9 @@ int wmain(int argc, wchar_t* argv[])
             Wprintln(L"bwrap.exe: Net-whitelisted " + nt + L"\n");
     }
 
+    // Deny log: enable only when --showConsole is set
+    drv.SetDenyLogEnabled(sid, g_showConsole ? TRUE : FALSE);
+
     // Attach bwrap itself to the sandbox.
     // Subsequent CreateProcess will have bwrap as parent, which IS in PidMap,
     // so child processes automatically inherit sandbox via KiloProcessNotify.
@@ -438,7 +441,10 @@ int wmain(int argc, wchar_t* argv[])
         }
     }
 
-    drv.StartNotifyThread();
+    if (g_showConsole)
+    {
+        drv.StartNotifyThread();
+    }
     drv.StartDenyThread();
 
     // -----------------------------------------------------------------------
@@ -472,15 +478,13 @@ int wmain(int argc, wchar_t* argv[])
             }
             else
             {
-                std::wcerr << L"bwrap.exe: command not found: "
-                    << shortName << L"\n";
+                std::wcerr << L"bwrap.exe: command not found: " << shortName << L"\n";
                 return 1;
             }
         }
     }
 
     auto cmdLine = BuildCmdLine(exe, argv + i + 1, argc - i - 1);
-
     std::wstring exeLower = exe;
     std::transform(exeLower.begin(), exeLower.end(), exeLower.begin(), ::towlower);
 
@@ -515,8 +519,7 @@ int wmain(int argc, wchar_t* argv[])
     }
     else
     {
-        std::wcerr << L"bwrap.exe: cannot execute " << exe
-            << L" — unsupported file extension\n";
+        std::wcerr << L"bwrap.exe: cannot execute " << exe << L" — unsupported file extension\n";
         return 1;
     }
 
@@ -559,18 +562,14 @@ int wmain(int argc, wchar_t* argv[])
     STARTUPINFOW si = {sizeof(si)};
     UINT oldErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
     PROCESS_INFORMATION pi = {};
-    BOOL ok = CreateProcessW(NULL, cmdbuf.data(),
-        NULL, NULL, TRUE,
-        CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT,
-        NULL, lpCwd, &si, &pi);
-
+    BOOL ok = CreateProcessW(NULL, cmdbuf.data(), NULL, NULL, TRUE,
+        CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT, NULL, lpCwd, &si, &pi);
     SetErrorMode(oldErrorMode);
 
     if (!ok)
     {
         if (hJob) CloseHandle(hJob);
-        std::wcerr << L"bwrap.exe: CreateProcess failed ("
-            << GetLastError() << L") for: " << cmdLine << L"\n";
+        std::wcerr << L"bwrap.exe: CreateProcess failed (" << GetLastError() << L") for: " << cmdLine << L"\n";
         return 1;
     }
     else
@@ -587,10 +586,10 @@ int wmain(int argc, wchar_t* argv[])
     if (hJob)
     {
         if (!AssignProcessToJobObject(hJob, pi.hProcess))
-            std::wcerr << L"bwrap.exe: AssignProcessToJobObject failed ("
-            << GetLastError() << L")" << std::endl;
+        {
+            std::wcerr << L"bwrap.exe: AssignProcessToJobObject failed (" << GetLastError() << L")" << std::endl;
+        }
     }
-
     // Resume child
     ResumeThread(pi.hThread);
 

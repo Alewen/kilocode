@@ -123,6 +123,16 @@ void DriverClient::SetNetExeList(const std::vector<std::wstring>& ntPaths)
         Die("IOCTL_KG_SET_NET_EXE_LIST failed");
 }
 
+void DriverClient::SetDenyLogEnabled(KG_SANDBOX_ID sid, BOOLEAN enabled)
+{
+    KG_SET_DENY_LOG_INPUT in;
+    in.Sid = sid;
+    in.Enabled = enabled;
+    DWORD junk;
+    if (!DeviceIoControl(m_h, IOCTL_KG_SET_DENY_LOG, &in, sizeof(in), NULL, 0, &junk, NULL))
+        Die("IOCTL_KG_SET_DENY_LOG failed");
+}
+
 void DriverClient::AddRules(const std::vector<KG_POLICY_RULE_ENTRY>& rules)
 {
     if (rules.empty()) return;
@@ -238,14 +248,13 @@ void DriverClient::DrainEvents()
     {
         KG_QUERY_EVENTS_OUTPUT out = {};
         QueryEvents(out);
-        if (out.EventCount == 0) break;
+        if (out.EventCount == 0)
+            break;
         for (ULONG i = 0; i < out.EventCount; i++)
         {
             std::wstring winPath = NtPathToWin32(out.Events[i].ImageName);
             std::wcerr << L"PID " << out.Events[i].Pid
-                << L" : " << winPath
-                << L" (DLL not found: " << out.Events[i].DllPath
-                << L")" << std::endl;
+                << L" : " << winPath << L" (DLL not found: " << out.Events[i].DllPath << L")" << std::endl;
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿#include "Domain.h"
+﻿
+#include "Domain.h"
 #include "Pidmap.h"
 
 NTSYSAPI PCSTR NTAPI PsGetProcessImageFileName(PEPROCESS Process);
@@ -133,6 +134,7 @@ KG_SYSTEM_STATE* KgAllocState(VOID)
     state->Domain[0].RuleEpoch = 0;
     state->Domain[0].NetBlockEnabled = FALSE;
     state->Domain[0].NetExeCount = 0;
+    state->Domain[0].DenyLogEnabled = FALSE;
     KeInitializeSpinLock(&state->Domain[0].EventRing.Lock);
     state->Domain[0].EventRing.WriteIndex = 0;
     state->Domain[0].EventRing.ReadIndex = 0;
@@ -345,6 +347,7 @@ BOOLEAN KgIsTraversalAllowed(KG_SYSTEM_STATE* state, ULONG slotIndex, PUNICODE_S
 
 VOID KgPushDenyEvent(KG_POLICY_DOMAIN* domain, HANDLE pid, PUNICODE_STRING filePath)
 {
+    if (!domain->DenyLogEnabled) return;
     KIRQL oldIrql;
     KeAcquireSpinLock(&domain->DenyRing.Lock, &oldIrql);
 
@@ -400,7 +403,8 @@ VOID KgPushNetDenyEvent(ULONG slotIndex, HANDLE pid, PCUNICODE_STRING infoStr)
     KG_SYSTEM_STATE* s = KgAcquireState();
     if (!s) return;
 
-    if (slotIndex >= KG_MAX_DOMAIN || !s->Domain[slotIndex].Active) {
+    if (slotIndex >= KG_MAX_DOMAIN || !s->Domain[slotIndex].Active || !s->Domain[slotIndex].DenyLogEnabled)
+    {
         KgReleaseState(s);
         return;
     }

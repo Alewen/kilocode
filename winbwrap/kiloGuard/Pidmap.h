@@ -2,8 +2,8 @@
 
 #include <fltKernel.h>
 
-#define KG_PID_BUCKETS 256
-#define KG_PID_SLOT_EMPTY 0xFFFF
+#define KG_PID_BUCKETS          256
+#define KG_PID_SLOT_EMPTY       0xFFFF
 
 ////////////////////////////////////////////////////////////////////////////////
 // PID 映射条目

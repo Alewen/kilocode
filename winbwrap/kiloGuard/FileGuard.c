@@ -43,6 +43,8 @@
     CTL_CODE(FILE_DEVICE_UNKNOWN, 0x807, METHOD_BUFFERED, FILE_READ_DATA | FILE_WRITE_DATA)
 #define IOCTL_KG_QUERY_DENY_EVENTS \
     CTL_CODE(FILE_DEVICE_UNKNOWN, 0x808, METHOD_BUFFERED, FILE_READ_DATA)
+#define IOCTL_KG_SET_DENY_LOG \
+    CTL_CODE(FILE_DEVICE_UNKNOWN, 0x80A, METHOD_BUFFERED, FILE_WRITE_DATA)
 
 #define KG_MAX_IOCTL_SIZE 65536
 #define KG_MAX_TRUSTED_PIDS 16
@@ -247,8 +249,7 @@ KgInstanceTeardownComplete(PCFLT_RELATED_OBJECTS FltObjects, FLT_INSTANCE_TEARDO
 //   ContextType - 上下文类型（当前未使用）
 // 返回值：无
 ////////////////////////////////////////////////////////////////////////////////
-static VOID
-KgContextCleanup(PFLT_CONTEXT Context, FLT_CONTEXT_TYPE ContextType)
+static VOID KgContextCleanup(PFLT_CONTEXT Context, FLT_CONTEXT_TYPE ContextType)
 {
     UNREFERENCED_PARAMETER(ContextType);
     ExFreePoolWithTag(Context, KG_POOL_TAG);
@@ -289,9 +290,8 @@ static const FLT_CONTEXT_REGISTRATION ContextRegistration[] = {
 //   ReturnOutputBufferLength - 返回的输出数据长度
 // 返回值：STATUS_SUCCESS
 ////////////////////////////////////////////////////////////////////////////////
-static NTSTATUS
-KgMessageNotify(PVOID PortCookie, PVOID InputBuffer, ULONG InputBufferLength,
-                PVOID OutputBuffer, ULONG OutputBufferLength, PULONG ReturnOutputBufferLength)
+static NTSTATUS KgMessageNotify(PVOID PortCookie, PVOID InputBuffer, ULONG InputBufferLength,
+    PVOID OutputBuffer, ULONG OutputBufferLength, PULONG ReturnOutputBufferLength)
 {
     UNREFERENCED_PARAMETER(PortCookie);
     UNREFERENCED_PARAMETER(InputBuffer);
@@ -310,10 +310,8 @@ KgMessageNotify(PVOID PortCookie, PVOID InputBuffer, ULONG InputBufferLength,
 //   ConnectionCookie - 连接标识（当前未使用）
 // 返回值：无
 ////////////////////////////////////////////////////////////////////////////////
-static NTSTATUS
-KgConnectNotify(PFLT_PORT ClientPort, PVOID ServerPortCookie,
-                PVOID ConnectionContext, ULONG SizeOfContext,
-                PVOID *ConnectionPortCookie)
+static NTSTATUS KgConnectNotify(PFLT_PORT ClientPort, PVOID ServerPortCookie, PVOID ConnectionContext,
+    ULONG SizeOfContext, PVOID *ConnectionPortCookie)
 {
     UNREFERENCED_PARAMETER(ServerPortCookie);
     UNREFERENCED_PARAMETER(ConnectionContext);
@@ -325,7 +323,6 @@ KgConnectNotify(PFLT_PORT ClientPort, PVOID ServerPortCookie,
     *ConnectionPortCookie = (PVOID)(ULONG_PTR)1;
     gClientPort = ClientPort;
     KG_LOG("FileGuard: Port Connect accepted\n");
-
     return STATUS_SUCCESS;
 }
 
@@ -732,6 +729,7 @@ static NTSTATUS KgDeviceIoControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
                     s->Domain[i].DenyRing.ReadIndex = 0;
                     s->Domain[i].NetBlockEnabled = FALSE;
                     s->Domain[i].NetExeCount = 0;
+                    s->Domain[i].DenyLogEnabled = FALSE;
                     status = STATUS_SUCCESS;
                     break;
                 }
@@ -870,7 +868,26 @@ static NTSTATUS KgDeviceIoControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
         status = STATUS_SUCCESS;
         break;
     }
+
+    case IOCTL_KG_SET_DENY_LOG:
+    {
+        if (!KgIsTrustedCaller()) { status = STATUS_ACCESS_DENIED; break; }
+        if (inSize < sizeof(KG_SET_DENY_LOG_INPUT)) { status = STATUS_INVALID_PARAMETER; break; }
+        KG_SET_DENY_LOG_INPUT* in = (KG_SET_DENY_LOG_INPUT*)buf;
+
+        KG_SYSTEM_STATE* s = KgAcquireState();
+        if (!s) { status = STATUS_UNSUCCESSFUL; break; }
+
+        ULONG slot = KgFindDomainSlot(s, in->Sid);
+        if (slot == (ULONG)-1) { KgReleaseState(s); status = STATUS_NOT_FOUND; break; }
+
+        s->Domain[slot].DenyLogEnabled = in->Enabled;
+        KgReleaseState(s);
+        status = STATUS_SUCCESS;
+        break;
     }
+
+    } // switch end
 
     Irp->IoStatus.Status = status;
     Irp->IoStatus.Information = info;
@@ -1145,6 +1162,23 @@ static PCSTR KgOpToString(KG_OPERATION_TYPE op)
     }
 }
 
+NTSYSAPI LARGE_INTEGER NTAPI KeQueryPerformanceCounter(PLARGE_INTEGER PerformanceFrequency);
+
+#ifdef DEBUG
+static VOID KgLogTimer(LARGE_INTEGER start, PCSTR name, HANDLE pid, PUNICODE_STRING path)
+{
+    LARGE_INTEGER freq;
+    LARGE_INTEGER end = KeQueryPerformanceCounter(&freq);
+    ULONG us = (ULONG)((end.QuadPart - start.QuadPart) * 1000000 / freq.QuadPart);
+    if (path)
+        DbgPrint("FileGuard: T %s PID=%lu %wZ %lu us\n", name, (ULONG)(ULONG_PTR)pid, path, us);
+    else
+        DbgPrint("FileGuard: T %s PID=%lu (null) %lu us\n", name, (ULONG)(ULONG_PTR)pid, us);
+}
+#else
+#define KgLogTimer(start, name, pid, path) ((VOID)0)
+#endif // DEBUG
+
 ////////////////////////////////////////////////////////////////////////////////
 // 功能：无锁快照捕获 — 判断当前 PID 是否在沙箱内并获取槽位索引
 //       通过两轮读取 gPidMapEpoch 比较检测并发修改，
@@ -1216,14 +1250,19 @@ typedef struct _KG_DIR_ENTRY_OFFSETS {
 static const KG_DIR_ENTRY_OFFSETS KgDirEntryOffsets[] = {
     { FileDirectoryInformation,          FIELD_OFFSET(FILE_DIRECTORY_INFORMATION, FileNameLength),
                                          FIELD_OFFSET(FILE_DIRECTORY_INFORMATION, FileName) },
+
     { FileFullDirectoryInformation,      FIELD_OFFSET(FILE_FULL_DIR_INFORMATION, FileNameLength),
                                          FIELD_OFFSET(FILE_FULL_DIR_INFORMATION, FileName) },
+
     { FileBothDirectoryInformation,      FIELD_OFFSET(FILE_BOTH_DIR_INFORMATION, FileNameLength),
                                          FIELD_OFFSET(FILE_BOTH_DIR_INFORMATION, FileName) },
+
     { FileNamesInformation,              FIELD_OFFSET(FILE_NAMES_INFORMATION, FileNameLength),
                                          FIELD_OFFSET(FILE_NAMES_INFORMATION, FileName) },
+
     { FileIdBothDirectoryInformation,    FIELD_OFFSET(FILE_ID_BOTH_DIR_INFORMATION, FileNameLength),
                                          FIELD_OFFSET(FILE_ID_BOTH_DIR_INFORMATION, FileName) },
+
     { FileIdFullDirectoryInformation,    FIELD_OFFSET(FILE_ID_FULL_DIR_INFORMATION, FileNameLength),
                                          FIELD_OFFSET(FILE_ID_FULL_DIR_INFORMATION, FileName) },
 };
@@ -1231,8 +1270,10 @@ static const KG_DIR_ENTRY_OFFSETS KgDirEntryOffsets[] = {
 static BOOLEAN
 KgLookupDirEntryOffsets(FILE_INFORMATION_CLASS infoClass, USHORT* fnLenOffset, USHORT* fnOffset)
 {
-    for (ULONG i = 0; i < sizeof(KgDirEntryOffsets) / sizeof(KgDirEntryOffsets[0]); i++) {
-        if (KgDirEntryOffsets[i].InfoClass == infoClass) {
+    for (ULONG i = 0; i < sizeof(KgDirEntryOffsets) / sizeof(KgDirEntryOffsets[0]); i++)
+    {
+        if (KgDirEntryOffsets[i].InfoClass == infoClass)
+        {
             *fnLenOffset = KgDirEntryOffsets[i].FileNameLengthOffset;
             *fnOffset = KgDirEntryOffsets[i].FileNameOffset;
             return TRUE;
@@ -1241,8 +1282,7 @@ KgLookupDirEntryOffsets(FILE_INFORMATION_CLASS infoClass, USHORT* fnLenOffset, U
     return FALSE;
 }
 
-static BOOLEAN
-KgValidateDirEntry(PUCHAR entry, ULONG entrySize, USHORT fnLenOffset)
+static BOOLEAN KgValidateDirEntry(PUCHAR entry, ULONG entrySize, USHORT fnLenOffset)
 {
     if (entrySize < sizeof(ULONG))
         return FALSE;
@@ -1254,8 +1294,7 @@ KgValidateDirEntry(PUCHAR entry, ULONG entrySize, USHORT fnLenOffset)
     return TRUE;
 }
 
-static BOOLEAN
-KgCheckEnumVisibility(HANDLE pid, PUNICODE_STRING path)
+static BOOLEAN KgCheckEnumVisibility(HANDLE pid, PUNICODE_STRING path)
 {
     KG_SYSTEM_STATE* state = KgAcquireState();
     if (!state) return TRUE;
@@ -1287,7 +1326,6 @@ KgCheckEnumVisibility(HANDLE pid, PUNICODE_STRING path)
     }
 
     KgReleaseState(state);
-
     return (level >= 1);
 }
 
@@ -1302,18 +1340,22 @@ KgCheckEnumVisibility(HANDLE pid, PUNICODE_STRING path)
 //   CompletionContext - 完成上下文
 // 返回值：FLT_PREOP_SUCCESS_NO_CALLBACK
 ////////////////////////////////////////////////////////////////////////////////
-static FLT_PREOP_CALLBACK_STATUS
-PreCreate(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
+static FLT_PREOP_CALLBACK_STATUS PreCreate(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
 {
     UNREFERENCED_PARAMETER(FltObjects);
     UNREFERENCED_PARAMETER(CompletionContext);
+
+#ifdef DEBUG
+    LARGE_INTEGER _kg_ts = KeQueryPerformanceCounter(NULL);
+#endif
 
     ACCESS_MASK desiredAccess = 0;
     if (Data->Iopb->Parameters.Create.SecurityContext)
         desiredAccess = Data->Iopb->Parameters.Create.SecurityContext->DesiredAccess;
 
     // 纯遍历（FILE_TRAVERSE）且路径是绑定根祖先 → 直接放行
-    if (KgIsPureTraversal(desiredAccess)) {
+    if (KgIsPureTraversal(desiredAccess))
+    {
         PFLT_FILE_NAME_INFORMATION nameInfo;
         if (KgNormalizePath(Data, &nameInfo)) {
             KG_SYSTEM_STATE* state = KgAcquireState();
@@ -1337,7 +1379,8 @@ PreCreate(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Comp
 
     // 绿色通道：访问 .svn 目录（无论层级多深）直接放行
     // svn 会逐级向上探测 .svn，绝大多数路径不存在，让 OS 返回"文件未找到"即可
-    if (nameInfo->Name.Length >= 8) {
+    if (nameInfo->Name.Length >= 8)
+    {
         PWCHAR buf = nameInfo->Name.Buffer;
         USHORT len = nameInfo->Name.Length / sizeof(WCHAR);
         if (buf[len - 4] == L'.' && buf[len - 3] == L's' &&
@@ -1360,7 +1403,8 @@ PreCreate(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Comp
 
     KG_SANDBOX_LEVEL level = 0;
 
-    if (isSandboxed) {
+    if (isSandboxed)
+    {
         KG_POLICY_DOMAIN* domain = &state->Domain[slot];
         KIRQL dIrql;
         KeAcquireSpinLock(&domain->Lock, &dIrql);
@@ -1368,7 +1412,8 @@ PreCreate(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Comp
         KeReleaseSpinLock(&domain->Lock, dIrql);
     }
 
-    if (level == 0) {
+    if (level == 0)
+    {
         KG_POLICY_DOMAIN* global = &state->Domain[0];
         KIRQL dIrql;
         KeAcquireSpinLock(&global->Lock, &dIrql);
@@ -1385,7 +1430,8 @@ PreCreate(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Comp
 
     // 沙箱进程 + 路径是绑定根祖先目录 → 放行（需先遍历到子目录）
     if (isSandboxed && level == 0) {
-        if (KgIsTraversalAllowed(state, slot, &nameInfo->Name)) {
+        if (KgIsTraversalAllowed(state, slot, &nameInfo->Name))
+        {
             level = 1;  // 授予遍历级别的权限
         }
     }
@@ -1412,13 +1458,15 @@ PreCreate(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Comp
     }
 
     // 规范化路径通过后，再验一次 opened path（防符号链接绕过）
-    if (allowed) {
+    if (allowed)
+    {
         PFLT_FILE_NAME_INFORMATION openedInfo = NULL;
-        NTSTATUS openStatus = FltGetFileNameInformation(Data,
-            FLT_FILE_NAME_OPENED | FLT_FILE_NAME_QUERY_DEFAULT, &openedInfo);
-        if (NT_SUCCESS(openStatus)) {
+        NTSTATUS openStatus = FltGetFileNameInformation(Data, FLT_FILE_NAME_OPENED | FLT_FILE_NAME_QUERY_DEFAULT, &openedInfo);
+        if (NT_SUCCESS(openStatus))
+        {
             openStatus = FltParseFileNameInformation(openedInfo);
-            if (NT_SUCCESS(openStatus)) {
+            if (NT_SUCCESS(openStatus))
+            {
                 if (RtlCompareUnicodeString(&nameInfo->Name, &openedInfo->Name, TRUE) != 0) {
                     // 规范化路径和实际打开路径不一致 → 用 opened 路径再查一次
                     KIRQL dIrql;
@@ -1478,6 +1526,8 @@ PreCreate(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Comp
     KgReleaseState(state);
     FltReleaseFileNameInformation(nameInfo);
 
+    KgLogTimer(_kg_ts, "PreCreate", pid, &nameInfo->Name);
+
     if (!allowed) {
         Data->IoStatus.Status = (op == KgOpCreate) ? STATUS_OBJECT_NAME_NOT_FOUND : STATUS_ACCESS_DENIED;
         Data->IoStatus.Information = 0;
@@ -1507,6 +1557,10 @@ PreWrite(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Compl
 {
     UNREFERENCED_PARAMETER(FltObjects);
     UNREFERENCED_PARAMETER(CompletionContext);
+
+#ifdef DEBUG
+    LARGE_INTEGER _kg_ts = KeQueryPerformanceCounter(NULL);
+#endif
 
     // 分页 IO 路径中禁止路径解析和策略决策，直接放行。
     if (Data->Iopb->IrpFlags & IRP_PAGING_IO)
@@ -1584,7 +1638,8 @@ PreWrite(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Compl
         }
     }
 
-    if (!allowed) {
+    if (!allowed)
+    {
         KG_LOG("FileGuard: DENY PID=%lu Level=%hhu Op=Write File=%wZ\n",
                  (ULONG)(ULONG_PTR)pid, level, &nameInfo->Name);
         KgPushDenyEvent(&state->Domain[isSandboxed ? slot : 0], pid, &nameInfo->Name);
@@ -1592,8 +1647,10 @@ PreWrite(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Compl
 
     KgReleaseState(state);
     FltReleaseFileNameInformation(nameInfo);
+    KgLogTimer(_kg_ts, "PreWrite", pid, &nameInfo->Name);
 
-    if (!allowed) {
+    if (!allowed)
+    {
         Data->IoStatus.Status = STATUS_ACCESS_DENIED;
         Data->IoStatus.Information = 0;
         return FLT_PREOP_COMPLETE;
@@ -1611,11 +1668,14 @@ PreWrite(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Compl
 //   CompletionContext - 完成上下文
 // 返回值：FLT_PREOP_SUCCESS_NO_CALLBACK 或 FLT_PREOP_COMPLETE（拒绝时）
 ////////////////////////////////////////////////////////////////////////////////
-static FLT_PREOP_CALLBACK_STATUS
-PreSetInfo(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
+static FLT_PREOP_CALLBACK_STATUS PreSetInfo(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
 {
     UNREFERENCED_PARAMETER(FltObjects);
     UNREFERENCED_PARAMETER(CompletionContext);
+
+#ifdef DEBUG
+    LARGE_INTEGER _kg_ts = KeQueryPerformanceCounter(NULL);
+#endif
 
     PFLT_FILE_NAME_INFORMATION nameInfo;
     if (!KgNormalizePath(Data, &nameInfo))
@@ -1699,7 +1759,8 @@ PreSetInfo(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
     }
 
     BOOLEAN allowed = TRUE;
-    if (hasTarget) {
+    if (hasTarget)
+    {
         // 重命名三规则：
         //   源 L0/L1 → 拒绝（2）；目标 L0/L1 → 拒绝（3）；两者皆 L2 → 放行（1）
         if (level < 2 || targetLevel < 2)
@@ -1718,28 +1779,34 @@ PreSetInfo(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
 
     if (allowed) {
         PFLT_FILE_NAME_INFORMATION openedInfo = NULL;
-        NTSTATUS openStatus = FltGetFileNameInformation(Data,
-            FLT_FILE_NAME_OPENED | FLT_FILE_NAME_QUERY_DEFAULT, &openedInfo);
-        if (NT_SUCCESS(openStatus)) {
+        NTSTATUS openStatus = FltGetFileNameInformation(Data, FLT_FILE_NAME_OPENED | FLT_FILE_NAME_QUERY_DEFAULT, &openedInfo);
+        if (NT_SUCCESS(openStatus))
+        {
             openStatus = FltParseFileNameInformation(openedInfo);
-            if (NT_SUCCESS(openStatus)) {
-                if (RtlCompareUnicodeString(&nameInfo->Name, &openedInfo->Name, TRUE) != 0) {
+            if (NT_SUCCESS(openStatus))
+            {
+                if (RtlCompareUnicodeString(&nameInfo->Name, &openedInfo->Name, TRUE) != 0)
+                {
                     KIRQL dIrql;
                     KG_SANDBOX_LEVEL openedLevel = 0;
-                    if (isSandboxed) {
+                    if (isSandboxed)
+                    {
                         KG_POLICY_DOMAIN* domain = &state->Domain[slot];
                         KeAcquireSpinLock(&domain->Lock, &dIrql);
                         openedLevel = KgFindPathRule(domain, &openedInfo->Name);
                         KeReleaseSpinLock(&domain->Lock, dIrql);
                     }
-                    if (openedLevel == 0) {
+                    if (openedLevel == 0)
+                    {
                         KG_POLICY_DOMAIN* global = &state->Domain[0];
                         KeAcquireSpinLock(&global->Lock, &dIrql);
                         openedLevel = KgFindPathRule(global, &openedInfo->Name);
                         KeReleaseSpinLock(&global->Lock, dIrql);
                     }
-                    if (isSandboxed || openedLevel != 0) {
-                        switch (op) {
+                    if (isSandboxed || openedLevel != 0)
+                    {
+                        switch (op)
+                        {
                         case KgOpDelete:
                         case KgOpRename:
                         case KgOpSetInfo:
@@ -1755,14 +1822,18 @@ PreSetInfo(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
         }
     }
 
-    if (!allowed) {
+    if (!allowed)
+    {
         PCSTR denyOp = (op == KgOpDelete) ? "Delete" :
                        (op == KgOpRename) ? "Rename" : "SetInfo";
-        if (hasTarget) {
+        if (hasTarget)
+        {
             KG_LOG("FileGuard: DENY PID=%lu Level=%hhu TargetLevel=%hhu Op=%s File=%wZ\n",
                      (ULONG)(ULONG_PTR)pid, level, targetLevel, denyOp, &nameInfo->Name);
-        } else {
-        KG_LOG("FileGuard: DENY PID=%lu Level=%hhu Op=%s File=%wZ\n",
+        }
+        else
+        {
+            KG_LOG("FileGuard: DENY PID=%lu Level=%hhu Op=%s File=%wZ\n",
                  (ULONG)(ULONG_PTR)pid, level, denyOp, &nameInfo->Name);
         }
         KgPushDenyEvent(&state->Domain[isSandboxed ? slot : 0], pid, &nameInfo->Name);
@@ -1770,8 +1841,10 @@ PreSetInfo(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
 
     KgReleaseState(state);
     FltReleaseFileNameInformation(nameInfo);
+    KgLogTimer(_kg_ts, "PreSetInfo", pid, &nameInfo->Name);
 
-    if (!allowed) {
+    if (!allowed)
+    {
         Data->IoStatus.Status = STATUS_ACCESS_DENIED;
         Data->IoStatus.Information = 0;
         return FLT_PREOP_COMPLETE;
@@ -1790,10 +1863,13 @@ PreSetInfo(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
 //   CompletionContext - 完成上下文
 // 返回值：FLT_PREOP_SUCCESS_NO_CALLBACK
 ////////////////////////////////////////////////////////////////////////////////
-static FLT_PREOP_CALLBACK_STATUS
-PreCleanup(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
+static FLT_PREOP_CALLBACK_STATUS PreCleanup(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
 {
     UNREFERENCED_PARAMETER(CompletionContext);
+
+#ifdef DEBUG
+    LARGE_INTEGER _kg_ts = KeQueryPerformanceCounter(NULL);
+#endif
 
     // 从 minifilter 回调参数中获取文件对象指针。
     // FileObject 是当前 IO 操作的目标，其 Flags 字段包含文件对象的状态标志。
@@ -1810,7 +1886,8 @@ PreCleanup(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
         return FLT_PREOP_SUCCESS_NO_CALLBACK;
 
     KG_SYSTEM_STATE* state = KgAcquireState();
-    if (!state) {
+    if (!state)
+    {
         FltReleaseFileNameInformation(nameInfo);
         return FLT_PREOP_SUCCESS_NO_CALLBACK;
     }
@@ -1843,23 +1920,28 @@ PreCleanup(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
     if (isSandboxed || level != 0)
         allowed = (level >= 2);
 
-    if (allowed) {
+    if (allowed)
+    {
         PFLT_FILE_NAME_INFORMATION openedInfo = NULL;
-        NTSTATUS openStatus = FltGetFileNameInformation(Data,
-            FLT_FILE_NAME_OPENED | FLT_FILE_NAME_QUERY_DEFAULT, &openedInfo);
-        if (NT_SUCCESS(openStatus)) {
+        NTSTATUS openStatus = FltGetFileNameInformation(Data, FLT_FILE_NAME_OPENED | FLT_FILE_NAME_QUERY_DEFAULT, &openedInfo);
+        if (NT_SUCCESS(openStatus))
+        {
             openStatus = FltParseFileNameInformation(openedInfo);
-            if (NT_SUCCESS(openStatus)) {
-                if (RtlCompareUnicodeString(&nameInfo->Name, &openedInfo->Name, TRUE) != 0) {
+            if (NT_SUCCESS(openStatus))
+            {
+                if (RtlCompareUnicodeString(&nameInfo->Name, &openedInfo->Name, TRUE) != 0)
+                {
                     KIRQL dIrql;
                     KG_SANDBOX_LEVEL openedLevel = 0;
-                    if (isSandboxed) {
+                    if (isSandboxed)
+                    {
                         KG_POLICY_DOMAIN* domain = &state->Domain[slot];
                         KeAcquireSpinLock(&domain->Lock, &dIrql);
                         openedLevel = KgFindPathRule(domain, &openedInfo->Name);
                         KeReleaseSpinLock(&domain->Lock, dIrql);
                     }
-                    if (openedLevel == 0) {
+                    if (openedLevel == 0)
+                    {
                         KG_POLICY_DOMAIN* global = &state->Domain[0];
                         KeAcquireSpinLock(&global->Lock, &dIrql);
                         openedLevel = KgFindPathRule(global, &openedInfo->Name);
@@ -1876,7 +1958,8 @@ PreCleanup(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
     // 权限不足：从文件对象的 Flags 中清除 FO_DELETE_ON_CLOSE 标志。
     // 这样文件系统在后续处理 Cleanup IRP 时不会执行删除动作，
     // 文件被保留。句柄本身正常关闭，调用者收到成功的返回值。
-    if (!allowed) {
+    if (!allowed)
+    {
         KG_LOG("FileGuard: DENY PID=%lu Level=%hhu Op=DeleteCleanup File=%wZ\n",
                  (ULONG)(ULONG_PTR)pid, level, &nameInfo->Name);
         KgPushDenyEvent(&state->Domain[isSandboxed ? slot : 0], pid, &nameInfo->Name);
@@ -1885,6 +1968,8 @@ PreCleanup(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
 
     KgReleaseState(state);
     FltReleaseFileNameInformation(nameInfo);
+    KgLogTimer(_kg_ts, "PreCleanup", pid, &nameInfo->Name);
+
     return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
 
@@ -1897,8 +1982,7 @@ PreCleanup(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
 //   CompletionContext - 输出参数，接收 KG_DIR_ENUM_CTX 指针
 // 返回值：FLT_PREOP_SUCCESS_WITH_CALLBACK（注册 Post 回调）
 ////////////////////////////////////////////////////////////////////////////////
-static FLT_PREOP_CALLBACK_STATUS
-PreDirCtrl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
+static FLT_PREOP_CALLBACK_STATUS PreDirCtrl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
 {
     UNREFERENCED_PARAMETER(FltObjects);
 
@@ -1906,7 +1990,8 @@ PreDirCtrl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
     HANDLE pid = requestor ? PsGetProcessId(requestor) : PsGetCurrentProcessId();
     KG_SYSTEM_STATE* s = KgAcquireState();
     BOOLEAN isSandboxed = FALSE;
-    if (s) {
+    if (s)
+    {
         isSandboxed = (KgIsPidInSandBox(pid) != (ULONG)-1);
         KgReleaseState(s);
     }
@@ -1915,9 +2000,11 @@ PreDirCtrl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
 
     PFLT_FILE_NAME_INFORMATION nameInfo;
     NTSTATUS status = FltGetFileNameInformation(Data, FLT_FILE_NAME_NORMALIZED | FLT_FILE_NAME_QUERY_DEFAULT, &nameInfo);
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         KG_DIR_ENUM_CTX* ctx = (KG_DIR_ENUM_CTX*)ExAllocatePool2(POOL_FLAG_NON_PAGED, sizeof(KG_DIR_ENUM_CTX), KG_POOL_TAG);
-        if (!ctx) return FLT_PREOP_SUCCESS_NO_CALLBACK;
+        if (!ctx)
+            return FLT_PREOP_SUCCESS_NO_CALLBACK;
         ctx->DirectoryPath.Length = 0;
         ctx->DirectoryPath.Buffer = NULL;
         ctx->RequestorProcess = FltGetRequestorProcess(Data);
@@ -1925,10 +2012,12 @@ PreDirCtrl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
         return FLT_PREOP_SUCCESS_WITH_CALLBACK;
     }
     status = FltParseFileNameInformation(nameInfo);
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         FltReleaseFileNameInformation(nameInfo);
         KG_DIR_ENUM_CTX* ctx = (KG_DIR_ENUM_CTX*)ExAllocatePool2(POOL_FLAG_NON_PAGED, sizeof(KG_DIR_ENUM_CTX), KG_POOL_TAG);
-        if (!ctx) return FLT_PREOP_SUCCESS_NO_CALLBACK;
+        if (!ctx)
+            return FLT_PREOP_SUCCESS_NO_CALLBACK;
         ctx->DirectoryPath.Length = 0;
         ctx->DirectoryPath.Buffer = NULL;
         ctx->RequestorProcess = FltGetRequestorProcess(Data);
@@ -1939,7 +2028,8 @@ PreDirCtrl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Com
     USHORT pathByteLen = nameInfo->Name.Length;
     ULONG ctxSize = sizeof(KG_DIR_ENUM_CTX) + pathByteLen + sizeof(WCHAR);
     KG_DIR_ENUM_CTX* ctx = (KG_DIR_ENUM_CTX*)ExAllocatePool2(POOL_FLAG_NON_PAGED, ctxSize, KG_POOL_TAG);
-    if (!ctx) {
+    if (!ctx)
+    {
         FltReleaseFileNameInformation(nameInfo);
         return FLT_PREOP_SUCCESS_NO_CALLBACK;
     }
@@ -2065,8 +2155,7 @@ PreAcquireForSectionSync(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjec
  * 获取锁、分配内存等操作，否则可能触发递归 page fault 导致死锁。
  * 因此分页 IO 必须直接放行，不做任何处理。
  */
-static FLT_PREOP_CALLBACK_STATUS
-PreRead(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
+static FLT_PREOP_CALLBACK_STATUS PreRead(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
 {
     UNREFERENCED_PARAMETER(FltObjects);
     UNREFERENCED_PARAMETER(CompletionContext);
@@ -2087,26 +2176,32 @@ PreRead(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *Comple
 //   CompletionContext - 完成上下文
 // 返回值：FLT_PREOP_SUCCESS_NO_CALLBACK 或 FLT_PREOP_COMPLETE（拒绝时）
 ////////////////////////////////////////////////////////////////////////////////
-static FLT_PREOP_CALLBACK_STATUS
-PreQueryInformation(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
+static FLT_PREOP_CALLBACK_STATUS PreQueryInformation(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
 {
     UNREFERENCED_PARAMETER(FltObjects);
     UNREFERENCED_PARAMETER(CompletionContext);
 
+#ifdef DEBUG
+    LARGE_INTEGER _kg_ts = KeQueryPerformanceCounter(NULL);
+#endif
+
     KG_SYSTEM_STATE* state = KgAcquireState();
-    if (!state) return FLT_PREOP_SUCCESS_NO_CALLBACK;
+    if (!state)
+        return FLT_PREOP_SUCCESS_NO_CALLBACK;
 
     HANDLE pid = PsGetCurrentProcessId();
     ULONG slot = KgIsPidInSandBox(pid);
 
     // 非沙箱进程 → 直接放行，跳过路径解析和规则查找
-    if (slot == (ULONG)-1) {
+    if (slot == (ULONG)-1)
+    {
         KgReleaseState(state);
         return FLT_PREOP_SUCCESS_NO_CALLBACK;
     }
 
     PFLT_FILE_NAME_INFORMATION nameInfo;
-    if (!KgNormalizePath(Data, &nameInfo)) {
+    if (!KgNormalizePath(Data, &nameInfo))
+    {
         KgReleaseState(state);
         return FLT_PREOP_SUCCESS_NO_CALLBACK;
     }
@@ -2117,7 +2212,8 @@ PreQueryInformation(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, P
     KG_SANDBOX_LEVEL level = KgFindPathRule(domain, &nameInfo->Name);
     KeReleaseSpinLock(&domain->Lock, dIrql);
 
-    if (level == 0) {
+    if (level == 0)
+    {
         KG_POLICY_DOMAIN* global = &state->Domain[0];
         KeAcquireSpinLock(&global->Lock, &dIrql);
         level = KgFindPathRule(global, &nameInfo->Name);
@@ -2125,7 +2221,8 @@ PreQueryInformation(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, P
     }
 
     // 祖先目录遍历放行：路径是绑定根目录的父目录 → 直接放行（与 PreCreate 一致）
-    if (level == 0 && KgIsTraversalAllowed(state, slot, &nameInfo->Name)) {
+    if (level == 0 && KgIsTraversalAllowed(state, slot, &nameInfo->Name))
+    {
         KgReleaseState(state);
         FltReleaseFileNameInformation(nameInfo);
         return FLT_PREOP_SUCCESS_NO_CALLBACK;
@@ -2134,21 +2231,21 @@ PreQueryInformation(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, P
     // L0 路径 → 返回"文件不存在"，与真正不存在的路径结果一致
     if (level == 0) {
         KG_LOG("FileGuard: DomainID=%lu PID=%lu FileName=%wZ | QueryInfo | L0 DENY\n",
-                 state->Domain[slot].Id,
-                 (ULONG)(ULONG_PTR)pid,
-                 &nameInfo->Name);
+            state->Domain[slot].Id, (ULONG)(ULONG_PTR)pid, &nameInfo->Name);
         KG_LOG("FileGuard: DENY PID=%lu Level=0 Op=QueryInfo File=%wZ\n",
-                 (ULONG)(ULONG_PTR)pid, &nameInfo->Name);
+            (ULONG)(ULONG_PTR)pid, &nameInfo->Name);
         KgPushDenyEvent(&state->Domain[slot], pid, &nameInfo->Name);
         KgReleaseState(state);
         FltReleaseFileNameInformation(nameInfo);
         Data->IoStatus.Status = STATUS_OBJECT_NAME_NOT_FOUND;
         Data->IoStatus.Information = 0;
+        KgLogTimer(_kg_ts, "PreQueryInfo", pid, &nameInfo->Name);
         return FLT_PREOP_COMPLETE;
     }
 
     KgReleaseState(state);
     FltReleaseFileNameInformation(nameInfo);
+    KgLogTimer(_kg_ts, "PreQueryInfo", pid, &nameInfo->Name);
     return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
 
@@ -2161,8 +2258,7 @@ PreQueryInformation(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, P
 //   CompletionContext - 完成上下文
 // 返回值：FLT_PREOP_SUCCESS_NO_CALLBACK
 ////////////////////////////////////////////////////////////////////////////////
-static FLT_PREOP_CALLBACK_STATUS
-PreSetSecurity(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
+static FLT_PREOP_CALLBACK_STATUS PreSetSecurity(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
 {
     //UNREFERENCED_PARAMETER(Data);
     UNREFERENCED_PARAMETER(FltObjects);
@@ -2181,8 +2277,7 @@ PreSetSecurity(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID 
 // 返回值：
 //      FLT_PREOP_SUCCESS_NO_CALLBACK
 ////////////////////////////////////////////////////////////////////////////////
-static FLT_PREOP_CALLBACK_STATUS
-PreFlushBuffers(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
+static FLT_PREOP_CALLBACK_STATUS PreFlushBuffers(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
 {
     //UNREFERENCED_PARAMETER(Data);
     UNREFERENCED_PARAMETER(FltObjects);
@@ -2202,8 +2297,7 @@ PreFlushBuffers(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID
 // 返回值：
 //      FLT_PREOP_SUCCESS_NO_CALLBACK
 ////////////////////////////////////////////////////////////////////////////////
-static FLT_PREOP_CALLBACK_STATUS
-PreFileSystemControl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
+static FLT_PREOP_CALLBACK_STATUS PreFileSystemControl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
 {
     UNREFERENCED_PARAMETER(Data);
     UNREFERENCED_PARAMETER(FltObjects);
@@ -2222,8 +2316,8 @@ PreFileSystemControl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, 
 //   Flags             - 后置操作标志
 // 返回值：FLT_POSTOP_FINISHED_PROCESSING
 ////////////////////////////////////////////////////////////////////////////////
-static FLT_POSTOP_CALLBACK_STATUS
-KiloPostDirectoryControl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID CompletionContext, FLT_POST_OPERATION_FLAGS Flags)
+static FLT_POSTOP_CALLBACK_STATUS KiloPostDirectoryControl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects,
+    PVOID CompletionContext, FLT_POST_OPERATION_FLAGS Flags)
 {
     UNREFERENCED_PARAMETER(FltObjects);
     UNREFERENCED_PARAMETER(Flags);
@@ -2276,7 +2370,8 @@ KiloPostDirectoryControl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjec
     PUCHAR prevEntry = NULL;
     ULONG remaining = bufLen;
 
-    while (remaining >= sizeof(ULONG)) {
+    while (remaining >= sizeof(ULONG))
+    {
         ULONG nextOff = *(ULONG*)readPtr;
         ULONG thisEntrySize;
 
@@ -2309,7 +2404,8 @@ KiloPostDirectoryControl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjec
             childPath.Length = (USHORT)(ctx->DirectoryPath.Length + sepLen + fnLen);
             childPath.MaximumLength = (USHORT)(childPath.Length + sizeof(WCHAR));
             childPath.Buffer = (WCHAR*)ExAllocatePool2(POOL_FLAG_NON_PAGED, childPath.MaximumLength, KG_POOL_TAG);
-            if (childPath.Buffer) {
+            if (childPath.Buffer)
+            {
                 RtlCopyMemory(childPath.Buffer, ctx->DirectoryPath.Buffer, ctx->DirectoryPath.Length);
                 if (!dirHasTrailingSlash)
                     childPath.Buffer[ctx->DirectoryPath.Length / sizeof(WCHAR)] = L'\\';
@@ -2317,7 +2413,8 @@ KiloPostDirectoryControl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjec
                 childPath.Buffer[childPath.Length / sizeof(WCHAR)] = L'\0';
 
                 state = KgAcquireState();
-                if (state) {
+                if (state)
+                {
                     BOOLEAN travAllowed = KgIsTraversalAllowed(state, slotIndex, &childPath);
                     if (!travAllowed)
                         keep = KgCheckEnumVisibility(childPid, &childPath);
@@ -2327,7 +2424,8 @@ KiloPostDirectoryControl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjec
             }
         }
 
-        if (keep) {
+        if (keep)
+        {
             if (writePtr != readPtr)
                 RtlMoveMemory(writePtr, readPtr, thisEntrySize);
             if (prevEntry)
@@ -2365,27 +2463,36 @@ done:
 //   Flags - 卸载标志（当前未使用）
 // 返回值：STATUS_SUCCESS
 ////////////////////////////////////////////////////////////////////////////////
-static NTSTATUS
-DriverUnload(FLT_FILTER_UNLOAD_FLAGS Flags)
+static NTSTATUS DriverUnload(FLT_FILTER_UNLOAD_FLAGS Flags)
 {
     UNREFERENCED_PARAMETER(Flags);
     KgUnregisterNetCallbacks();
     KgUnregisterRegCallbacks();
     KgUnregisterProcessCallbacks();
     KgClearAllTrustedPids();
+
     // 通信端口清理（专为 minifilter 通信端口架构预留，当前 IOCTL 模式下 gServerPort 始终为 NULL）
-    if (gServerPort) { FltCloseCommunicationPort(gServerPort); gServerPort = NULL; }
-    if (gDeviceObject) {
+    if (gServerPort)
+    {
+        FltCloseCommunicationPort(gServerPort);
+        gServerPort = NULL;
+    }
+
+    if (gDeviceObject)
+    {
         UNICODE_STRING symLink;
         RtlInitUnicodeString(&symLink, L"\\DosDevices\\KiloGuard");
         IoDeleteSymbolicLink(&symLink);
         IoDeleteDevice(gDeviceObject);
         gDeviceObject = NULL;
     }
-    if (gFilter) FltUnregisterFilter(gFilter);
+
+    if (gFilter)
+        FltUnregisterFilter(gFilter);
 
     KG_SYSTEM_STATE* state = (KG_SYSTEM_STATE*)InterlockedExchangePointer((PVOID*)&gState, NULL);
-    if (state) {
+    if (state)
+    {
         ExWaitForRundownProtectionRelease(&state->RundownRef);
         KgFreeState(state);
     }
@@ -2402,12 +2509,10 @@ DriverUnload(FLT_FILTER_UNLOAD_FLAGS Flags)
 //   CompletionContext - 完成上下文
 // 返回值：FLT_PREOP_SUCCESS_NO_CALLBACK
 ///////////////////////////////////////////////////////////////////////////////
-static FLT_PREOP_CALLBACK_STATUS
-PreQuerySecurity(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
+static FLT_PREOP_CALLBACK_STATUS PreQuerySecurity(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID *CompletionContext)
 {
     UNREFERENCED_PARAMETER(FltObjects);
     UNREFERENCED_PARAMETER(CompletionContext);
-
     KgCheckFileAccess(Data, KgOpRead);
     return FLT_PREOP_SUCCESS_NO_CALLBACK;
 }
@@ -2479,13 +2584,13 @@ static const FLT_REGISTRATION FilterRegistration = {
     sizeof(FLT_REGISTRATION),
     FLT_REGISTRATION_VERSION,
     0,
-    ContextRegistration, // 专为通信端口架构预留，此字段暂为占位
+    ContextRegistration,            // 专为通信端口架构预留，此字段暂为占位
     Callbacks,
     DriverUnload,
-    KgInstanceSetup, // 卷挂载时，Filter Manager 通知 minifilter 附加到卷
-    KgInstanceQueryTeardown, // 查询是否可以卸载实例
-    KgInstanceTeardownStart, // 实例拆卸开始
-    KgInstanceTeardownComplete, // 实例拆卸完成
+    KgInstanceSetup,                // 卷挂载时，Filter Manager 通知 minifilter 附加到卷
+    KgInstanceQueryTeardown,        // 查询是否可以卸载实例
+    KgInstanceTeardownStart,        // 实例拆卸开始
+    KgInstanceTeardownComplete,     // 实例拆卸完成
     NULL, NULL, NULL, NULL, NULL, NULL
 };
 
@@ -2544,9 +2649,10 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
     InitializeObjectAttributes(&oa, &portName, OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, NULL, &sd);
 
     status = FltCreateCommunicationPort(gFilter, &gServerPort, &oa, NULL,
-                                        KgConnectNotify, KgDisconnectNotify,
-                                        KgMessageNotify, 64);
-    if (!NT_SUCCESS(status)) {
+        KgConnectNotify, KgDisconnectNotify, KgMessageNotify, 64);
+
+    if (!NT_SUCCESS(status))
+    {
         FltUnregisterFilter(gFilter);
         gFilter = NULL;
         KgFreeState(gState); gState = NULL;
@@ -2571,10 +2677,11 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
     {
         UNICODE_STRING sddl;
         RtlInitUnicodeString(&sddl, L"D:P(A;;GA;;;WD)");
-        status = IoCreateDeviceSecure(DriverObject, 0, &devName, FILE_DEVICE_UNKNOWN, 0, FALSE,
-                                      &sddl, NULL, &gDeviceObject);
+        status = IoCreateDeviceSecure(DriverObject, 0, &devName, FILE_DEVICE_UNKNOWN,
+            0, FALSE, &sddl, NULL, &gDeviceObject);
     }
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         KgUnregisterProcessCallbacks();
         FltCloseCommunicationPort(gServerPort);
         gServerPort = NULL;
@@ -2585,7 +2692,9 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
     }
 
     status = KgRegisterNetCallbacks(gDeviceObject);
-    if (!NT_SUCCESS(status)) {
+
+    if (!NT_SUCCESS(status))
+    {
         IoDeleteDevice(gDeviceObject);
         gDeviceObject = NULL;
         KgUnregisterProcessCallbacks();
@@ -2600,7 +2709,8 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
     UNICODE_STRING symLink;
     RtlInitUnicodeString(&symLink, L"\\DosDevices\\KiloGuard");
     status = IoCreateSymbolicLink(&symLink, &devName);
-    if (!NT_SUCCESS(status)) {
+    if (!NT_SUCCESS(status))
+    {
         KgUnregisterNetCallbacks();
         IoDeleteDevice(gDeviceObject);
         gDeviceObject = NULL;

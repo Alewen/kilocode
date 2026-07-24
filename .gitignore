@@ -71,7 +71,10 @@ packages/opencode/.artifacts/
 
 # windows bwrap
 winbwrap/bwrap/x64/
+winbwrap/bwrap/.vs/
+winbwrap/bwrap/*.user
 winbwrap/kiloGuard/*.obj
 winbwrap/kiloGuard/KiloGuard.pdb
 winbwrap/kiloGuard/.vs/
 winbwrap/kiloGuard/x64/
+winbwrap/kiloGuard/*.pdb
