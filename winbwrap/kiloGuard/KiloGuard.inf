@@ -1,0 +1,46 @@
+[Version]
+Signature="$WINDOWS NT$"
+Class=ActivityMonitor
+ClassGuid={b86dff51-a31e-4bac-b3cf-e8cfe75c9fc2}
+Provider=%ManufacturerName%
+DriverVer=
+CatalogFile=KiloGuard.cat
+PnpLockdown=1
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+KiloGuard.sys = 1
+
+[Manufacturer]
+%ManufacturerName%=Standard,NT$ARCH$.10.0...16299
+
+[Standard.NT$ARCH$.10.0...16299]
+%KiloGuard.Description% = KiloGuard_Install, FLT\KiloGuard
+
+[KiloGuard_Install.NT]
+CopyFiles = KiloGuard_CopyFiles
+
+[KiloGuard_Install.NT.Services]
+AddService = KiloGuard, 0x00000002, KiloGuard_Service_Inst
+
+[KiloGuard_CopyFiles]
+KiloGuard.sys
+
+[KiloGuard_Service_Inst]
+DisplayName    = %KiloGuard.Description%
+ServiceType    = 2
+StartType      = 3
+ErrorControl   = 1
+ServiceBinary  = %13%\KiloGuard.sys
+LoadOrderGroup = FSFilter Activity Monitor
+Dependencies   = FltMgr
+
+[Strings]
+ManufacturerName    = "KiloGuard"
+DiskName            = "KiloGuard Source Disk"
+KiloGuard.Description = "KiloGuard Minifilter Driver"

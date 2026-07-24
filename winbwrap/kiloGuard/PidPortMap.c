@@ -243,6 +243,7 @@ static VOID KgNetResClassify(const FWPS_INCOMING_VALUES0*in,const FWPS_INCOMING_
 static VOID KgNetTransClassify(const FWPS_INCOMING_VALUES0*in,const FWPS_INCOMING_METADATA_VALUES0*im,PVOID ld,const VOID*cc,const FWPS_FILTER3*f,UINT64 fc,FWPS_CLASSIFY_OUT0*co)
 {
     (void)ld;
+    (void)im;
     (void)cc;
     (void)f;
     (void)fc;

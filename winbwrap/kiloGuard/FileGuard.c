@@ -348,7 +348,7 @@ VOID KgSendProcessEvent(ULONG slotIndex, ULONG pid, ULONG msgType, PUNICODE_STRI
     if (state && slotIndex < KG_MAX_DOMAIN && state->Domain[slotIndex].Active)
         sid = state->Domain[slotIndex].Id;
 
-    KG_PORT_MESSAGE msg = {};
+    KG_PORT_MESSAGE msg = {0};
     msg.MsgType = msgType;
     msg.Pid = pid;
     msg.SID = sid;
@@ -2226,6 +2226,7 @@ static FLT_POSTOP_CALLBACK_STATUS
 KiloPostDirectoryControl(PFLT_CALLBACK_DATA Data, PCFLT_RELATED_OBJECTS FltObjects, PVOID CompletionContext, FLT_POST_OPERATION_FLAGS Flags)
 {
     UNREFERENCED_PARAMETER(FltObjects);
+    UNREFERENCED_PARAMETER(Flags);
 
     KG_DIR_ENUM_CTX* ctx = (KG_DIR_ENUM_CTX*)CompletionContext;
 
