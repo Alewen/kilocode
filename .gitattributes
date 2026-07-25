@@ -36,5 +36,6 @@ packages/kilo-i18n/src/de.ts linguist-generated=false
 packages/kilo-docs/markdoc/partials/cli-commands-table.md linguist-generated=true
 packages/kilo-docs/pages/code-with-ai/platforms/cli-reference.md linguist-generated=true
 
-# keep line end char
-* text=false
+# WinBwrap binaries
+packages/opencode/bin/winbwrap/*.dll binary
+packages/opencode/bin/winbwrap/*.exe binary
