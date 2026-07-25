@@ -441,11 +441,11 @@ int wmain(int argc, wchar_t* argv[])
         }
     }
 
+    drv.StartNotifyThread();
     if (g_showConsole)
     {
-        drv.StartNotifyThread();
+        drv.StartDenyThread();
     }
-    drv.StartDenyThread();
 
     // -----------------------------------------------------------------------
     // Phase 3: Launch child process and attach to sandbox
