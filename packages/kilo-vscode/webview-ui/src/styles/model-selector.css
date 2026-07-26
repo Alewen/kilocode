@@ -441,11 +441,8 @@
 }
 
 .model-selector-item.active {
-  background: var(
-    --surface-interactive-active,
-    var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
-  );
-  color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground));
+  border-left: 3px solid var(--vscode-focusBorder, var(--vscode-list-activeSelectionBackground));
+  padding-left: calc(12px - 3px);
 }
 
 .model-selector-item.active .model-selector-item-name {

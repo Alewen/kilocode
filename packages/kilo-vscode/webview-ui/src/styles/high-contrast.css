@@ -38,7 +38,6 @@ body.vscode-high-contrast-light {
   /* List items — active selection */
   .file-mention-item--active,
   .slash-command-item--active,
-  .model-selector-item.active,
   .thinking-selector-item.selected,
   .mode-switcher-item.selected {
     outline: 1px solid var(--vscode-contrastBorder, transparent);

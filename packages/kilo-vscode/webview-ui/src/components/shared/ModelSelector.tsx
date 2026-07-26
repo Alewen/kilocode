@@ -169,11 +169,6 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   // Per-group collapse state. Not persisted — resets every time the
   // selector mounts so groups are always expanded on reopen.
   const [collapsed, setCollapsed] = createSignal<Set<string>>(new Set())
-  // Snapshot of the active model key captured when the popover opens.
-  // Used to reorder favorites so the current model appears first — but only
-  // based on the state at open-time, not reactively, to avoid list jumps
-  // when the user picks a different model while the popover is still open.
-  const [openSnapshot, setOpenSnapshot] = createSignal<string | null>(null)
 
   let searchRef: HTMLInputElement | undefined
   let searchWrapperRef: HTMLDivElement | undefined
@@ -253,17 +248,15 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     if (props.favorites === false) return []
     if (!session || debouncedSearch()) return []
     const map = new Map(visibleModels().map((m) => [modelKey(m.providerID, m.id), m]))
-    const list = session
+    return session
       .favoriteModels()
       .map((f) => map.get(modelKey(f.providerID, f.modelID)))
       .filter((m): m is EnrichedModel => !!m)
-    const snap = openSnapshot()
-    if (!snap) return list
-    const idx = list.findIndex((m) => modelKey(m.providerID, m.id) === snap)
-    if (idx <= 0) return list
-    const item = list[idx]
-    if (!item) return list
-    return [item, ...list.slice(0, idx), ...list.slice(idx + 1)]
+      .sort((a, b) => {
+        const provider = a.providerName.localeCompare(b.providerName)
+        if (provider !== 0) return provider
+        return a.name.localeCompare(b.name)
+      })
   })
 
   const groups = createMemo<ModelGroup[]>(() => {
@@ -477,11 +470,8 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
 
   createEffect(() => {
     if (open()) {
-      const active = activeModel()
-      const snap = active ? modelKey(active.providerID, active.id) : null
-      setOpenSnapshot(snap)
       // Defer key resolution to next microtask so favoriteModels/groups/rows
-      // recompute with the snapshot before we try to resolve the key.
+      // recompute before we try to resolve the key.
       queueMicrotask(() => {
         const next = activeKey(activeModel())
         setSelectedKey(next ?? defaultKey())
@@ -496,7 +486,6 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       })
       return
     }
-    setOpenSnapshot(null)
     setBrowsing(false)
     setNavigating(false)
     setSearch("")
@@ -951,6 +940,9 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                               }}
                             >
                               <div class="model-selector-item-left">
+                                <Show when={showProvider()}>
+                                  <span class="model-selector-item-provider-tag">{model.providerName}</span>
+                                </Show>
                                 <span class="model-selector-item-name">
                                   {(() => {
                                     const full = sanitizeName(model.name)
@@ -991,9 +983,6 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                                       </Tooltip>
                                     </Show>
                                   </span>
-                                </Show>
-                                <Show when={showProvider()}>
-                                  <span class="model-selector-item-provider-tag">{model.providerName}</span>
                                 </Show>
                               </div>
                             </div>
