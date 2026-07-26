@@ -2670,7 +2670,7 @@ NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
     }
 
     KgRegisterProcessCallbacks();
-    KgRegisterRegCallbacks();
+    KgRegisterRegCallbacks(DriverObject);
 
     UNICODE_STRING devName;
     RtlInitUnicodeString(&devName, L"\\Device\\KiloGuard");

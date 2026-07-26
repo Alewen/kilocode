@@ -553,17 +553,41 @@ KiloImageLoadNotify(PUNICODE_STRING ImageName, HANDLE ProcessId, PIMAGE_INFO Ima
     KeReleaseSpinLock(&gTrackerLock, oldIrql);
 }
 
+#define KG_PROCESS_TERMINATE                   0x0001 // 终止目标进程
+#define KG_PROCESS_CREATE_THREAD               0x0002 // 在目标进程内创建线程
+#define KG_PROCESS_SET_SESSIONID               0x0004 // 修改目标进程的会话 ID
+#define KG_PROCESS_VM_OPERATION                0x0008 // 操作目标进程的虚拟地址空间 (如 AllocateVirtualMemory)
+#define KG_PROCESS_VM_READ                     0x0010 // 读取目标进程的内存
+#define KG_PROCESS_VM_WRITE                    0x0020 // 写入目标进程的内存
+#define KG_PROCESS_DUP_HANDLE                  0x0040 // 复制目标进程的句柄到当前进程
+#define KG_PROCESS_CREATE_PROCESS              0x0080 // 在目标进程内创建新进程 (作为子进程)
+#define KG_PROCESS_SET_QUOTA                   0x0100 // 修改目标进程的配额限制
+#define KG_PROCESS_SET_INFORMATION             0x0200 // 修改目标进程的信息 (优先级、亲和性等)
+#define KG_PROCESS_QUERY_INFORMATION           0x0400 // 查询目标进程的详细信息 (含路径、命令行等)
+#define KG_PROCESS_SUSPEND_RESUME              0x0800 // 挂起或恢复目标进程/线程
+#define KG_PROCESS_QUERY_LIMITED_INFORMATION   0x1000 // 查询目标进程的有限信息 (PID、退出码等基本信息)
+#define KG_PROCESS_SET_LIMITED_INFORMATION     0x2000 // 修改目标进程的有限信息*/
+
+#define KG_PROCESS_DENY_MASK \
+    (KG_PROCESS_SUSPEND_RESUME | KG_PROCESS_DUP_HANDLE)
+
 ////////////////////////////////////////////////////////////////////////////////
 // 功能：进程句柄创建前置回调(ObRegisterCallbacks)
-//       当前为占位实现，句柄权限剥离已确认在 CreateProcess 路径上无法区分
-//       OpenProcess vs CreateProcess（两者参数完全一致），因此放弃剥离。
+//       当沙箱进程尝试通过 OpenProcess 打开其他进程的句柄时，从 DesiredAccess 中剥离危险权限，
+//       使 OpenProcess 因权限不足而失败。但是这回调有个问题，
+//       句柄权限剥离已确认在 CreateProcess 路径上无法区分
+//       OpenProcess vs CreateProcess（两者参数完全一致）。
 // 参数：
 //      RegistrationContext - 注册上下文
 //      Info               - 操作信息
 // 返回值：
-//      OB_PREOP_SUCCESS（始终放行）
-static OB_PREOP_CALLBACK_STATUS
-KiloPreOperation(PVOID RegistrationContext, POB_PRE_OPERATION_INFORMATION Info)
+//      OB_PREOP_SUCCESS（始终返回，不阻止句柄创建，只修改访问掩码）
+// 重要提醒：
+//      此回调运行在 NtCreateUserProcess 的同步路径上，不可使用任何可能阻塞的操作
+//      包括 ExAcquireRundownProtection，否则会导致 CreateProcess 卡死。
+//      因此此处使用无锁原子读取，不获取 rundown 保护。
+////////////////////////////////////////////////////////////////////////////////
+static OB_PREOP_CALLBACK_STATUS KiloPreOperation(PVOID RegistrationContext, POB_PRE_OPERATION_INFORMATION Info)
 {
     /*
      * 这个函数是 ObRegisterCallbacks 的进程句柄创建前置回调。
@@ -603,13 +627,22 @@ KiloPreOperation(PVOID RegistrationContext, POB_PRE_OPERATION_INFORMATION Info)
      *
      * ── 当前状态 ──
      *
-     * 此回调保留注册框架和调用链，但函数体为空，始终放行所有句柄创建。
-     * 将来若找到区分 OpenProcess 与 NtCreateUserProcess 的可靠方法（如
-     * 通过 ObjectInfo 中的额外字段或引入内核补丁），可在此处重新启用
-     * 权限剥离逻辑。
+     * 已实证 ObPre 早于 Notify，无法通过 PidMap 时序区分 CreateProcess
+     * 与 OpenProcess。因此缩小剥离范围：仅剥离 PROCESS_TERMINATE、
+     * PROCESS_SUSPEND_RESUME、PROCESS_DUP_HANDLE 三项——这三项
+     * CreateProcess 不需要，不会导致子进程初始化死锁。
+     * 同时保留 PROCESS_VM_WRITE | PROCESS_VM_OPERATION | PROCESS_CREATE_THREAD
+     * ——这三项是 CreateProcess 初始化子进程地址空间所必需的，不可剥离。
      */
+
     UNREFERENCED_PARAMETER(RegistrationContext);
-    UNREFERENCED_PARAMETER(Info);
+    if (Info->Operation == OB_OPERATION_HANDLE_CREATE) {
+        HANDLE caller = PsGetCurrentProcessId();
+        ULONG slot = KgIsPidInSandBox(caller);
+        if (slot != (ULONG)-1) {
+            Info->Parameters->CreateHandleInformation.DesiredAccess &= ~(KG_PROCESS_DENY_MASK);
+        }
+    }
     return OB_PREOP_SUCCESS;
 }
 

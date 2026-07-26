@@ -2,5 +2,5 @@
 
 #include <fltKernel.h>
 
-NTSTATUS KgRegisterRegCallbacks(VOID);
+NTSTATUS KgRegisterRegCallbacks(PDRIVER_OBJECT DriverObject);
 VOID KgUnregisterRegCallbacks(VOID);

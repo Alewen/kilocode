@@ -219,13 +219,25 @@ KgRegCallback(PVOID context, PVOID arg1, PVOID arg2)
     return STATUS_SUCCESS;
 }
 
-NTSTATUS KgRegisterRegCallbacks(VOID)
+NTSTATUS KgRegisterRegCallbacks(PDRIVER_OBJECT DriverObject)
 {
-    NTSTATUS status = CmRegisterCallback(
-        KgRegCallback,
-        NULL,
-        &gRegCookie
+    UNICODE_STRING altitude;
+    RtlInitUnicodeString(&altitude, L"360000");
+
+    NTSTATUS status = CmRegisterCallbackEx(
+        KgRegCallback,     // 1. Function
+        &altitude,         // 2. Altitude
+        DriverObject,      // 3. Driver
+        NULL,              // 4. Context
+        &gRegCookie,       // 5. Cookie
+        NULL               // 6. Reserved
     );
+
+    // NTSTATUS status = CmRegisterCallback(
+    //     KgRegCallback,
+    //     NULL,
+    //     &gRegCookie
+    // );
 
     if (NT_SUCCESS(status)) {
         KG_LOG("RegGuard: Callback registered\n");
