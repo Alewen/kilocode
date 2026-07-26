@@ -585,9 +585,16 @@ int wmain(int argc, wchar_t* argv[])
     // Assign to Job Object
     if (hJob)
     {
-        if (!AssignProcessToJobObject(hJob, pi.hProcess))
+        HANDLE hProcJob = NULL;
+        if (DuplicateHandle(GetCurrentProcess(), pi.hProcess, GetCurrentProcess(),
+            &hProcJob, PROCESS_SET_QUOTA | PROCESS_TERMINATE, FALSE, 0))
         {
-            std::wcerr << L"bwrap.exe: AssignProcessToJobObject failed (" << GetLastError() << L")" << std::endl;
+            if (!AssignProcessToJobObject(hJob, hProcJob))
+            {
+                DWORD err = GetLastError();
+                std::wcerr << L"bwrap.exe: AssignProcessToJobObject failed (" << err << L")" << std::endl;
+            }
+            CloseHandle(hProcJob);
         }
     }
     // Resume child
