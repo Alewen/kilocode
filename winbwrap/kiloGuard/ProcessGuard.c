@@ -569,7 +569,7 @@ KiloImageLoadNotify(PUNICODE_STRING ImageName, HANDLE ProcessId, PIMAGE_INFO Ima
 #define KG_PROCESS_SET_LIMITED_INFORMATION     0x2000 // 修改目标进程的有限信息*/
 
 #define KG_PROCESS_DENY_MASK \
-    (KG_PROCESS_SUSPEND_RESUME | KG_PROCESS_DUP_HANDLE)
+    (KG_PROCESS_TERMINATE | KG_PROCESS_SUSPEND_RESUME | KG_PROCESS_DUP_HANDLE)
 
 ////////////////////////////////////////////////////////////////////////////////
 // 功能：进程句柄创建前置回调(ObRegisterCallbacks)
@@ -639,8 +639,19 @@ static OB_PREOP_CALLBACK_STATUS KiloPreOperation(PVOID RegistrationContext, POB_
     if (Info->Operation == OB_OPERATION_HANDLE_CREATE) {
         HANDLE caller = PsGetCurrentProcessId();
         ULONG slot = KgIsPidInSandBox(caller);
-        if (slot != (ULONG)-1) {
-            Info->Parameters->CreateHandleInformation.DesiredAccess &= ~(KG_PROCESS_DENY_MASK);
+        if (slot != (ULONG)-1)
+        {
+            PEPROCESS target = (PEPROCESS)Info->Object;
+            LONGLONG ct = PsGetProcessCreateTimeQuadPart(target);
+            LARGE_INTEGER now;
+            KeQuerySystemTimePrecise(&now);
+            LONGLONG deltaUs = (now.QuadPart - ct) / 10;
+            KG_LOG("KiloGuard: KiloPreOperation CallerPID=%lu TargetPID=%lu TargetDelta=%lld us\n",
+                (ULONG)(ULONG_PTR)caller, (ULONG)(ULONG_PTR)PsGetProcessId(target), deltaUs);
+            if (deltaUs > 1000)
+            {
+                Info->Parameters->CreateHandleInformation.DesiredAccess &= ~(KG_PROCESS_DENY_MASK);
+            }
         }
     }
     return OB_PREOP_SUCCESS;
