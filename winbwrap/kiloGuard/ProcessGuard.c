@@ -8,6 +8,24 @@
 #include "KiloGuardSecret.h"
 #include <ntimage.h>
 
+#define KG_PROCESS_TERMINATE                   0x0001 // 终止目标进程
+#define KG_PROCESS_CREATE_THREAD               0x0002 // 在目标进程内创建线程
+#define KG_PROCESS_SET_SESSIONID               0x0004 // 修改目标进程的会话 ID
+#define KG_PROCESS_VM_OPERATION                0x0008 // 操作目标进程的虚拟地址空间 (如 AllocateVirtualMemory)
+#define KG_PROCESS_VM_READ                     0x0010 // 读取目标进程的内存
+#define KG_PROCESS_VM_WRITE                    0x0020 // 写入目标进程的内存
+#define KG_PROCESS_DUP_HANDLE                  0x0040 // 复制目标进程的句柄到当前进程
+#define KG_PROCESS_CREATE_PROCESS              0x0080 // 在目标进程内创建新进程 (作为子进程)
+#define KG_PROCESS_SET_QUOTA                   0x0100 // 修改目标进程的配额限制
+#define KG_PROCESS_SET_INFORMATION             0x0200 // 修改目标进程的信息 (优先级、亲和性等)
+#define KG_PROCESS_QUERY_INFORMATION           0x0400 // 查询目标进程的详细信息 (含路径、命令行等)
+#define KG_PROCESS_SUSPEND_RESUME              0x0800 // 挂起或恢复目标进程/线程
+#define KG_PROCESS_QUERY_LIMITED_INFORMATION   0x1000 // 查询目标进程的有限信息 (PID、退出码等基本信息)
+#define KG_PROCESS_SET_LIMITED_INFORMATION     0x2000 // 修改目标进程的有限信息*/
+
+#define KG_PROCESS_DENY_MASK \
+    (KG_PROCESS_TERMINATE | KG_PROCESS_SUSPEND_RESUME | KG_PROCESS_DUP_HANDLE)
+
 NTSYSAPI NTSTATUS NTAPI ZwQueryInformationProcess(
     HANDLE ProcessHandle,
     ULONG ProcessInformationClass,
@@ -433,9 +451,29 @@ KiloProcessNotify(PEPROCESS Process, HANDLE ProcessId, PPS_CREATE_NOTIFY_INFO Cr
 
         ULONG exitSlot = KgLookupSlotByPid(state->PidMap, ProcessId);
 
+        HANDLE orphanPids[256];
+        ULONG orphanCount = 0;
+
         {
             USHORT fidx = (USHORT)((ULONG_PTR)ProcessId & 0xFFFF);
+            if (exitSlot != (ULONG)-1) {
+                DbgPrint("ProcessGuard: BWRAP_CHK PID=%lu exitSlot=%lu bwrapFast=%u\n",
+                    (ULONG)(ULONG_PTR)ProcessId, exitSlot, (ULONG)gBwrapFast[fidx]);
+            }
             if (exitSlot != (ULONG)-1 && gBwrapFast[fidx]) {
+                DbgPrint("ProcessGuard: BWRAP_EXIT PID=%lu DomainID=%lu Dumping orphan PIDs\n",
+                    (ULONG)(ULONG_PTR)ProcessId, state->Domain[exitSlot].Id);
+                for (ULONG b = 0; b < KG_PID_BUCKETS; b++) {
+                    for (PLIST_ENTRY e = newMap->Buckets[b].Flink; e != &newMap->Buckets[b]; e = e->Flink) {
+                        KG_PID_ENTRY* entry = CONTAINING_RECORD(e, KG_PID_ENTRY, Link);
+                        if (entry->SlotIndex == exitSlot && entry->Pid != ProcessId) {
+                            if (orphanCount < 256)
+                                orphanPids[orphanCount++] = entry->Pid;
+                            DbgPrint("ProcessGuard: BWRAP_EXIT Orphan PID=%lu Slot=%lu\n",
+                                (ULONG)(ULONG_PTR)entry->Pid, exitSlot);
+                        }
+                    }
+                }
                 gBwrapFast[fidx] = 0;
                 KgFreePathRules(&state->Domain[exitSlot]);
                 state->Domain[exitSlot].Active = FALSE;
@@ -465,6 +503,20 @@ KiloProcessNotify(PEPROCESS Process, HANDLE ProcessId, PPS_CREATE_NOTIFY_INFO Cr
         KG_PID_MAP* oldMap = KgSwapPidMap(newMap);
         KeReleaseSpinLock(&gStateLock, oldIrql);
         KgFreeOldPidMap(oldMap);
+
+        for (ULONG i = 0; i < orphanCount; i++) {
+            HANDLE hProc = NULL;
+            CLIENT_ID cid = { orphanPids[i], NULL };
+            OBJECT_ATTRIBUTES oa;
+            InitializeObjectAttributes(&oa, NULL, OBJ_KERNEL_HANDLE, NULL, NULL);
+            NTSTATUS s = ZwOpenProcess(&hProc, KG_PROCESS_TERMINATE, &oa, &cid);
+            if (NT_SUCCESS(s)) {
+                ZwTerminateProcess(hProc, STATUS_SUCCESS);
+                ZwClose(hProc);
+                DbgPrint("ProcessGuard: BWRAP_EXIT Terminated orphan PID=%lu\n",
+                    (ULONG)(ULONG_PTR)orphanPids[i]);
+            }
+        }
 
         if (exitSlot != (ULONG)-1)
             KgSendProcessEvent(exitSlot, 0, (ULONG)(ULONG_PTR)ProcessId,
@@ -554,24 +606,6 @@ KiloImageLoadNotify(PUNICODE_STRING ImageName, HANDLE ProcessId, PIMAGE_INFO Ima
     }
     KeReleaseSpinLock(&gTrackerLock, oldIrql);
 }
-
-#define KG_PROCESS_TERMINATE                   0x0001 // 终止目标进程
-#define KG_PROCESS_CREATE_THREAD               0x0002 // 在目标进程内创建线程
-#define KG_PROCESS_SET_SESSIONID               0x0004 // 修改目标进程的会话 ID
-#define KG_PROCESS_VM_OPERATION                0x0008 // 操作目标进程的虚拟地址空间 (如 AllocateVirtualMemory)
-#define KG_PROCESS_VM_READ                     0x0010 // 读取目标进程的内存
-#define KG_PROCESS_VM_WRITE                    0x0020 // 写入目标进程的内存
-#define KG_PROCESS_DUP_HANDLE                  0x0040 // 复制目标进程的句柄到当前进程
-#define KG_PROCESS_CREATE_PROCESS              0x0080 // 在目标进程内创建新进程 (作为子进程)
-#define KG_PROCESS_SET_QUOTA                   0x0100 // 修改目标进程的配额限制
-#define KG_PROCESS_SET_INFORMATION             0x0200 // 修改目标进程的信息 (优先级、亲和性等)
-#define KG_PROCESS_QUERY_INFORMATION           0x0400 // 查询目标进程的详细信息 (含路径、命令行等)
-#define KG_PROCESS_SUSPEND_RESUME              0x0800 // 挂起或恢复目标进程/线程
-#define KG_PROCESS_QUERY_LIMITED_INFORMATION   0x1000 // 查询目标进程的有限信息 (PID、退出码等基本信息)
-#define KG_PROCESS_SET_LIMITED_INFORMATION     0x2000 // 修改目标进程的有限信息*/
-
-#define KG_PROCESS_DENY_MASK \
-    (KG_PROCESS_TERMINATE | KG_PROCESS_SUSPEND_RESUME | KG_PROCESS_DUP_HANDLE)
 
 ////////////////////////////////////////////////////////////////////////////////
 // 功能：进程句柄创建前置回调(ObRegisterCallbacks)

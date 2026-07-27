@@ -33,7 +33,6 @@ DriverClient::~DriverClient()
     DisconnectPort();
     if (m_h != INVALID_HANDLE_VALUE)
     {
-        DestroySandbox();
         Deauthenticate();
         CloseHandle(m_h);
     }
