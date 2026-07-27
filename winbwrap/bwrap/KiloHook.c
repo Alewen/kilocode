@@ -86,24 +86,27 @@ static int KgModRmLen(BYTE* p)
 static int KgGetInstLen(BYTE* addr)
 {
     BYTE b = addr[0];
-    // 1-byte: nop, ret, int3, push/pop reg, inc/dec reg
-    if (b == 0x90 || b == 0xCC || b == 0xC3 || b == 0xCB || b == 0xCF) return 1;
-    if (b >= 0x50 && b <= 0x5F) return 1;
-    // ret imm16
-    if (b == 0xC2 || b == 0xCA) return 3;
-    // push imm8, push imm32
-    if (b == 0x6A) return 2;
-    if (b == 0x68) return 5;
-    // call rel32, jmp rel32
-    if (b == 0xE8 || b == 0xE9) return 5;
-    // jcc rel8 (0x70-0x7F)
-    if (b >= 0x70 && b <= 0x7F) return 2;
-    // jmp short, call/jmp reg (indirect)
-    if (b == 0xEB) return 2;
-    if (b == 0xFF) return 2 + KgModRmLen(addr + 1);
-    // REX prefix (0x40-0x4F)
+    // Extract REX prefix first so all subsequent checks see the true opcode
     int rex = 0;
     if (b >= 0x40 && b <= 0x4F) { rex = 1; b = addr[1]; }
+    // 1-byte: nop, ret, int3, push/pop reg, inc/dec reg
+    if (b == 0x90 || b == 0xCC || b == 0xC3 || b == 0xCB || b == 0xCF) return 1 + rex;
+    if (b >= 0x50 && b <= 0x5F) return 1 + rex;
+    // leave, pushfq, popfq, clc, stc, cld, std
+    if (b == 0xC9 || b == 0x9C || b == 0x9D || b == 0xF8 ||
+        b == 0xF9 || b == 0xFC || b == 0xFD) return 1 + rex;
+    // ret imm16
+    if (b == 0xC2 || b == 0xCA) return 3 + rex;
+    // push imm8, push imm32
+    if (b == 0x6A) return 2 + rex;
+    if (b == 0x68) return 5 + rex;
+    // call rel32, jmp rel32
+    if (b == 0xE8 || b == 0xE9) return 5 + rex;
+    // jcc rel8 (0x70-0x7F)
+    if (b >= 0x70 && b <= 0x7F) return 2 + rex;
+    // jmp short, call/jmp reg (indirect)
+    if (b == 0xEB) return 2 + rex;
+    if (b == 0xFF) return 1 + rex + KgModRmLen(addr + 1 + rex);
     // 0F-prefixed two-byte opcodes
     if (b == 0x0F) {
         BYTE b2 = addr[1 + rex];
@@ -122,16 +125,7 @@ static int KgGetInstLen(BYTE* addr)
         if (b2 == 0xAE) return 2 + rex + KgModRmLen(addr + 2 + rex);
         return 2 + rex + KgModRmLen(addr + 2 + rex);
     }
-    // 0F 38 / 0F 3A two-byte escape sequences
-    // (handled by the 0F case above already)
     // Common 1-byte+ModRM instructions
-    // 8B = mov r, r/m; 89 = mov r/m, r
-    // 85 = test; 03 = add; 2B = sub; 33 = xor; 39 = cmp; 3B = cmp
-    // 8D = lea; 63 = movsxd; 01 = add; 09 = or; 11 = adc; 19 = sbb
-    // 21 = and; 29 = sub; 31 = xor; 39 = cmp; 41 = ror; 09 = or
-    // 8A = mov r8, r/m8; 88 = mov r/m8, r8
-    // 8B = mov r, r/m; 89 = mov r/m, r
-    // 8D = lea; 8B = mov
     if (b == 0x01 || b == 0x03 || b == 0x09 || b == 0x11 || b == 0x19 ||
         b == 0x21 || b == 0x29 || b == 0x31 || b == 0x39 || b == 0x3B ||
         b == 0x63 || b == 0x85 || b == 0x89 || b == 0x8B || b == 0x8D ||
@@ -143,30 +137,14 @@ static int KgGetInstLen(BYTE* addr)
     if (b == 0x81) return 1 + rex + KgModRmLen(addr + 1 + rex) + 4;
     // C7 = mov r/m, imm32
     if (b == 0xC7) return 1 + rex + KgModRmLen(addr + 1 + rex) + 4;
-    // 48 8B 05 xx xx xx xx = mov rax, [rip+disp32]
-    // 48 8D xx = lea, 48 63 xx = movsxd
-    // A0 = mov al, moffs8; A1 = mov eax/rax, moffs
-    // A2 = mov moffs8, al; A3 = mov moffs, eax/rax
+    // A0-A3 = mov moffs (absolute address)
     if (b == 0xA0 || b == 0xA1 || b == 0xA2 || b == 0xA3) {
         return 1 + rex + (rex ? 8 : 4);
     }
-    // B0-BF = mov reg8, imm8; B8-BF = mov reg32/64, imm32/64
-    // B0-B7 with REX = mov r8, imm8; B8-BF with REX = mov r64, imm64
+    // B0-BF = mov reg, imm
     if (b >= 0xB0 && b <= 0xB7) return 1 + rex + 1;
     if (b >= 0xB8 && b <= 0xBF) return 1 + rex + (rex ? 8 : 4);
-    // C9 = leave; 9C = pushfq; 9D = popfq; F8 = clc; F9 = stc; FC = cld; FD = std
-    if (b == 0xC9 || b == 0x9C || b == 0x9D || b == 0xF8 ||
-        b == 0xF9 || b == 0xFC || b == 0xFD) return 1 + rex;
-    // 48 35 xx xx xx xx = xor rax, imm32
-    // 48 05 xx xx xx xx = add rax, imm32
-    // 48 2D xx xx xx xx = sub rax, imm32
-    // 48 25 xx xx xx xx = and rax, imm32
-    // 48 0D xx xx xx xx = or rax, imm32
-    // 34 = xor al, imm8; 35 = xor eax, imm32
-    // 04 = add al, imm8; 05 = add eax, imm32
-    // 2C = sub al, imm8; 2D = sub eax, imm32
-    // 24 = and al, imm8; 25 = and eax, imm32
-    // 0C = or al, imm8; 0D = or eax, imm32
+    // al/ax/eax/rax immediate arithmetic
     if (b == 0x04 || b == 0x0C || b == 0x14 || b == 0x1C ||
         b == 0x24 || b == 0x2C || b == 0x34 || b == 0x3C)
         return 1 + rex + 1;
@@ -179,10 +157,7 @@ static int KgGetInstLen(BYTE* addr)
     if (b == 0x6B) return 1 + rex + KgModRmLen(addr + 1 + rex) + 1;
     // 8F = pop r/m
     if (b == 0x8F) return 1 + rex + KgModRmLen(addr + 1 + rex);
-    // F3 = rep prefix; F2 = repne prefix
-    // 66 = operand size prefix; 67 = address size prefix
-    // 2E = CS; 36 = SS; 3E = DS; 26 = ES; 64 = FS; 65 = GS
-    // 9B = fwait
+    // F3/F2/66/67/2E/36/3E/26/64/65/9B — legacy prefixes (recurse)
     static const BYTE prefixes[] = {0xF3, 0xF2, 0x66, 0x67, 0x2E, 0x36, 0x3E, 0x26, 0x64, 0x65, 0x9B};
     for (int i = 0; i < (int)(sizeof(prefixes)/sizeof(prefixes[0])); i++) {
         if (b == prefixes[i]) {
@@ -231,6 +206,7 @@ static void InstallHook(BYTE* target, void* detour, int hookSize, BYTE* saved, B
     *(DWORD*)(tramp + hookSize + 2) = 0;
     *(void**)(tramp + hookSize + 6) = target + hookSize;
     VirtualProtect(tramp, hookSize + 14, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), tramp, hookSize + 14);
     *trampOut = tramp;
     *origOut = (void*)tramp;
     // Write jmp from target to detour
@@ -327,7 +303,6 @@ static BOOL WINAPI DetourShellExecuteExW(LPSHELLEXECUTEINFOW pExecInfo)
 static void Install(void)
 {
     HMODULE hMod = GetModuleHandleA("combase.dll");
-    if (!hMod) hMod = LoadLibraryA("combase.dll");
     if (!hMod) return;
 
     // ---- Hook CoCreateInstance ----
@@ -340,7 +315,6 @@ static void Install(void)
             BYTE saved[24];
             InstallHook(g_TargetCCI, DetourCoCreateInstance, hookSize, saved,
                         (BYTE**)&g_OriginalCCI, (void**)&g_OriginalCCI);
-            memcpy(saved, g_TargetCCI, hookSize); // restore saved after hook overwritten
         }
     }
 
@@ -365,7 +339,6 @@ static void Install(void)
             BYTE saved[24];
             InstallHook(g_TargetCGO, DetourCoGetClassObject, hookSize, saved,
                         (BYTE**)&g_OriginalCGO, (void**)&g_OriginalCGO);
-            memcpy(saved, g_TargetCGO, hookSize);
         }
     }
 
@@ -382,13 +355,37 @@ static void Install(void)
                     BYTE saved[24];
                     InstallHook(g_TargetSEEW, DetourShellExecuteExW, hookSize, saved,
                                 (BYTE**)&g_OriginalSEEW, (void**)&g_OriginalSEEW);
-                    memcpy(saved, g_TargetSEEW, hookSize);
                 }
             }
         }
     }
 
     InterlockedExchange(&g_Ready, 1);
+
+    // Register detour addresses with CFG so the FF 25 indirect JMP written
+    // into combase.dll / shell32.dll won't crash on CFG-enabled processes.
+    // SetProcessValidCallTargets is a no-op when CFG is off.
+    {
+        typedef BOOL (WINAPI *SetProcessValidCallTargetsFn)(HANDLE, PVOID, SIZE_T, ULONG, PULONG);
+        HMODULE hK32 = GetModuleHandleA("kernel32.dll");
+        if (hK32) {
+            SetProcessValidCallTargetsFn fn = (SetProcessValidCallTargetsFn)GetProcAddress(hK32, "SetProcessValidCallTargets");
+            if (fn) {
+                PVOID addrs[6];
+                ULONG n = 0;
+                if (g_TargetCCI) addrs[n++] = DetourCoCreateInstance;
+                if (g_TargetCGO) addrs[n++] = DetourCoGetClassObject;
+                if (g_TargetSEEW) addrs[n++] = DetourShellExecuteExW;
+                if (g_OriginalCCI) addrs[n++] = g_OriginalCCI;
+                if (g_OriginalCGO) addrs[n++] = g_OriginalCGO;
+                if (g_OriginalSEEW) addrs[n++] = g_OriginalSEEW;
+                if (n) {
+                    ULONG flags = 0;
+                    fn(GetCurrentProcess(), addrs, n * sizeof(PVOID), 0, &flags);
+                }
+            }
+        }
+    }
 }
 
 // ============================================================================
