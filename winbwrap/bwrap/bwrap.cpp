@@ -1,5 +1,12 @@
 ﻿
+#include "bwrap.h"
 #include "DriverClient.h"
+
+// KG_PORT_MSG_PROCESS_CREATE      1   沙箱内新进程创建
+// KG_PORT_MSG_PROCESS_EXIT        2   沙箱内进程退出
+// KG_PORT_MSG_READY_FOR_INJECT    3   进程已加载 oleaut32.dll，可以注入 KiloHook
+// IOCTL_KG_QUERY_EVENTS               — DLL 加载失败事件，驱动使用 KgPushEvent 推入回环
+// IOCTL_KG_QUERY_DENY_EVENTS          — 文件访问被拒绝事件，驱动使用 KgPushDenyEvent 推入回环
 
 // ---------------------------------------------------------------------------
 // Help
@@ -20,6 +27,7 @@ static void ShowHelp()
         << "                              pwsh is always resolved by default.\n"
         << "  --showbox                 Print sandbox SID to stdout after creation\n"
         << "  --showConsole             Enable diagnostic messages on the console\n"
+        << "  --showDeny                Enable deny messages on the console\n"
         << "  --no-inject               Skip KiloHook.dll injection into pwsh\n"
         << "  --ses <id>                Log invocation to session file for Agent Manager\n"
         << "  --cwd <path>              Set working directory for child process\n"
@@ -131,6 +139,10 @@ int wmain(int argc, wchar_t* argv[])
         else if (a == L"--showConsole")
         {
             g_showConsole = true;
+        }
+        else if (a == L"--showDeny")
+        {
+            g_showDeny = true;
         }
         else if (a == L"--no-inject")
         {
@@ -398,16 +410,16 @@ int wmain(int argc, wchar_t* argv[])
             Wprintln(L"bwrap.exe: Net-whitelisted " + nt + L"\n");
     }
 
-    // Deny log: enable only when --showConsole is set
-    drv.SetDenyLogEnabled(sid, g_showConsole ? TRUE : FALSE);
+    // Deny log: enable only when --showDeny is set
+    drv.SetDenyLogEnabled(sid, g_showDeny ? TRUE : FALSE);
 
     // Attach bwrap itself to the sandbox.
     // Subsequent CreateProcess will have bwrap as parent, which IS in PidMap,
     // so child processes automatically inherit sandbox via KiloProcessNotify.
     drv.AttachProcess(GetCurrentProcessId(), sid);
     WCHAR abuf[128];
-    int alen = swprintf_s(abuf, ARRAYSIZE(abuf), L"bwrap.exe: Attached own PID %lu to sandbox SID=%lu\n",
-        GetCurrentProcessId(), sid);
+    int alen = swprintf_s(abuf, ARRAYSIZE(abuf), L"bwrap.exe: Sandbox SID=%lu Attached own PID %lu\n",
+        sid, GetCurrentProcessId());
     if (alen > 0)
     {
         Wprintln(abuf);
@@ -470,11 +482,17 @@ int wmain(int argc, wchar_t* argv[])
             std::wstring foundPath = FindExePathFromPath(shortName);
             if (!foundPath.empty())
             {
+                WCHAR cbuf[1024];
                 exe = foundPath;
-                if (IsAppExecutionAlias(exe))
-                    Wprintln(L"bwrap.exe: Resolved AppExec alias " + shortName + L" -> " + exe + L"\n");
-                else
-                    Wprintln(L"bwrap.exe: Resolved from PATH: " + shortName + L" -> " + exe + L"\n");
+                if (IsAppExecutionAlias(exe)) {
+                    int clen = swprintf_s(cbuf, ARRAYSIZE(cbuf),
+                        L"bwrap.exe: Sandbox SID=%lu Resolved AppExec alias from PATH: %s -> %s\n", sid, shortName.c_str(), exe.c_str());
+                    if (clen > 0) Wprintln(cbuf);
+                } else {
+                    int clen = swprintf_s(cbuf, ARRAYSIZE(cbuf),
+                        L"bwrap.exe: Sandbox SID=%lu Resolved from PATH: %s -> %s\n", sid, shortName.c_str(), exe.c_str());
+                    if (clen > 0) Wprintln(cbuf);
+                }
             }
             else
             {
@@ -551,7 +569,8 @@ int wmain(int argc, wchar_t* argv[])
     if (hJob)
     {
         JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobInfo = {};
-        jobInfo.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        jobInfo.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE; // JOB 关闭通杀
+        // JOB_OBJECT_LIMIT_BREAKAWAY_OK;  // ← 设置这个之后，子进程可以通过 CREATE_BREAKAWAY_FROM_JOB 逃逸
         if (!SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &jobInfo, sizeof(jobInfo)))
         {
             CloseHandle(hJob);
@@ -563,7 +582,8 @@ int wmain(int argc, wchar_t* argv[])
     UINT oldErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
     PROCESS_INFORMATION pi = {};
     BOOL ok = CreateProcessW(NULL, cmdbuf.data(), NULL, NULL, TRUE,
-        CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT, NULL, lpCwd, &si, &pi);
+        CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT | CREATE_BREAKAWAY_FROM_JOB, // 脱离旧的JOB
+        NULL, lpCwd, &si, &pi);
     SetErrorMode(oldErrorMode);
 
     if (!ok)
@@ -575,7 +595,8 @@ int wmain(int argc, wchar_t* argv[])
     else
     {
         WCHAR cbuf[512];
-        int clen = swprintf_s(cbuf, ARRAYSIZE(cbuf), L"bwrap.exe: Created process PID=%lu ProcessName=%s\n", pi.dwProcessId, exe.c_str());
+        int clen = swprintf_s(cbuf, ARRAYSIZE(cbuf), L"bwrap.exe: Sandbox SID=%lu Proces PID=%lu ProcName=%s\n",
+            sid, pi.dwProcessId, exe.c_str());
         if (clen > 0) Wprintln(cbuf);
     }
 
@@ -589,7 +610,7 @@ int wmain(int argc, wchar_t* argv[])
         if (DuplicateHandle(GetCurrentProcess(), pi.hProcess, GetCurrentProcess(),
             &hProcJob, PROCESS_SET_QUOTA | PROCESS_TERMINATE, FALSE, 0))
         {
-            if (!AssignProcessToJobObject(hJob, hProcJob))
+            if (!AssignProcessToJobObject(hJob, hProcJob)) // 进入进的 JOB
             {
                 DWORD err = GetLastError();
                 std::wcerr << L"bwrap.exe: AssignProcessToJobObject failed (" << err << L")" << std::endl;
@@ -607,6 +628,11 @@ int wmain(int argc, wchar_t* argv[])
 
     DWORD ec = 0;
     GetExitCodeProcess(pi.hProcess, &ec);
+
+    WCHAR exitBuf[512];
+    int exlen = swprintf_s(exitBuf, ARRAYSIZE(exitBuf), L"bwrap.exe: Sandbox SID=%lu Proces PID=%lu ExitCode=%lu WaitForSingleObject End!\n",
+            sid, pi.dwProcessId, ec);
+    if (exlen > 0) Wprintln(exitBuf);
 
     drv.DrainEvents();
 

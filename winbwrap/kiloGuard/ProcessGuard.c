@@ -360,8 +360,10 @@ KiloProcessNotify(PEPROCESS Process, HANDLE ProcessId, PPS_CREATE_NOTIFY_INFO Cr
                          state->Domain[parentSlot].Id,
                          (ULONG)(ULONG_PTR)ProcessId,
                          imageName);
-                KgSendProcessEvent(parentSlot, (ULONG)(ULONG_PTR)ProcessId,
-                                   KG_PORT_MSG_PROCESS_CREATE, imageName);
+
+                //KgSendProcessEvent(parentSlot, (ULONG)(ULONG_PTR)ProcessId, KG_PORT_MSG_PROCESS_CREATE, imageName);
+                KgSendProcessEvent(parentSlot, (ULONG)(ULONG_PTR)CreateInfo->ParentProcessId,
+                    (ULONG)(ULONG_PTR)ProcessId, KG_PORT_MSG_PROCESS_CREATE, imageName);
                 ExFreePool(imageName);
             }
         } else {
@@ -465,7 +467,7 @@ KiloProcessNotify(PEPROCESS Process, HANDLE ProcessId, PPS_CREATE_NOTIFY_INFO Cr
         KgFreeOldPidMap(oldMap);
 
         if (exitSlot != (ULONG)-1)
-            KgSendProcessEvent(exitSlot, (ULONG)(ULONG_PTR)ProcessId,
+            KgSendProcessEvent(exitSlot, 0, (ULONG)(ULONG_PTR)ProcessId,
                                KG_PORT_MSG_PROCESS_EXIT, NULL);
     }
 }
@@ -544,7 +546,7 @@ KiloImageLoadNotify(PUNICODE_STRING ImageName, HANDLE ProcessId, PIMAGE_INFO Ima
             if ((len >= 9  && _wcsicmp(name + len - 9,  L"\\pwsh.exe") == 0) ||
                 (len >= 16 && _wcsicmp(name + len - 16, L"\\powershell.exe") == 0)) {
                 KeReleaseSpinLock(&gTrackerLock, oldIrql);
-                KgSendProcessEvent(slot, (ULONG)(ULONG_PTR)ProcessId,
+                KgSendProcessEvent(slot, 0, (ULONG)(ULONG_PTR)ProcessId,
                                    KG_PORT_MSG_READY_FOR_INJECT, NULL);
                 return;
             }

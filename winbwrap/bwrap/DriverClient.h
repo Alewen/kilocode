@@ -60,7 +60,9 @@ public:
 
         WCHAR buf[128];
         int len = swprintf_s(buf, ARRAYSIZE(buf), L"bwrap.exe: Sandbox SID=%lu Port thread started\n", self->m_sid);
-        if (len > 0) Wprintln(buf);
+        if (len > 0) {
+            Wprintln(buf);
+        }
         while (true)
         {
             HRESULT hr = FilterGetMessage(self->m_portHandle, hdr,
@@ -75,7 +77,8 @@ public:
                     self->m_pids.insert(msg->Pid);
                     std::wstring winPath = NtPathToWin32(msg->ImageName);
                     WCHAR buf[512];
-                    int blen = swprintf_s(buf, ARRAYSIZE(buf), L"bwrap.exe: Sandbox SID=%lu Create PID=%lu ProcName=%s\n", msg->SID, msg->Pid, winPath.c_str());
+                    int blen = swprintf_s(buf, ARRAYSIZE(buf), L"bwrap.exe: Sandbox SID=%lu Parent PID=%lu Create PID=%lu ProcName=%s\n",
+                        msg->SID, msg->ParentPid, msg->Pid, winPath.c_str());
                     if (blen > 0) Wprintln(buf);
 
                 }

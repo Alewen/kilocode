@@ -20,4 +20,4 @@ VOID KgRemoveTrustedPid(HANDLE Pid);
 //   imageName - 进程映像名称（可选）
 // 返回值：无
 ////////////////////////////////////////////////////////////////////////////////
-VOID KgSendProcessEvent(ULONG slotIndex, ULONG pid, ULONG msgType, PUNICODE_STRING imageName);
+VOID KgSendProcessEvent(ULONG slotIndex, ULONG parentPid, ULONG pid, ULONG msgType, PUNICODE_STRING imageName);

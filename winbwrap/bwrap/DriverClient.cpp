@@ -127,7 +127,7 @@ void DriverClient::SetDenyLogEnabled(KG_SANDBOX_ID sid, BOOLEAN enabled)
 {
     KG_SET_DENY_LOG_INPUT in;
     in.Sid = sid;
-    in.Enabled = enabled;
+    in.IsEnableDeny = enabled;
     DWORD junk;
     if (!DeviceIoControl(m_h, IOCTL_KG_SET_DENY_LOG, &in, sizeof(in), NULL, 0, &junk, NULL))
         Die("IOCTL_KG_SET_DENY_LOG failed");
@@ -296,8 +296,10 @@ void DriverClient::ConnectNotificationPort()
         return;
     }
     WCHAR buf[128];
-    int len = swprintf_s(buf, ARRAYSIZE(buf), L"bwrap.exe: Notification port connected SID=%lu\n", m_sid);
-    if (len > 0) Wprintln(buf);
+    int len = swprintf_s(buf, ARRAYSIZE(buf), L"bwrap.exe: Sandbox SID=%lu Notification port connected\n", m_sid);
+    if (len > 0) {
+        Wprintln(buf);
+    }
     m_portThread = CreateThread(NULL, 0, PortThreadProc, this, 0, NULL);
 }
 

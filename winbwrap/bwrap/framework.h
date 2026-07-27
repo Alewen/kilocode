@@ -120,7 +120,7 @@ typedef struct
 typedef struct
 {
     KG_SANDBOX_ID Sid;
-    BOOLEAN Enabled;
+    BOOLEAN IsEnableDeny;
 } KG_SET_DENY_LOG_INPUT;
 
 // ---------------------------------------------------------------------------
@@ -134,6 +134,7 @@ typedef struct
 typedef struct _KG_PORT_MESSAGE
 {
     ULONG MsgType;
+    ULONG ParentPid;
     ULONG Pid;
     ULONG SID;
     WCHAR ImageName[260];
@@ -141,6 +142,7 @@ typedef struct _KG_PORT_MESSAGE
 #pragma pack(pop)
 
 extern bool g_showConsole;
+extern bool g_showDeny;
 extern bool g_noInject;
 
 void Wprintln(const std::wstring& s);

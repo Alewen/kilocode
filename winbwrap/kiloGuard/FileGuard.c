@@ -46,8 +46,8 @@
 #define IOCTL_KG_SET_DENY_LOG \
     CTL_CODE(FILE_DEVICE_UNKNOWN, 0x80A, METHOD_BUFFERED, FILE_WRITE_DATA)
 
-#define KG_MAX_IOCTL_SIZE 65536
-#define KG_MAX_TRUSTED_PIDS 16
+#define KG_MAX_IOCTL_SIZE           65536
+#define KG_MAX_TRUSTED_PIDS         16
 
 ///////////////////////////////////////////////////////////////////////////////
 // Types
@@ -333,7 +333,7 @@ static VOID KgDisconnectNotify(PVOID ConnectionCookie)
     FltCloseClientPort(gFilter, &gClientPort);
 }
 
-VOID KgSendProcessEvent(ULONG slotIndex, ULONG pid, ULONG msgType, PUNICODE_STRING imageName)
+VOID KgSendProcessEvent(ULONG slotIndex, ULONG parentPid, ULONG pid, ULONG msgType, PUNICODE_STRING imageName)
 {
     UNREFERENCED_PARAMETER(slotIndex);
 
@@ -347,6 +347,7 @@ VOID KgSendProcessEvent(ULONG slotIndex, ULONG pid, ULONG msgType, PUNICODE_STRI
 
     KG_PORT_MESSAGE msg = {0};
     msg.MsgType = msgType;
+    msg.ParentPid = parentPid;
     msg.Pid = pid;
     msg.SID = sid;
     if (imageName && imageName->Buffer)
@@ -729,7 +730,7 @@ static NTSTATUS KgDeviceIoControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
                     s->Domain[i].DenyRing.ReadIndex = 0;
                     s->Domain[i].NetBlockEnabled = FALSE;
                     s->Domain[i].NetExeCount = 0;
-                    s->Domain[i].DenyLogEnabled = FALSE;
+                    s->Domain[i].IsEnableDenyEvent = FALSE;
                     status = STATUS_SUCCESS;
                     break;
                 }
@@ -881,7 +882,7 @@ static NTSTATUS KgDeviceIoControl(PDEVICE_OBJECT DeviceObject, PIRP Irp)
         ULONG slot = KgFindDomainSlot(s, in->Sid);
         if (slot == (ULONG)-1) { KgReleaseState(s); status = STATUS_NOT_FOUND; break; }
 
-        s->Domain[slot].DenyLogEnabled = in->Enabled;
+        s->Domain[slot].IsEnableDenyEvent = in->IsEnableDeny;
         KgReleaseState(s);
         status = STATUS_SUCCESS;
         break;

@@ -2,6 +2,7 @@
 #include "framework.h"
 
 bool g_showConsole = false;
+bool g_showDeny = false;
 bool g_noInject = false;
 
 void Wprintln(const std::wstring& s)

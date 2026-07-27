@@ -106,7 +106,7 @@ typedef struct _KG_POLICY_DOMAIN {
     WCHAR NetExeList[KG_MAX_NET_EXE][260];  // 网络例外进程 NT 路径列表
     ULONG NetExeCount;                      // 网络例外列表中的条目数
     BOOLEAN NetBlockEnabled;                // 是否启用网络拦截
-    BOOLEAN DenyLogEnabled;                 // 是否向缓冲写入 DENY 日志
+    BOOLEAN IsEnableDenyEvent;              // 是否向缓冲写入 DENY 事件信息
 } KG_POLICY_DOMAIN;
 
 typedef struct _KG_POLICY_STATE {
@@ -331,7 +331,7 @@ typedef struct _KG_NET_EXE_LIST_INPUT {
 
 typedef struct _KG_SET_DENY_LOG_INPUT {
     KG_SANDBOX_ID Sid;
-    BOOLEAN Enabled;
+    BOOLEAN IsEnableDeny;
 } KG_SET_DENY_LOG_INPUT;
 
 #define KG_PORT_MSG_PROCESS_CREATE     1
@@ -340,6 +340,7 @@ typedef struct _KG_SET_DENY_LOG_INPUT {
 
 typedef struct _KG_PORT_MESSAGE {
     ULONG MsgType;
+    ULONG ParentPid;
     ULONG Pid;
     ULONG SID;
     WCHAR ImageName[260];
