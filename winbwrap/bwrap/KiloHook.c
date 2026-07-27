@@ -362,30 +362,32 @@ static void Install(void)
 
     InterlockedExchange(&g_Ready, 1);
 
-    // Register detour addresses with CFG so the FF 25 indirect JMP written
-    // into combase.dll / shell32.dll won't crash on CFG-enabled processes.
-    // SetProcessValidCallTargets is a no-op when CFG is off.
+    // Register detour + trampoline addresses with CFG so the FF 25
+    // indirect JMP in combase.dll / shell32.dll won't crash on
+    // CFG-enabled processes. Each call marks a single code region.
     {
-        typedef BOOL (WINAPI *SetProcessValidCallTargetsFn)(HANDLE, PVOID, SIZE_T, ULONG, PULONG);
+        typedef BOOL (WINAPI *Fn)(HANDLE, PVOID, SIZE_T, ULONG, PULONG);
         HMODULE hK32 = GetModuleHandleA("kernel32.dll");
-        if (hK32) {
-            SetProcessValidCallTargetsFn fn = (SetProcessValidCallTargetsFn)GetProcAddress(hK32, "SetProcessValidCallTargets");
-            if (fn) {
-                PVOID addrs[6];
-                ULONG n = 0;
-                if (g_TargetCCI) addrs[n++] = DetourCoCreateInstance;
-                if (g_TargetCGO) addrs[n++] = DetourCoGetClassObject;
-                if (g_TargetSEEW) addrs[n++] = DetourShellExecuteExW;
-                if (g_OriginalCCI) addrs[n++] = g_OriginalCCI;
-                if (g_OriginalCGO) addrs[n++] = g_OriginalCGO;
-                if (g_OriginalSEEW) addrs[n++] = g_OriginalSEEW;
-                if (n) {
-                    ULONG flags = 0;
-                    fn(GetCurrentProcess(), addrs, n * sizeof(PVOID), 0, &flags);
-                }
-            }
-        }
+        if (!hK32) goto done;
+        Fn fn = (Fn)GetProcAddress(hK32, "SetProcessValidCallTargets");
+        if (!fn) goto done;
+
+        HANDLE self = GetCurrentProcess();
+
+        // Detour entry points — one byte at each function start
+        if (g_TargetCCI) fn(self, DetourCoCreateInstance, 1, 0, NULL);
+        if (g_TargetCGO) fn(self, DetourCoGetClassObject, 1, 0, NULL);
+        if (g_TargetSEEW) fn(self, DetourShellExecuteExW, 1, 0, NULL);
+
+        // Trampolines — VirtualAlloc'd pages, not in DLL .text
+        if (g_OriginalCCI && g_HookSizeCCI)
+            fn(self, (PVOID)(ULONG_PTR)g_OriginalCCI, g_HookSizeCCI + 14, 0, NULL);
+        if (g_OriginalCGO && g_HookSizeCGO)
+            fn(self, (PVOID)(ULONG_PTR)g_OriginalCGO, g_HookSizeCGO + 14, 0, NULL);
+        if (g_OriginalSEEW && g_HookSizeSEEW)
+            fn(self, (PVOID)(ULONG_PTR)g_OriginalSEEW, g_HookSizeSEEW + 14, 0, NULL);
     }
+done:;
 }
 
 // ============================================================================
