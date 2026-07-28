@@ -8,7 +8,6 @@
 // ============================================================================
 // Blocked CLSIDs (COM class identifiers)
 // ============================================================================
-
 // WbemLocator:           {4590F811-1D3A-11D0-891F-00AA004B2E24}
 // WbemAdministrativeLoc: {8BC3F05E-D86B-11D0-A075-00C04FB68820}
 // SWbemLocator:          {76A64158-CB41-11D1-8B02-00600806D9B6}
@@ -107,8 +106,10 @@ static int KgGetInstLen(BYTE* addr)
     // jmp short, call/jmp reg (indirect)
     if (b == 0xEB) return 2 + rex;
     if (b == 0xFF) return 1 + rex + KgModRmLen(addr + 1 + rex);
+
     // 0F-prefixed two-byte opcodes
-    if (b == 0x0F) {
+    if (b == 0x0F)
+    {
         BYTE b2 = addr[1 + rex];
         // 0F 1F xx = NOP (multi-byte)
         if (b2 == 0x1F) return 1 + rex + KgModRmLen(addr + 1 + rex);
@@ -125,12 +126,15 @@ static int KgGetInstLen(BYTE* addr)
         if (b2 == 0xAE) return 2 + rex + KgModRmLen(addr + 2 + rex);
         return 2 + rex + KgModRmLen(addr + 2 + rex);
     }
+
     // Common 1-byte+ModRM instructions
     if (b == 0x01 || b == 0x03 || b == 0x09 || b == 0x11 || b == 0x19 ||
         b == 0x21 || b == 0x29 || b == 0x31 || b == 0x39 || b == 0x3B ||
         b == 0x63 || b == 0x85 || b == 0x89 || b == 0x8B || b == 0x8D ||
         b == 0x88 || b == 0x8A)
+    {
         return 1 + rex + KgModRmLen(addr + 1 + rex);
+    }
     // 83 = opcode /0-/7 with imm8 (sub rsp, imm8; and/or/cmp/add)
     if (b == 0x83) return 1 + rex + KgModRmLen(addr + 1 + rex) + 1;
     // 81 = same with imm32
@@ -138,7 +142,8 @@ static int KgGetInstLen(BYTE* addr)
     // C7 = mov r/m, imm32
     if (b == 0xC7) return 1 + rex + KgModRmLen(addr + 1 + rex) + 4;
     // A0-A3 = mov moffs (absolute address)
-    if (b == 0xA0 || b == 0xA1 || b == 0xA2 || b == 0xA3) {
+    if (b == 0xA0 || b == 0xA1 || b == 0xA2 || b == 0xA3)
+    {
         return 1 + rex + (rex ? 8 : 4);
     }
     // B0-BF = mov reg, imm
@@ -147,7 +152,9 @@ static int KgGetInstLen(BYTE* addr)
     // al/ax/eax/rax immediate arithmetic
     if (b == 0x04 || b == 0x0C || b == 0x14 || b == 0x1C ||
         b == 0x24 || b == 0x2C || b == 0x34 || b == 0x3C)
+    {
         return 1 + rex + 1;
+    }
     if (b == 0x05 || b == 0x0D || b == 0x15 || b == 0x1D ||
         b == 0x25 || b == 0x2D || b == 0x35 || b == 0x3D)
         return 1 + rex + 4;
@@ -159,8 +166,10 @@ static int KgGetInstLen(BYTE* addr)
     if (b == 0x8F) return 1 + rex + KgModRmLen(addr + 1 + rex);
     // F3/F2/66/67/2E/36/3E/26/64/65/9B — legacy prefixes (recurse)
     static const BYTE prefixes[] = {0xF3, 0xF2, 0x66, 0x67, 0x2E, 0x36, 0x3E, 0x26, 0x64, 0x65, 0x9B};
-    for (int i = 0; i < (int)(sizeof(prefixes)/sizeof(prefixes[0])); i++) {
-        if (b == prefixes[i]) {
+    for (int i = 0; i < (int)(sizeof(prefixes)/sizeof(prefixes[0])); i++)
+    {
+        if (b == prefixes[i])
+        {
             int rest = KgGetInstLen(addr + 1);
             return rest ? 1 + rest : 0;
         }
@@ -175,7 +184,8 @@ static int KgGetInstLen(BYTE* addr)
 static int KgCalcCover(BYTE* addr, int minBytes)
 {
     int total = 0;
-    while (total < minBytes) {
+    while (total < minBytes)
+    {
         int len = KgGetInstLen(addr + total);
         if (len == 0) return 0;
         total += len;
@@ -189,7 +199,6 @@ static int KgCalcCover(BYTE* addr, int minBytes)
 // the remaining bytes up to hookSize. The trampoline copies the original
 // hookSize bytes, then jumps back to target + hookSize.
 // ============================================================================
-
 static void InstallHook(BYTE* target, void* detour, int hookSize, BYTE* saved, BYTE** trampOut, void** origOut)
 {
     DWORD old;
@@ -222,7 +231,6 @@ static void InstallHook(BYTE* target, void* detour, int hookSize, BYTE* saved, B
 // ============================================================================
 // GUID comparison
 // ============================================================================
-
 static BOOL GuidEq(REFGUID a, REFGUID b)
 {
     return memcmp(a, b, sizeof(GUID)) == 0;
@@ -248,14 +256,16 @@ static HRESULT WINAPI DetourCoCreateInstance(
     REFIID riid, LPVOID *ppv)
 {
     if (g_Ready && rclsid) {
-        WCHAR buf[128];
         int blocked = IsBlockedClsid(rclsid);
+#ifdef _DEBUG
+        WCHAR buf[128];
         wsprintfW(buf, L"KiloHook: CCI CLSID=%08X %04X %04X %02X%02X %02X%02X%02X%02X%02X%02X blocked=%d\n",
             rclsid->Data1, rclsid->Data2, rclsid->Data3,
             rclsid->Data4[0], rclsid->Data4[1], rclsid->Data4[2], rclsid->Data4[3],
             rclsid->Data4[4], rclsid->Data4[5], rclsid->Data4[6], rclsid->Data4[7],
             blocked);
         OutputDebugStringW(buf);
+#endif
     }
     if (g_Ready && IsBlockedClsid(rclsid))
         return REGDB_E_CLASSNOTREG;
@@ -266,15 +276,18 @@ static HRESULT WINAPI DetourCoGetClassObject(
     REFCLSID rclsid, DWORD dwClsContext, LPVOID pvReserved,
     REFIID riid, LPVOID *ppv)
 {
-    if (g_Ready && rclsid) {
-        WCHAR buf[128];
+    if (g_Ready && rclsid)
+    {
         int blocked = IsBlockedClsid(rclsid);
+#ifdef _DEBUG
+        WCHAR buf[128];
         wsprintfW(buf, L"KiloHook: CGO CLSID=%08X %04X %04X %02X%02X %02X%02X%02X%02X%02X%02X blocked=%d\n",
             rclsid->Data1, rclsid->Data2, rclsid->Data3,
             rclsid->Data4[0], rclsid->Data4[1], rclsid->Data4[2], rclsid->Data4[3],
             rclsid->Data4[4], rclsid->Data4[5], rclsid->Data4[6], rclsid->Data4[7],
             blocked);
         OutputDebugStringW(buf);
+#endif
     }
     if (g_Ready && IsBlockedClsid(rclsid))
         return REGDB_E_CLASSNOTREG;
@@ -288,8 +301,11 @@ static HRESULT WINAPI DetourCoGetClassObject(
 static BOOL WINAPI DetourShellExecuteExW(LPSHELLEXECUTEINFOW pExecInfo)
 {
     if (g_Ready && pExecInfo && pExecInfo->lpVerb &&
-        _wcsicmp(pExecInfo->lpVerb, L"runas") == 0) {
+        _wcsicmp(pExecInfo->lpVerb, L"runas") == 0)
+    {
+#ifdef _DEBUG
         OutputDebugStringW(L"KiloHook: ShellExecuteExW runas BLOCKED\n");
+#endif
         SetLastError(ERROR_CANCELLED);
         return FALSE;
     }
@@ -302,27 +318,49 @@ static BOOL WINAPI DetourShellExecuteExW(LPSHELLEXECUTEINFOW pExecInfo)
 
 static void Install(void)
 {
+#ifdef _DEBUG
+    WCHAR dbg[256];
+    wsprintfW(dbg, L"KiloHook: Install() called, PID=%lu\n", GetCurrentProcessId());
+    OutputDebugStringW(dbg);
+#endif
+
+    HMODULE hShellCheck = GetModuleHandleA("shell32.dll");
+#ifdef _DEBUG
+    wsprintfW(dbg, L"KiloHook: shell32.dll handle at Install() = %p\n", hShellCheck);
+    OutputDebugStringW(dbg);
+#endif
+
     HMODULE hMod = GetModuleHandleA("combase.dll");
-    if (!hMod) return;
+#ifdef _DEBUG
+    wsprintfW(dbg, L"KiloHook: combase.dll handle = %p\n", hMod);
+    OutputDebugStringW(dbg);
+#endif
+
+    if (!hMod)
+        return;
 
     // ---- Hook CoCreateInstance ----
     CoCreateInstanceFn origCCI = (CoCreateInstanceFn)GetProcAddress(hMod, "CoCreateInstance");
-    if (origCCI) {
+    if (origCCI)
+    {
         g_TargetCCI = (BYTE*)origCCI;
         int hookSize = KgCalcCover(g_TargetCCI, 14);
-        if (hookSize > 0 && hookSize <= 24) {
+        if (hookSize > 0 && hookSize <= 24)
+        {
             g_HookSizeCCI = hookSize;
             BYTE saved[24];
             InstallHook(g_TargetCCI, DetourCoCreateInstance, hookSize, saved,
-                        (BYTE**)&g_OriginalCCI, (void**)&g_OriginalCCI);
+                (BYTE**)&g_OriginalCCI, (void**)&g_OriginalCCI);
         }
     }
 
     // ---- Hook CoGetClassObject ----
     CoGetClassObjectFn origCGO = (CoGetClassObjectFn)GetProcAddress(hMod, "CoGetClassObject");
-    if (origCGO) {
+    if (origCGO)
+    {
         g_TargetCGO = (BYTE*)origCGO;
         {
+#ifdef _DEBUG
             WCHAR d[256];
             wsprintfW(d, L"KiloHook: CGO prologue: %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X",
                 g_TargetCGO[0], g_TargetCGO[1], g_TargetCGO[2], g_TargetCGO[3],
@@ -332,35 +370,64 @@ static void Install(void)
                 g_TargetCGO[16], g_TargetCGO[17], g_TargetCGO[18], g_TargetCGO[19],
                 g_TargetCGO[20], g_TargetCGO[21], g_TargetCGO[22], g_TargetCGO[23]);
             OutputDebugStringW(d);
+#endif
         }
         int hookSize = KgCalcCover(g_TargetCGO, 14);
-        if (hookSize > 0 && hookSize <= 24) {
+        if (hookSize > 0 && hookSize <= 24)
+        {
             g_HookSizeCGO = hookSize;
             BYTE saved[24];
             InstallHook(g_TargetCGO, DetourCoGetClassObject, hookSize, saved,
-                        (BYTE**)&g_OriginalCGO, (void**)&g_OriginalCGO);
+                (BYTE**)&g_OriginalCGO, (void**)&g_OriginalCGO);
         }
     }
 
     // ---- Hook ShellExecuteExW (shell32.dll) — block UAC runas ----
     {
         HMODULE hShell = GetModuleHandleA("shell32.dll");
-        if (hShell) {
+#ifdef _DEBUG
+        wsprintfW(dbg, L"KiloHook: shell32 hook attempt: hShell=%p\n", hShell);
+        OutputDebugStringW(dbg);
+#endif
+        if (hShell)
+        {
             ShellExecuteExW_Fn origSEEW = (ShellExecuteExW_Fn)GetProcAddress(hShell, "ShellExecuteExW");
-            if (origSEEW) {
+#ifdef _DEBUG
+            wsprintfW(dbg, L"KiloHook: ShellExecuteExW addr = %p\n", origSEEW);
+            OutputDebugStringW(dbg);
+#endif
+            if (origSEEW)
+            {
                 g_TargetSEEW = (BYTE*)origSEEW;
                 int hookSize = KgCalcCover(g_TargetSEEW, 14);
-                if (hookSize > 0 && hookSize <= 24) {
+#ifdef _DEBUG
+                wsprintfW(dbg, L"KiloHook: ShellExecuteExW hookSize = %d\n", hookSize);
+                OutputDebugStringW(dbg);
+#endif
+                if (hookSize > 0 && hookSize <= 24)
+                {
                     g_HookSizeSEEW = hookSize;
                     BYTE saved[24];
                     InstallHook(g_TargetSEEW, DetourShellExecuteExW, hookSize, saved,
-                                (BYTE**)&g_OriginalSEEW, (void**)&g_OriginalSEEW);
+                        (BYTE**)&g_OriginalSEEW, (void**)&g_OriginalSEEW);
+#ifdef _DEBUG
+                        OutputDebugStringW(L"KiloHook: ShellExecuteExW hook INSTALLED\n");
+#endif
                 }
             }
+        }
+        else
+        {
+#ifdef _DEBUG
+            OutputDebugStringW(L"KiloHook: shell32.dll NOT loaded yet, ShellExecuteExW hook SKIPPED\n");
+#endif
         }
     }
 
     InterlockedExchange(&g_Ready, 1);
+#ifdef _DEBUG
+    OutputDebugStringW(L"KiloHook: Install() done, g_Ready=1\n");
+#endif
 
     // Register detour + trampoline addresses with CFG so the FF 25
     // indirect JMP in combase.dll / shell32.dll won't crash on
@@ -393,7 +460,6 @@ done:;
 // ============================================================================
 // DLL entry point
 // ============================================================================
-
 BOOL WINAPI DllMain(HINSTANCE hInst, DWORD reason, LPVOID reserved)
 {
     UNREFERENCED_PARAMETER(reserved);

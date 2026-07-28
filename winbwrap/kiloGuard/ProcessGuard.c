@@ -337,10 +337,10 @@ static VOID KgAnalyzeDllFailure(KG_PENDING_TRACKER* tracker, KG_POLICY_DOMAIN* d
 //   CreateInfo - NULL=进程退出，非NULL=进程创建信息
 // 返回值：无
 ////////////////////////////////////////////////////////////////////////////////
-static VOID
-KiloProcessNotify(PEPROCESS Process, HANDLE ProcessId, PPS_CREATE_NOTIFY_INFO CreateInfo)
+static VOID KiloProcessNotify(PEPROCESS Process, HANDLE ProcessId, PPS_CREATE_NOTIFY_INFO CreateInfo)
 {
-    if (CreateInfo) {
+    if (CreateInfo)
+    {
         KIRQL oldIrql;
         KeAcquireSpinLock(&gStateLock, &oldIrql);
         KG_SYSTEM_STATE* state = (KG_SYSTEM_STATE*)InterlockedCompareExchangePointer((PVOID*)&gState, NULL, NULL);
@@ -384,10 +384,14 @@ KiloProcessNotify(PEPROCESS Process, HANDLE ProcessId, PPS_CREATE_NOTIFY_INFO Cr
                     (ULONG)(ULONG_PTR)ProcessId, KG_PORT_MSG_PROCESS_CREATE, imageName);
                 ExFreePool(imageName);
             }
-        } else {
+        }
+        else
+        {
             KeReleaseSpinLock(&gStateLock, oldIrql);
         }
-    } else {
+    }
+    else
+    {
         KG_POLICY_DOMAIN* notifyDomain = NULL;
         KG_PENDING_TRACKER trackerCopy;
         RtlZeroMemory(&trackerCopy, sizeof(trackerCopy));
@@ -396,7 +400,8 @@ KiloProcessNotify(PEPROCESS Process, HANDLE ProcessId, PPS_CREATE_NOTIFY_INFO Cr
         KIRQL tIrql;
         KeAcquireSpinLock(&gTrackerLock, &tIrql);
         KG_PENDING_TRACKER* tracker = KgFindTracker(ProcessId);
-        if (tracker) {
+        if (tracker)
+        {
             LONG exitStatus = 0;
             KgGetProcessExitStatus(Process, &exitStatus);
             {
@@ -407,22 +412,23 @@ KiloProcessNotify(PEPROCESS Process, HANDLE ProcessId, PPS_CREATE_NOTIFY_INFO Cr
                     ? s->Domain[tracker->SlotIndex].Id : 0;
                 KeReleaseSpinLock(&gStateLock, sIrql);
                 KG_LOG("FileGuard: DomainID=%lu PID=%lu ExitCode=%08lX\n",
-                         domainId,
-                         (ULONG)(ULONG_PTR)ProcessId,
-                         exitStatus);
+                         domainId, (ULONG)(ULONG_PTR)ProcessId, exitStatus);
             }
             if (exitStatus == (LONG)0xC0000135 || exitStatus == (LONG)0xC0000139 ||
-                exitStatus == (LONG)0xC0000142) {
+                exitStatus == (LONG)0xC0000142)
+            {
                 RtlCopyMemory(&trackerCopy, tracker, sizeof(KG_PENDING_TRACKER));
                 shouldAnalyze = TRUE;
             }
         }
-        if (!shouldAnalyze) {
+        if (!shouldAnalyze)
+        {
             KgFreeTracker(ProcessId);
         }
         KeReleaseSpinLock(&gTrackerLock, tIrql);
 
-        if (shouldAnalyze) {
+        if (shouldAnalyze)
+        {
             KIRQL oldIrql;
             KeAcquireSpinLock(&gStateLock, &oldIrql);
             KG_SYSTEM_STATE* state = (KG_SYSTEM_STATE*)InterlockedCompareExchangePointer((PVOID*)&gState, NULL, NULL);
@@ -432,7 +438,8 @@ KiloProcessNotify(PEPROCESS Process, HANDLE ProcessId, PPS_CREATE_NOTIFY_INFO Cr
             }
             KeReleaseSpinLock(&gStateLock, oldIrql);
 
-            if (notifyDomain) {
+            if (notifyDomain)
+            {
                 KgAnalyzeDllFailure(&trackerCopy, notifyDomain);
             }
 
@@ -456,30 +463,39 @@ KiloProcessNotify(PEPROCESS Process, HANDLE ProcessId, PPS_CREATE_NOTIFY_INFO Cr
 
         {
             USHORT fidx = (USHORT)((ULONG_PTR)ProcessId & 0xFFFF);
-            if (exitSlot != (ULONG)-1) {
-                DbgPrint("ProcessGuard: BWRAP_CHK PID=%lu exitSlot=%lu bwrapFast=%u\n",
+            if (exitSlot != (ULONG)-1)
+            {
+                // 检查退出的进程是否为 bwrap
+                KG_LOG("ProcessGuard: CHK PID=%lu DomainID=%lu isBWRAP=%u\n",
                     (ULONG)(ULONG_PTR)ProcessId, exitSlot, (ULONG)gBwrapFast[fidx]);
             }
-            if (exitSlot != (ULONG)-1 && gBwrapFast[fidx]) {
-                DbgPrint("ProcessGuard: BWRAP_EXIT PID=%lu DomainID=%lu Dumping orphan PIDs\n",
+            if (exitSlot != (ULONG)-1 && gBwrapFast[fidx])
+            {
+                // 退出的进程为 bwrap，收集孤儿进程 PID
+                KG_LOG("ProcessGuard: CHK PID=%lu DomainID=%lu Dumping orphan PIDs\n",
                     (ULONG)(ULONG_PTR)ProcessId, state->Domain[exitSlot].Id);
-                for (ULONG b = 0; b < KG_PID_BUCKETS; b++) {
-                    for (PLIST_ENTRY e = newMap->Buckets[b].Flink; e != &newMap->Buckets[b]; e = e->Flink) {
+                for (ULONG b = 0; b < KG_PID_BUCKETS; b++)
+                {
+                    for (PLIST_ENTRY e = newMap->Buckets[b].Flink; e != &newMap->Buckets[b]; e = e->Flink)
+                    {
                         KG_PID_ENTRY* entry = CONTAINING_RECORD(e, KG_PID_ENTRY, Link);
-                        if (entry->SlotIndex == exitSlot && entry->Pid != ProcessId) {
+                        if (entry->SlotIndex == exitSlot && entry->Pid != ProcessId)
+                        {
                             if (orphanCount < 256)
                                 orphanPids[orphanCount++] = entry->Pid;
-                            DbgPrint("ProcessGuard: BWRAP_EXIT Orphan PID=%lu Slot=%lu\n",
-                                (ULONG)(ULONG_PTR)entry->Pid, exitSlot);
+                            KG_LOG("ProcessGuard: DomainID=%lu Orphan PID=%lu\n",
+                                exitSlot, (ULONG)(ULONG_PTR)entry->Pid);
                         }
                     }
                 }
                 gBwrapFast[fidx] = 0;
                 KgFreePathRules(&state->Domain[exitSlot]);
                 state->Domain[exitSlot].Active = FALSE;
-                for (ULONG b = 0; b < KG_PID_BUCKETS; b++) {
+                for (ULONG b = 0; b < KG_PID_BUCKETS; b++)
+                {
                     PLIST_ENTRY e = newMap->Buckets[b].Flink;
-                    while (e != &newMap->Buckets[b]) {
+                    while (e != &newMap->Buckets[b])
+                    {
                         KG_PID_ENTRY* entry = CONTAINING_RECORD(e, KG_PID_ENTRY, Link);
                         PLIST_ENTRY next = e->Flink;
                         if (entry->SlotIndex == exitSlot) {
@@ -513,7 +529,7 @@ KiloProcessNotify(PEPROCESS Process, HANDLE ProcessId, PPS_CREATE_NOTIFY_INFO Cr
             if (NT_SUCCESS(s)) {
                 ZwTerminateProcess(hProc, STATUS_SUCCESS);
                 ZwClose(hProc);
-                DbgPrint("ProcessGuard: BWRAP_EXIT Terminated orphan PID=%lu\n",
+                KG_LOG("ProcessGuard: Terminated orphan PID=%lu\n",
                     (ULONG)(ULONG_PTR)orphanPids[i]);
             }
         }
@@ -561,6 +577,7 @@ KiloImageLoadNotify(PUNICODE_STRING ImageName, HANDLE ProcessId, PIMAGE_INFO Ima
 
     ULONG slot = KgIsPidInSandBox(ProcessId);
     BOOLEAN isOleAut32 = FALSE;
+    BOOLEAN isShell32 = FALSE;
 
     /* Log RPC/COM DLL loading by sandboxed processes */
     if (slot != (ULONG)-1)
@@ -574,8 +591,16 @@ KiloImageLoadNotify(PUNICODE_STRING ImageName, HANDLE ProcessId, PIMAGE_INFO Ima
             L"rpcrt4.dll", L"rpcss.dll", L"ole32.dll", L"combase.dll",
             L"oleaut32.dll", L"clbcatq.dll", L"comsvcs.dll",
         };
-        for (ULONG i = 0; i < ARRAYSIZE(rpcDlls); i++) {
-            if (_wcsicmp(p, rpcDlls[i]) == 0) {
+        if (_wcsicmp(p, L"shell32.dll") == 0)
+        {
+            KG_LOG("FileGuard: RPC_LOAD: PID=%lu DLL=%s ImageName=%wZ\n",
+                (ULONG)(ULONG_PTR)ProcessId, L"shell32.dll", ImageName);
+            isShell32 = TRUE;
+        }
+        for (ULONG i = 0; i < ARRAYSIZE(rpcDlls); i++)
+        {
+            if (_wcsicmp(p, rpcDlls[i]) == 0)
+            {
                 KG_LOG("FileGuard: RPC_LOAD: PID=%lu DLL=%s ImageName=%wZ\n",
                          (ULONG)(ULONG_PTR)ProcessId, rpcDlls[i], ImageName);
                 if (_wcsicmp(p, L"oleaut32.dll") == 0)
@@ -588,18 +613,30 @@ KiloImageLoadNotify(PUNICODE_STRING ImageName, HANDLE ProcessId, PIMAGE_INFO Ima
     KIRQL oldIrql;
     KeAcquireSpinLock(&gTrackerLock, &oldIrql);
     KG_PENDING_TRACKER* tracker = KgFindTracker(ProcessId);
-    if (tracker) {
+    if (tracker)
+    {
         InterlockedIncrement(&tracker->ImageCount);
         KgRecordDllLoad(tracker, ImageName);
 
+        if (isShell32 && slot != (ULONG)-1 && tracker->ImageName[0] != L'\0') {
+            PCWSTR name = tracker->ImageName;
+            USHORT len = (USHORT)wcslen(name);
+            if (len >= 15 && _wcsicmp(name + len - 15, L"\\powershell.exe") == 0)
+            {
+                KeReleaseSpinLock(&gTrackerLock, oldIrql);
+                KgSendProcessEvent(slot, 0, (ULONG)(ULONG_PTR)ProcessId,
+                    KG_PORT_MSG_READY_FOR_INJECT, NULL);
+                return;
+            }
+        }
         if (isOleAut32 && slot != (ULONG)-1 && tracker->ImageName[0] != L'\0') {
             PCWSTR name = tracker->ImageName;
             USHORT len = (USHORT)wcslen(name);
-            if ((len >= 9  && _wcsicmp(name + len - 9,  L"\\pwsh.exe") == 0) ||
-                (len >= 15 && _wcsicmp(name + len - 15, L"\\powershell.exe") == 0)) {
+            if (len >= 9  && _wcsicmp(name + len - 9,  L"\\pwsh.exe") == 0)
+            {
                 KeReleaseSpinLock(&gTrackerLock, oldIrql);
                 KgSendProcessEvent(slot, 0, (ULONG)(ULONG_PTR)ProcessId,
-                                   KG_PORT_MSG_READY_FOR_INJECT, NULL);
+                    KG_PORT_MSG_READY_FOR_INJECT, NULL);
                 return;
             }
         }
