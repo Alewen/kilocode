@@ -596,7 +596,7 @@ KiloImageLoadNotify(PUNICODE_STRING ImageName, HANDLE ProcessId, PIMAGE_INFO Ima
             PCWSTR name = tracker->ImageName;
             USHORT len = (USHORT)wcslen(name);
             if ((len >= 9  && _wcsicmp(name + len - 9,  L"\\pwsh.exe") == 0) ||
-                (len >= 16 && _wcsicmp(name + len - 16, L"\\powershell.exe") == 0)) {
+                (len >= 15 && _wcsicmp(name + len - 15, L"\\powershell.exe") == 0)) {
                 KeReleaseSpinLock(&gTrackerLock, oldIrql);
                 KgSendProcessEvent(slot, 0, (ULONG)(ULONG_PTR)ProcessId,
                                    KG_PORT_MSG_READY_FOR_INJECT, NULL);
