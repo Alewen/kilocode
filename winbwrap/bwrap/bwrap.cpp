@@ -578,7 +578,22 @@ int wmain(int argc, wchar_t* argv[])
         }
     }
 
+    // Create an isolated desktop so sandboxed processes cannot send
+    // WM messages, inject input, or access the clipboard of the host.
+    // Child processes inherit the desktop automatically.
+    HDESK hDesk = CreateDesktopW(L"KiloSandbox", NULL, NULL, 0, GENERIC_ALL, NULL);
+    if (!hDesk)
+    {
+        WCHAR ebuf[128];
+        int elen = swprintf_s(ebuf, ARRAYSIZE(ebuf),
+            L"bwrap.exe: CreateDesktop failed (%lu), continuing on default desktop\n", GetLastError());
+        if (elen > 0) Wprintln(ebuf);
+    }
+
     STARTUPINFOW si = {sizeof(si)};
+    if (hDesk)
+        si.lpDesktop = (LPWSTR)L"KiloSandbox";
+
     UINT oldErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
     PROCESS_INFORMATION pi = {};
     BOOL ok = CreateProcessW(NULL, cmdbuf.data(), NULL, NULL, TRUE,
@@ -641,6 +656,10 @@ int wmain(int argc, wchar_t* argv[])
     if (hJob)
     {
         CloseHandle(hJob);
+    }
+    if (hDesk)
+    {
+        CloseDesktop(hDesk);
     }
 
     return (int)ec;
