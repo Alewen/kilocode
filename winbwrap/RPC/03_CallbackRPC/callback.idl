@@ -1,0 +1,22 @@
+[
+    uuid(C3D87B2E-4D50-5B9E-AF2C-8D4A6E1B3C21),
+    version(1.0)
+]
+interface CallbackDemo
+{
+    typedef [context_handle] void* CONV_HANDLE;
+
+    void StartConversion(
+        [out] CONV_HANDLE* hConv,
+        [in] long count
+    );
+
+    void SendItem(
+        [in, out] CONV_HANDLE* hConv,
+        [in, string] const char* text
+    );
+
+    void EndConversion(
+        [in, out] CONV_HANDLE* hConv
+    );
+}

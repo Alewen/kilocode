@@ -1,0 +1,30 @@
+[
+    uuid(B2E76A1D-3C4F-4A8D-9E1B-7C3F5D0A2B10),
+    version(1.0)
+]
+interface DataDemo
+{
+    typedef struct tagPoint {
+        long x;
+        long y;
+    } Point;
+
+    typedef struct tagRect {
+        Point topLeft;
+        Point bottomRight;
+    } Rect;
+
+    long AddNumbers([in] long a, [in] long b);
+
+    void SwapLongs([in, out] long* a, [in, out] long* b);
+
+    long SumArray([in, range(1, 1000)] long count, [in, size_is(count)] long* numbers);
+
+    Rect GetBoundingBox([in, range(1, 100)] long count, [in, size_is(count)] Point* points);
+
+    void GetPrimeNumbers(
+        [in] long max,
+        [out] long* count,
+        [out, size_is(, *count)] long** primes
+    );
+}
