@@ -5,6 +5,199 @@
 
 static LARGE_INTEGER gRegCookie = { 0 };
 
+/* ============================================================================
+   敏感注册表路径黑名单（P0 / P1 / P2）
+   沙箱内进程读取匹配以下前缀的键时，返回 STATUS_ACCESS_DENIED。
+   路径使用 NT 格式（以 \Registry\ 开头，如 \Registry\Machine\...）。
+   ============================================================================ */
+
+static const WCHAR* gRegDenyPrefixes[] = {
+    /* --- P0: 凭据 / 密钥 / 沙箱自身 --- */
+    L"\\Registry\\Machine\\SECURITY\\Policy\\Secrets",
+    L"\\Registry\\Machine\\SECURITY\\SAM",
+    L"\\Registry\\Machine\\SAM",
+    L"\\Registry\\Machine\\System\\ControlSet*\\Services\\KiloGuard",
+    L"\\Registry\\Machine\\Software\\SimonTatham\\PuTTY\\Sessions",
+    L"\\Registry\\User\\*\\Software\\SimonTatham\\PuTTY\\Sessions",
+    L"\\Registry\\Machine\\Software\\Martin Prikryl\\WinSCP 2\\Sessions",
+    L"\\Registry\\User\\*\\Software\\Martin Prikryl\\WinSCP 2\\Sessions",
+    L"\\Registry\\Machine\\Software\\FileZilla",
+    L"\\Registry\\User\\*\\Software\\FileZilla",
+
+    /* --- P1: 隐私 / 行为轨迹 --- */
+    L"\\Registry\\User\\*\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs",
+    L"\\Registry\\User\\*\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU",
+    L"\\Registry\\User\\*\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\TypedPaths",
+    L"\\Registry\\User\\*\\Software\\Microsoft\\Windows\\Shell\\BagMRU",
+    L"\\Registry\\User\\*\\Software\\Microsoft\\Windows\\Shell\\Bags",
+    L"\\Registry\\User\\*\\Software\\Microsoft\\Internet Explorer\\TypedURLs",
+    L"\\Registry\\User\\*\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSavePidlMRU",
+    L"\\Registry\\User\\*\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\LastVisitedPidlMRU",
+    L"\\Registry\\User\\*\\Network",
+    L"\\Registry\\User\\*\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserAssist",
+
+    /* --- P2: 安全防御情报 / 补丁 / 防火墙 --- */
+    L"\\Registry\\Machine\\Software\\Microsoft\\Windows\\CurrentVersion\\Component Based Servicing\\Packages",
+    L"\\Registry\\Machine\\Software\\Policies\\Microsoft\\Windows Defender",
+    L"\\Registry\\Machine\\Software\\Microsoft\\Windows Defender",
+    L"\\Registry\\User\\*\\Software\\Microsoft\\Windows Defender",
+    L"\\Registry\\Machine\\System\\ControlSet*\\Services\\SharedAccess\\Parameters\\FirewallPolicy",
+    L"\\Registry\\Machine\\System\\ControlSet*\\Control\\Lsa",
+    L"\\Registry\\Machine\\System\\ControlSet*\\Control\\SecurePipeServers",
+    L"\\Registry\\Machine\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System",
+    L"\\Registry\\User\\*\\Software\\Sysinternals",
+};
+
+static const ULONG gRegDenyPrefixCount =
+    sizeof(gRegDenyPrefixes) / sizeof(gRegDenyPrefixes[0]);
+
+/* ============================================================================
+   KgRegMatchPrefix — 判断 path 是否以 prefix 为前缀（不区分大小写）
+   prefix 中可包含通配符 '*'，仅用于匹配注册表用户 SID 段（单段匹配）
+   ============================================================================ */
+static BOOLEAN KgRegMatchPrefix(const WCHAR* path, ULONG pathLen, const WCHAR* prefix)
+{
+    ULONG i = 0, j = 0;
+
+    while (i < pathLen && prefix[j] != L'\0')
+    {
+        if (prefix[j] == L'*')
+        {
+            j++;
+            ULONG k = i;
+            while (k < pathLen && path[k] != L'\\')
+                k++;
+            i = k;
+        }
+        else if (towupper(path[i]) == towupper(prefix[j]))
+        {
+            i++;
+            j++;
+        }
+        else
+        {
+            return FALSE;
+        }
+    }
+
+    return (prefix[j] == L'\0');
+}
+
+/* ============================================================================
+   KgRegIsSensitivePath — 检查路径是否命中黑名单
+   返回 TRUE 表示命中（应拒绝访问）
+   ============================================================================ */
+static BOOLEAN KgRegIsSensitivePath(PCUNICODE_STRING path)
+{
+    if (!path || !path->Buffer || path->Length == 0)
+        return FALSE;
+
+    ULONG pathChars = path->Length / sizeof(WCHAR);
+
+    for (ULONG idx = 0; idx < gRegDenyPrefixCount; idx++)
+    {
+        if (KgRegMatchPrefix(path->Buffer, pathChars, gRegDenyPrefixes[idx]))
+            return TRUE;
+    }
+    return FALSE;
+}
+
+/* ============================================================================
+   KgRegCheckObject — 从键对象指针获取完整路径并检查是否命中黑名单
+   使用 CmCallbackGetKeyObjectID 获取键的完整 NT 路径（如 \Registry\Machine\...）。
+   返回 TRUE 表示命中（应拒绝访问）。
+   ============================================================================ */
+static BOOLEAN KgRegCheckObject(PVOID keyObject)
+{
+    if (!keyObject)
+        return FALSE;
+
+    PCUNICODE_STRING name = NULL;
+    NTSTATUS status = CmCallbackGetKeyObjectID(
+        &gRegCookie, keyObject, NULL, (PUNICODE_STRING*)&name);
+    if (!NT_SUCCESS(status) || !name ||
+        !name->Buffer || name->Length == 0)
+    {
+        return FALSE;
+    }
+
+    /* Block COM CLSID reads */
+    if (wcsstr(name->Buffer, L"CLSID\\{"))
+        return TRUE;
+
+    return KgRegIsSensitivePath(name);
+}
+
+/* ============================================================================
+   KgRegCheckPreOpen — 检查 PreOpenKey / PreCreateKey 是否应该被拒绝
+   优先使用 CompleteName，否则用 RootObject + CmCallbackGetKeyObjectID
+   拼出完整路径后检查黑名单。
+   ============================================================================ */
+static BOOLEAN KgRegCheckPreOpen(PVOID arg2)
+{
+    PREG_CREATE_KEY_INFORMATION_V1 info = (PREG_CREATE_KEY_INFORMATION_V1)arg2;
+    if (!info)
+        return FALSE;
+
+    /* Fast path: CompleteName is populated for full-path creates/opens */
+    if (info->CompleteName && info->CompleteName->Buffer &&
+        info->CompleteName->Length > 0)
+    {
+        if (wcsstr(info->CompleteName->Buffer, L"CLSID\\{"))
+            return TRUE;
+        return KgRegIsSensitivePath(info->CompleteName);
+    }
+
+    /* Slow path: resolve RootObject full name, append RemainingName */
+    if (!info->RootObject)
+        return FALSE;
+
+    PCUNICODE_STRING rootName = NULL;
+    NTSTATUS status = CmCallbackGetKeyObjectID(
+        &gRegCookie, info->RootObject, NULL, (PUNICODE_STRING*)&rootName);
+    if (!NT_SUCCESS(status) || !rootName ||
+        !rootName->Buffer || rootName->Length == 0)
+    {
+        return FALSE;
+    }
+
+    WCHAR fullBuf[1024];
+    ULONG off = 0;
+    ULONG rootChars = rootName->Length / sizeof(WCHAR);
+
+    if (rootChars >= ARRAYSIZE(fullBuf))
+        return FALSE;
+
+    RtlCopyMemory(fullBuf, rootName->Buffer, rootName->Length);
+    off = rootChars;
+
+    if (info->RemainingName && info->RemainingName->Buffer &&
+        info->RemainingName->Length > 0)
+    {
+        if (off + 1 >= ARRAYSIZE(fullBuf))
+            return FALSE;
+        fullBuf[off++] = L'\\';
+
+        ULONG remChars = info->RemainingName->Length / sizeof(WCHAR);
+        if (off + remChars >= ARRAYSIZE(fullBuf))
+            remChars = ARRAYSIZE(fullBuf) - off - 1;
+
+        RtlCopyMemory(fullBuf + off, info->RemainingName->Buffer,
+            remChars * sizeof(WCHAR));
+        off += remChars;
+    }
+
+    fullBuf[off] = L'\0';
+
+    UNICODE_STRING fullUs;
+    RtlInitUnicodeString(&fullUs, fullBuf);
+
+    if (wcsstr(fullBuf, L"CLSID\\{"))
+        return TRUE;
+
+    return KgRegIsSensitivePath(&fullUs);
+}
+
 static PCSTR KgRegNotifyClassToString(REG_NOTIFY_CLASS notifyClass)
 {
     switch (notifyClass) {
@@ -56,8 +249,7 @@ static PCSTR KgRegNotifyClassToString(REG_NOTIFY_CLASS notifyClass)
     }
 }
 
-static NTSTATUS
-KgRegCallback(PVOID context, PVOID arg1, PVOID arg2)
+static NTSTATUS KgRegCallback(PVOID context, PVOID arg1, PVOID arg2)
 {
     REG_NOTIFY_CLASS notifyClass = (REG_NOTIFY_CLASS)(ULONG_PTR)arg1;
     UNREFERENCED_PARAMETER(context);
@@ -106,42 +298,45 @@ KgRegCallback(PVOID context, PVOID arg1, PVOID arg2)
     {
         REG_CREATE_KEY_INFORMATION* info = (REG_CREATE_KEY_INFORMATION*)arg2;
         if (info->CompleteName && info->CompleteName->Buffer)
-            KG_LOG("RegGuard: DENY PID=%lu %s Key=%wZ\n",
-                     (ULONG)(ULONG_PTR)pid,
-                     KgRegNotifyClassToString(notifyClass),
-                     info->CompleteName);
+        {
+            KG_LOG("RegGuard: DENY PID=%lu %s Key=%wZ\n", (ULONG)(ULONG_PTR)pid,
+                KgRegNotifyClassToString(notifyClass), info->CompleteName);
+        }
         else
-            KG_LOG("RegGuard: DENY PID=%lu %s\n",
-                     (ULONG)(ULONG_PTR)pid,
-                     KgRegNotifyClassToString(notifyClass));
+        {
+            KG_LOG("RegGuard: DENY PID=%lu %s\n", (ULONG)(ULONG_PTR)pid,
+                KgRegNotifyClassToString(notifyClass));
+        }
         return STATUS_ACCESS_DENIED;
     }
     case RegNtPreSetValueKey:
     {
         REG_SET_VALUE_KEY_INFORMATION* info = (REG_SET_VALUE_KEY_INFORMATION*)arg2;
         if (info->ValueName && info->ValueName->Buffer)
-            KG_LOG("RegGuard: DENY PID=%lu %s Value=%wZ\n",
-                     (ULONG)(ULONG_PTR)pid,
-                     KgRegNotifyClassToString(notifyClass),
-                     info->ValueName);
+        {
+            KG_LOG("RegGuard: DENY PID=%lu %s Value=%wZ\n", (ULONG)(ULONG_PTR)pid,
+                KgRegNotifyClassToString(notifyClass), info->ValueName);
+        }
         else
-            KG_LOG("RegGuard: DENY PID=%lu %s\n",
-                     (ULONG)(ULONG_PTR)pid,
-                     KgRegNotifyClassToString(notifyClass));
+        {
+            KG_LOG("RegGuard: DENY PID=%lu %s\n", (ULONG)(ULONG_PTR)pid,
+                KgRegNotifyClassToString(notifyClass));
+        }
         return STATUS_ACCESS_DENIED;
     }
     case RegNtPreDeleteValueKey:
     {
         REG_DELETE_VALUE_KEY_INFORMATION* info = (REG_DELETE_VALUE_KEY_INFORMATION*)arg2;
         if (info->ValueName && info->ValueName->Buffer)
-            KG_LOG("RegGuard: DENY PID=%lu %s Value=%wZ\n",
-                     (ULONG)(ULONG_PTR)pid,
-                     KgRegNotifyClassToString(notifyClass),
-                     info->ValueName);
+        {
+            KG_LOG("RegGuard: DENY PID=%lu %s Value=%wZ\n", (ULONG)(ULONG_PTR)pid,
+                KgRegNotifyClassToString(notifyClass), info->ValueName);
+        }
         else
-            KG_LOG("RegGuard: DENY PID=%lu %s\n",
-                     (ULONG)(ULONG_PTR)pid,
-                     KgRegNotifyClassToString(notifyClass));
+        {
+            KG_LOG("RegGuard: DENY PID=%lu %s\n", (ULONG)(ULONG_PTR)pid,
+                KgRegNotifyClassToString(notifyClass));
+        }
         return STATUS_ACCESS_DENIED;
     }
     /* RegNtPreSetInformationKey: allowed — needed by App Execution Alias resolution */
@@ -152,64 +347,61 @@ KgRegCallback(PVOID context, PVOID arg1, PVOID arg2)
     case RegNtPreRestoreKey:
     case RegNtPreSaveKey:
     case RegNtPreReplaceKey:
-        KG_LOG("RegGuard: DENY PID=%lu %s\n",
-                 (ULONG)(ULONG_PTR)pid,
-                 KgRegNotifyClassToString(notifyClass));
+        KG_LOG("RegGuard: DENY PID=%lu %s\n", (ULONG)(ULONG_PTR)pid,
+            KgRegNotifyClassToString(notifyClass));
         return STATUS_ACCESS_DENIED;
     }
 
-    /* Read / query operations: allow, with log */
+    /* Read / query operations: check against sensitive path blacklist */
     switch (notifyClass)
     {
     case RegNtPreOpenKey:
     {
-        REG_CREATE_KEY_INFORMATION* info = (REG_CREATE_KEY_INFORMATION*)arg2;
-        if (info->CompleteName && info->CompleteName->Buffer) {
-            /* Block COM CLSID reads to prevent CoCreateInstance-based escapes */
-            if (wcsstr(info->CompleteName->Buffer, L"CLSID\\{")) {
-                KG_LOG("RegGuard: DENY PID=%lu %s Key=%wZ (COM CLSID)\n",
-                         (ULONG)(ULONG_PTR)pid,
-                         KgRegNotifyClassToString(notifyClass),
-                         info->CompleteName);
-                return STATUS_ACCESS_DENIED;
-            }
-            /*KG_LOG("RegGuard: PID=%lu %s Key=%wZ\n",
-                     (ULONG)(ULONG_PTR)pid,
-                     KgRegNotifyClassToString(notifyClass),
-                     info->CompleteName);*/
-        } /* else {
-            KG_LOG("RegGuard: PID=%lu %s\n",
-                     (ULONG)(ULONG_PTR)pid,
-                     KgRegNotifyClassToString(notifyClass));
-        } */
+        if (KgRegCheckPreOpen(arg2))
+        {
+            KG_LOG("RegGuard: DENY PID=%lu %s (sensitive path)\n", (ULONG)(ULONG_PTR)pid,
+                KgRegNotifyClassToString(notifyClass));
+            return STATUS_ACCESS_DENIED;
+        }
         break;
     }
 
     case RegNtPreQueryValueKey:
     {
-        //REG_QUERY_VALUE_KEY_INFORMATION* info = (REG_QUERY_VALUE_KEY_INFORMATION*)arg2;
-        /*if (info->ValueName && info->ValueName->Buffer)
-            KG_LOG("RegGuard: PID=%lu %s Value=%wZ\n",
-                     (ULONG)(ULONG_PTR)pid,
-                     KgRegNotifyClassToString(notifyClass),
-                     info->ValueName);
-        else
-            KG_LOG("RegGuard: PID=%lu %s\n",
-                     (ULONG)(ULONG_PTR)pid,
-                     KgRegNotifyClassToString(notifyClass));*/
+        PREG_QUERY_VALUE_KEY_INFORMATION info = (PREG_QUERY_VALUE_KEY_INFORMATION)arg2;
+        if (KgRegCheckObject(info->Object))
+            return STATUS_ACCESS_DENIED;
         break;
     }
 
-    case RegNtPreEnumerateValueKey:
-    case RegNtPreEnumerateKey:
-    case RegNtPreQueryKey:
     case RegNtPreQueryMultipleValueKey:
+    {
+        PREG_QUERY_MULTIPLE_VALUE_KEY_INFORMATION info = (PREG_QUERY_MULTIPLE_VALUE_KEY_INFORMATION)arg2;
+        if (KgRegCheckObject(info->Object))
+            return STATUS_ACCESS_DENIED;
+        break;
+    }
+
+    case RegNtPreEnumerateKey:
+    case RegNtPreEnumerateValueKey:
+    {
+        PREG_ENUMERATE_KEY_INFORMATION info = (PREG_ENUMERATE_KEY_INFORMATION)arg2;
+        if (KgRegCheckObject(info->Object))
+            return STATUS_ACCESS_DENIED;
+        break;
+    }
+
+    case RegNtPreQueryKey:
     case RegNtPreQueryKeyName:
+    {
+        PREG_QUERY_KEY_INFORMATION info = (PREG_QUERY_KEY_INFORMATION)arg2;
+        if (KgRegCheckObject(info->Object))
+            return STATUS_ACCESS_DENIED;
+        break;
+    }
+
     case RegNtPreFlushKey:
     case RegNtPreQueryKeySecurity:
-        /*KG_LOG("RegGuard: PID=%lu %s\n",
-                 (ULONG)(ULONG_PTR)pid,
-                 KgRegNotifyClassToString(notifyClass));*/
         break;
 
     default:
