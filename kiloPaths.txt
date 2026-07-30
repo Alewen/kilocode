@@ -18,6 +18,7 @@ readonlyPaths   string[]    --ro-bind   只读挂载
 
 allowWrite      PathRule[]  --bind      读写挂载
     来自配置文件 writable_paths 
+    C:\Users\shaoke\.kilo\skills
     Global.Path.data + "/tool-output"   C:\Users\shaoke\.local\share\kilo\tool-output
     Global.Path.state                   C:\Users\shaoke\.local\state\kilo
     Global.Path.tmp                     C:\Users\shaoke\AppData\Local\Temp\kilo

@@ -183,6 +183,7 @@ export function computeWritable(ctx: InstanceContext, extra?: readonly string[])
     path.join(Global.Path.data, "tool-output"),
     Global.Path.state,
     Global.Path.tmp,
+    path.join(os.homedir(), ".kilo", "skills"),
     ...(extra ?? []),
   ]
 }
